@@ -1,0 +1,15 @@
+argonaut-arrange-icons		usr/bin
+argonaut-end-session		usr/bin
+00argonaut-start-session	etc/X11/Xsession.d
+00argonaut-check-login		etc/X11/Xsession.d
+argonaut-start-session		usr/bin
+argonaut-update-mime-links	usr/bin
+argonaut-update-login		usr/bin
+argonaut-update-mime-links-starter	usr/bin
+plugins/S04numlock		etc/argonaut/plugins
+plugins/S98login_scripts	etc/argonaut/plugins
+plugins/S97resolution		etc/argonaut/plugins
+plugins/K02konch		etc/argonaut/plugins
+plugins/S98konch		etc/argonaut/plugins
+mime-defs			etc/argonaut
+Xsetup				etc/argonaut

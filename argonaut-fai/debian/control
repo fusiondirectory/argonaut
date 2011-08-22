@@ -1,0 +1,20 @@
+Source: argonaut-fai
+Section: perl
+Priority: optional
+Maintainer: FusionDirectory Packagers <fusiondirectory-packages@lists.fusiondirectory.org>
+Uploaders: Benoit Mortier <benoit.mortier@opensides.be>
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 7.0.50~)
+Homepage: https://forge.fusiondirectory.org/projects/goto2
+Vcs-Browser: http://git.fusiondirectory.org/code/main/goto2.git/
+Vcs-Git: http://git.fusiondirectory.org/main/goto2.git
+DM-Upload-Allowed: yes
+
+Package: argonaut-fai
+Architecture: all
+Depends: ${misc:Depends}, ${perl:Depends}, libnet-ldap-perl, libapt-pkg-perl, liburi-perl
+Description: Argonaut FAI libraries
+ This package contains some FAI perl libraries.
+ Currently the focus is based on FusionDirectory / FAI management.
+
+

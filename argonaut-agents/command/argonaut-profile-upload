@@ -1,0 +1,163 @@
+#!/bin/sh
+# Copyright (C) 2005  Holger Burbach <holger.burbach@gonicus.de>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+##########################################################################
+
+. /usr/lib/argonaut/argonaut-support.lib
+. /etc/argonaut/argonaut-agent.conf
+
+##########################################################################
+
+DEBUG=YES
+QUOTALIMIT=""
+
+BLACKLISTFILE="/etc/argonaut/profile-exclude.list"
+
+##########################################################################
+
+#
+# Is the server available ?
+#
+
+function isAvailable()
+{	
+        PROFILESERVER=$(ldap_get_profileserver_of $SUDO_USER)
+	# echo "$PROFILESERVER"
+	SERVERENTRY=${PROFILESERVER//|*/}
+	# echo "$SERVERENTRY"
+        /usr/sbin/fping -t 1000 -q "$SERVERENTRY" 2> /dev/null
+	result=$?
+	if [ $result = "0" ]; then
+	  echo "1"
+	else
+	  echo "0"
+	fi
+}
+
+function profile_size()
+{
+	LANG=en du -scx $HOME | grep total | cut -f1
+}
+
+##########################################################################
+
+# will be removed when upload is successful later on 
+touch $HOME/.profile_upload-failed
+
+# 
+# Is the profile server available ?
+#
+ok="$(isAvailable)"
+if ldap_user_has_profile $SUDO_USER; then
+  if [ "$ok" = "0" ]; then
+   dprint "Server profile with drive not accessible ... Abort!"
+   Xdialog --msgbox "The server profile with the drive is not accessible. Your profile\ncould not be stored on the server profile!" 10 60
+   echo "offline"
+   exit 0
+  fi
+fi
+
+if ldap_user_has_profile $SUDO_USER; then
+
+	export HOME=$(ldap_get_home_of $SUDO_USER)
+	HOMEDIR=`basename $HOME`
+
+	timestampFile="$HOME/.profileTimestamp"
+	timestamp=`date "+%Y%m%d%H%M%S"`
+
+	dprint "Current timestamp is: $timestamp"
+
+	QUOTALIMIT=$(ldap_get_profilequota_of $SUDO_USER)
+	dprint "quotalimit=$QUOTALIMIT"
+
+	l_profile="$HOME"
+	p_profile="/mnt/profiles/$SUDO_USER"
+
+	#
+	# Is profile drive connected ?
+	#
+	grep -q "$p_profile" /etc/mtab
+	if [ $? -eq 1 ]; then
+	    dprint "Profile-drive is not connected ... Abort!"
+	    Xdialog --msgbox "The profile-drive is not connected. Your profile\ncould not be stored on the server profile!" 10 60
+	    chown ${SUDO_UID}.${SUDO_GID} $HOME/.ICEauthority
+	else
+		mkdir -p "$p_profile/profile/$HOMEDIR/1.0"
+		if [ $? -ne 0 ]; then
+			rm -rf "$p_profile/profile-orig"
+			mv "$p_profile/profile" "$p_profile/profile-orig"
+			mkdir -p "$p_profile/profile/$HOMEDIR/1.0"
+		fi
+
+		# Get timestamp from users local home directory
+		if [ -s "$timestampFile" ]; then
+			timestamp=$(head -1 $timestampFile | grep "20[0-9]*" )
+		else
+			timestamp="invalid"
+		fi
+		dprint "TS in $timestampFile is $timestamp"
+		
+		quota=$(profile_size)
+		dprint "Used quota in $l_profile: $quota"
+		
+		if [ -n "$QUOTALIMIT" ]; then
+			QUOTALIMITMB=$(( $QUOTALIMIT*1024 ))
+			dprint "QUOTALIMITMB=$QUOTALIMITMB"
+			if [ $quota -gt $QUOTALIMITMB ]; then
+				#These dialogues run as root and bend the rights to. ICEauthority!
+				Xdialog --msgbox "You have $quota KB data stored in your local profile. \ n The server may, however, only $QUOTALIMITMB kB can be stored.\nYour profile is so NOT stored on the profile server\nTo resolve this problem, please contact us again\nand erase unnecessary files." 12 60
+				rm -f $p_profile/profile/$HOMEDIR/1.0/.profileTimestamp
+				touch $p_profile/profile/$HOMEDIR/1.0/.profileTimestamp
+				chown ${SUDO_UID}.${SUDO_GID} $HOME/.ICEauthority
+				exit 0
+			fi
+		fi
+		
+		#
+		# Setting local profile to current
+		#
+		timestamp=`date "+%Y%m%d%H%M%S"`
+		echo "$timestamp" > $timestampFile
+		chown ${SUDO_UID}.${SUDO_GID} $timestampFile
+	
+		rm -f $p_profile/profile/$HOMEDIR/1.0/.profileTimestamp
+
+		/usr/sbin/goto-profile-sync -v -s $l_profile -d $p_profile/profile/$HOMEDIR/1.0 -e $BLACKLISTFILE backup
+		result=$?
+
+		if [ $result -eq 0 ]; then
+			dprint "Profile upload: successfully"
+
+			rm -f $HOME/.profile_upload-failed
+			
+			rm -f $p_profile/profile/$HOMEDIR/1.0/.profileTimestamp
+			cp $timestampFile $p_profile/profile/$HOMEDIR/1.0/.profileTimestamp
+		else	
+			dprint "Profile upload: failed (error code: $result)"
+			Xdialog --msgbox "Saving your user profile on the profile server failed\nYour profile will remain on this client base and is available in the \nApplication Nearest. If you change the client base,\nher profile will be lost." 12 70	
+			rm -f $p_profile/profile/$HOMEDIR/1.0/.profileTimestamp
+		fi
+	fi
+
+	#
+	# Permissions corrected on. ICEauthority
+	#
+	if [ -e $HOME/.ICEauthority ]; then
+		chown ${SUDO_UID}.${SUDO_GID} $HOME/.ICEauthority
+	fi
+fi
+

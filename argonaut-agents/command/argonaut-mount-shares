@@ -1,0 +1,662 @@
+#!/bin/sh 
+# Copyright (C) 2005,2006  Holger Burbach <holger.burbach@gonicus.de>
+# Copyright (C) 2006   Jan-Marek Glogowski <jan-marek.glogowski@muenchen.de>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+##########################################################################
+
+[ -f /etc/ldap/ldap-shell.conf ] && . /etc/ldap/ldap-shell.conf
+. /usr/lib/argonaut/argonaut-support.lib
+. /etc/argonaut/argonaut-agent.conf
+. /etc/sysconfig/argonaut-agent
+
+##########################################################################
+
+DEBUG=YES
+FPING=/usr/sbin/fping
+USER=$SUDO_USER
+ANTIVIRSCRIPT=/etc/init.d/antivir-workstation-prof
+
+mac="$MACADDRESS"		# mac address out of /etc/sysconfig/argonaut-agent
+
+##########################################################################
+# Variablen-Substitutionen
+##########################################################################
+# %u : User (Linux)
+# %U : User on server side (Samba, PC Netlink, AS/X, AS/U)
+# %H : The user's home directory (Linux)
+# %L : Servername of the Fileservers
+# %m : Clientname (DNS-Name of the Linux-Clients)
+# %S : Share Name
+#
+# deprecated:
+# %uid   : User (Linux)
+# $HOME  : The user's home directory (Linux)
+##########################################################################
+
+
+ldif_line_decode()
+{
+        local dec_res attr line oIFS
+	
+	# Store old IFS and set new to \n
+	oIFS=$IFS
+	IFS='
+	'
+
+	# Read function stdin
+	for line in `cat -`; do
+
+		attr=${line%%:*}
+	        if echo "$line" | grep -iq '^[a-z0-9]\+::'; then
+	                dec_res=$(echo $line | cut -d\  -f2- | base64 -d)
+		else
+			dec_res=$(echo $line | cut -d\  -f2-)
+		fi
+
+		echo "${attr}: $dec_res"
+	done
+	IFS=$oIFS
+}
+
+##########################################################################
+#
+# subst: Replaces variables according following Substitions list
+#
+# Argument $1: String (pathname)
+##########################################################################
+subst()
+{
+	sed -e "s|%uid|$USER|g" \
+	    -e "s|\$HOME|$HOME|g" \
+	    -e "s|%H|$HOME|g" \
+	    -e "s|%u|$USER|g" \
+	    -e "s|%U|$mountuser|g" \
+	    -e "s|%L|$server|g" \
+	    -e "s|%S|$shareid|g"
+}
+
+##########################################################################
+#
+# dprint: Print debug messages, simple function
+#
+# Argument $1: String to be output
+#
+##########################################################################
+dprint()
+{
+    if [ "$DEBUG" == "YES" ]; then
+       echo "${0##*/}: $1"  1>&2 
+    fi
+}
+
+##########################################################################
+# decode64
+##########################################################################
+decode64()
+{
+	if echo "$1" | grep -q "/"; then
+		echo "$1"
+	else
+		echo "$1" | base64 -d
+	fi
+}
+
+
+
+
+##########################################################################
+#
+# ldap_get_shares_details_of: Provides shares details
+#
+# Argument $1: Server
+# Argument $2: Sharename
+# Argument $3: user
+# 
+##########################################################################
+ldap_get_share_details_of() { 
+        ldapsearch -x -LLL "(&$UNIT_TAG_FILTER(cn=$1))" goExportEntry | fix_ldif | grep "^goExportEntry" | \
+		ldif_line_decode | sed 's/^goExportEntry: //g' | grep "^$2"
+}
+
+
+
+##########################################################################
+#
+# isAvailable: verifies that the server is available
+#
+# Argument $1: Servername
+#
+##########################################################################
+isAvailable()
+{
+	ip=$(ldapsearch -x -LLL "(&(cn=$1)$UNIT_TAG_FILTER)" ipHostNumber | grep "^ipHostNumber" | sed 's/^ipHostNumber: //g')
+
+	if [ -n "$ip" ]; then
+        	$FPING -t 250 -q "$ip" 2> /dev/null
+        	result=$?
+        	if [ $result = "0" ]; then
+          		echo "1"
+        	else
+          		echo "0"
+        	fi
+	else
+        	$FPING -t 250 -q "$1" 2> /dev/null
+        	result=$?
+        	if [ $result = "0" ]; then
+          		echo "1"
+        	else
+          		echo "0"
+        	fi
+	fi
+
+}
+
+##########################################################################
+#
+# mountShare: connects to a share
+#
+# Argument $1: fstype (samba/NCP)
+# Argument $2: File with credentials
+# Argument $3: SUDO_USER 
+# Argument $4: server
+# Argument $5: share/volume
+# Argument $6: options
+# Argument $7: mountpoint
+# Argument $8: is_profile
+# Argument $9: charset/codepage, e.g. cp850
+# Argument ${10}: servername (if different from the DNS at Novell server)
+# Argument ${11}: symlinklevel
+#
+##########################################################################
+mountShare()
+{
+    result=0
+
+    if [ "$8" = "1" ]; then
+       #
+       # mount as root Profile-drive 
+       #
+       MOUNT_UID=0
+       MOUNT_GID=0
+       MOUNT_POINT="/mnt/profiles/$SUDO_USER"
+       LINK_POINT=""
+    else
+       MOUNT_UID=$SUDO_UID
+       MOUNT_GID=$SUDO_GID
+       #MOUNT_POINT="$7"
+       MOUNT_POINT="/mnt/$SUDO_USER/$4/$5"
+       LINK_POINT="$7"
+    fi
+
+    linklevel=${11};
+
+    #
+    # creating mount point if necessary
+    #
+    if [ "$LINK_POINT" != "" ]; then
+    	if [ ! -d $(dirname "$LINK_POINT") ]; then
+		mkdir -p $(dirname "$LINK_POINT")
+    	fi
+    fi
+    if [ ! -d "$MOUNT_POINT" ]; then
+    	dprint "mkdir -p $MOUNT_POINT"
+	mkdir -p "$MOUNT_POINT"
+    fi
+
+    case "$1" in
+  	"samba") 
+	    dprint "mount -t smbfs -o ${6}credentials=XXXXXX,uid=$MOUNT_UID,gid=$MOUNT_GID,dmask=0750,ttl=10000,iocharset=utf8,codepage=$9 //$4/$5 $MOUNT_POINT"
+            mount -t smbfs -o ${6}credentials=$2,uid=$MOUNT_UID,gid=$MOUNT_GID,dmask=0750,ttl=10000,iocharset=utf8,codepage=$9 //$4/$5 $MOUNT_POINT 1>&2
+            result=$?
+	    ;;
+  	"CIFS") 
+            dprint "mount -t cifs -o ${6}credentials=XXXXXX,uid=$MOUNT_UID,gid=$MOUNT_GID,dir_mode=0750,iocharset=$9 //$4/$5 $MOUNT_POINT"
+            mount -t cifs -o ${6}credentials=$2,uid=$MOUNT_UID,gid=$MOUNT_GID,dir_mode=0750,iocharset=utf8 //$4/$5 $MOUNT_POINT 1>&2
+
+            result=$?
+	    ;;
+	"NCP")
+	    ncp_username=$(cat $2 | grep username | sed 's/^[ \t]*username[ \t]*=[ \t]*//' )    
+	    ncp_password=$(cat $2 | grep password | sed 's/^[ \t]*password[ \t]*=[ \t]*//' )    
+	    if [ -n "${10}" ]; then
+	    	ncp_server="-S ${10}"
+	    else
+	    	ncp_server="-S $4"
+	    fi
+	    dprint "ncpmount -A $4 -V $5 $ncp_server -u $MOUNT_UID -g $MOUNT_GID -U $ncp_username -P XXXXXX -N NFS -y utf8 -p $9 -m $MOUNT_POINT" 
+            ncpmount -A $4 -V $5 $ncp_server -u $MOUNT_UID -g $MOUNT_GID -U $ncp_username -P $ncp_password -N NFS -y utf8 -p $9 -m $MOUNT_POINT 1>&2
+	    result=$?
+	    ;;
+    esac
+
+    if [ "$result" != "0" ]; then
+	if echo -n "$LINK_POINT" | grep -q "^$HOME"; then 
+		dprint "Removing Mountpoint $LINK_POINT";
+		rm -f $LINK_POINT
+		DIRECTORY=$(dirname "$LINK_POINT")
+		while [ "$DIRECTORY" != "$HOME" ]; do
+			rmdir --ignore-fail-on-non-empty "$DIRECTORY"
+			DIRECTORY=$(dirname $DIRECTORY)
+		done
+	fi
+    else
+    	ln -s "$MOUNT_POINT" "$LINK_POINT"
+	if echo -n "$LINK_POINT" | grep -q "^$HOME"; then 
+		dprint "Fixing permissions for $LINK_POINT";
+		chown ${MOUNT_UID}.${MOUNT_GID} "$MOUNT_POINT"
+		chmod 755 "$MOUNT_POINT"
+		DIRECTORY=$(dirname "$LINK_POINT")
+		while [ "$DIRECTORY" != "$HOME" ]; do
+			chown ${MOUNT_UID}.${MOUNT_GID} "$DIRECTORY"
+			chmod 555 "$DIRECTORY"
+			DIRECTORY=$(dirname "$DIRECTORY")
+		done
+	else
+		chown ${MOUNT_UID}.${MOUNT_GID} "$MOUNT_POINT"
+	fi
+    fi
+
+    echo -n "$result"
+}
+
+
+##########################################################################
+##########################################################################
+##  MAIN ROUTINE
+##########################################################################
+##########################################################################
+
+LANG=de_DE.UTF-8
+password_changed=0
+
+export HOME=$(ldap_get_home_of $SUDO_USER)
+
+dprint "UNIT_TAG_FILTER=$UNIT_TAG_FILTER"
+dprint "USER=$USER"
+dprint "DISPLAY=$DISPLAY"
+
+if [ -n $HOME ]; then
+
+	#
+	# Clean-Up
+	#
+	rm -f $HOME/.credentials.*
+
+	# Fix /var/run/pw/$SUDO_USER
+	sed -i -e 's/ = /=/g' /var/run/pw/$SUDO_USER
+
+	USER_SHARES=$(ldap_get_user_shares_of $SUDO_USER)
+	SHARES=$(ldap_get_shares_of $SUDO_USER)
+	PROFILES=$(ldap_get_profileserver_of $SUDO_USER)
+
+	echo
+	echo "USER_SHARES"
+	for line in $USER_SHARES; do echo $line; done
+	echo "SHARES"
+	for line in $SHARES; do echo $line; done
+	echo
+	
+	#
+	# Check whether more than one profile assigned -> Error
+	#
+	num_profiles=`echo "$PROFILES" | wc -l`
+	
+	if [ $num_profiles -gt 1 ]; then
+		Xdialog --msgbox "Your user account is assigned to multiple profiles ! \nPlease contact your administrator." 15 60 
+		PROFILES=""
+	fi
+	
+	#
+	# All Shares (including profile) are connected in the following
+	#
+	SHARES="$SHARES $PROFILES"
+
+	dprint "shares=$SHARES"
+
+	#
+	# Array for different share passwords
+	#
+	sharepass_index=0
+	declare -a SHAREPASS
+	
+	#
+	# Clean up
+	#
+	rm -f $HOME/.pam_mount.conf
+	
+	for share in $SHARES; do
+		dprint "Share: $share"
+		
+		is_profile=0
+	
+		# First of all static values
+		server=$(echo $share | cut -d'|' -f1)
+		shareid=$(echo $share | cut -d'|' -f2)
+		sharecredential=$(echo $share | cut -d'|' -f4)
+		mountuser=$(echo $share | cut -d'|' -f5)
+		symlinklevel=$(echo $share | cut -d'|' -f6)
+
+		# checking syntax of symlinklevel
+		if echo "$symlinklever" | grep -q -v "^[0-2]$"; then
+			symlinklevel=0
+		fi
+
+		# Now replace the variables
+		mountpoint=$(decode64 $(echo $share | cut -d'|' -f3))
+		
+		echo "$share" | grep -q '^!'
+		if [ $? -eq 0 ]; then
+			dprint "This is no real share. Decrypting Credentials..."
+			dprint "share='$share'"
+			dprint "sharecredential='XXXXXX'"
+		
+			server=$(echo $server | sed 's/^!//' )
+		
+			echo "$sharecredential" | base64 -d > $HOME/.credentials.ssl.$server.$shareid
+			continue
+		fi
+
+		dprint "Server: $server"
+		dprint "Shareid: $shareid"
+		dprint "Mountpoint: $mountpoint"
+		dprint "Mountuser: '$3'"
+
+		#
+		# LDAP details of the share
+		#
+		details=$(ldap_get_share_details_of $server $shareid $SUDO_USER)
+		
+		dprint "Share:  $details"
+		fstype=$(echo $details | cut -d'|' -f3)
+		charset=$(echo $details | cut -d'|' -f4)
+		sharename=$(echo $details | cut -d'|' -f5)
+		options=$(echo $details | cut -d'|' -f6)
+		volume=$(echo $details | cut -d'|' -f7)
+
+		dprint "Fstype: $fstype"
+		dprint "Charset: $charset"
+		dprint "sharename: $sharename"
+		dprint "options: '$options'"
+		dprint "volume: '$volume'"
+		
+		if [ -n "$options" ]; then
+			options="$options,"
+		fi
+		
+		#
+		# check whether the server is available ...
+		#
+		if [ $(isAvailable "$server") = "0" ]; then
+			Xdialog --msgbox "The connection of drive \n\n//$server/$sharename\n\n failed. \ n \ nThe server is not reachable!" 15 60
+			continue    
+		fi
+		
+		#
+		# Network drive is the drive profile ?
+		#
+		if [ "$share" == "$PROFILES" ]; then
+			dprint "Network drive //$server/$shareid is the profile drive."
+       			mountpoint="/mnt/profiles/$SUDO_USER"
+			realmountpoint="$mountpoint"
+			is_profile=1
+		else
+			realmountpoint="/mnt/$SUDO_USER/$server/$sharename"
+		fi
+		
+		#
+		# Drive is already mounted?
+		#
+		grep -q "$realmountpoint" /proc/mounts
+		if [ $? -eq 0 ]; then
+			dprint "Network drive already connected ..."
+			continue;
+		fi
+		
+		# 
+		# Username and Password Read (libpamstorepw)
+		# 
+		pam_username=`grep "username" /var/run/pw/$SUDO_USER | cut -d'=' -f2`
+		pam_password=`grep "password" /var/run/pw/$SUDO_USER | cut -d'=' -f2`
+		
+		#
+		# If LDAP credentials exist, network drive with this mount
+		#
+		if [ -s $HOME/.credentials.ssl.$server.$shareid ]; then
+			dprint "trying to mount //$server/$sharename with LDAP credentials ..."
+		
+			echo "$pam_password" | openssl enc -pass stdin -d -aes256 -in $HOME/.credentials.ssl.$server.$shareid -out $HOME/.credentials.$server.$shareid
+
+			# Now replace the variables
+			mountuser=$(cat $HOME/.credentials.$server.$shareid | grep username | sed 's/^[ \t]*username[ \t]*=[ \t]*//' )
+			mountpoint=$(decode64 $(echo $share | cut -d'|' -f3 )|subst)
+			sharename=$(echo $details | cut -d'|' -f5 | subst)
+			if [ -z "$mountpoint" ]; then
+				mountpoint="undefined"
+			fi
+
+			dprint "mountShare $fstype $HOME/.credentials.$server.$shareid $SUDO_USER $server $sharename $options $mountpoint $is_profile $charset $volume $symlinklevel"
+			result=$(mountShare $fstype $HOME/.credentials.$server.$shareid $SUDO_USER $server $sharename "$options" $mountpoint $is_profile $charset "$volume" $symlinklevel)   
+		
+			if [ "$result" = "0" ]; then
+				dprint "Mounting //$server/$sharename successfully with LDAP credentials!"
+				ldap_credential=$(cat $HOME/.credentials.ssl.$server.$shareid | base64 | sed "s/^/ /g")
+				rm -f $HOME/.credentials.$server.$shareid
+
+				#
+				# Store share and credentials in an array
+				#
+				found=0
+				for ((i=0; i<$sharepass_index; i++)); do
+					if [ "${SHAREPASS[${i}]%||*}" = "gotoShare: !$server|$shareid" ]; then
+						SHAREPASS[$i]=`echo -e "gotoShare: !$server|$shareid||\n$ldap_credential"`
+						found=1
+					fi
+				done
+				if [ $found -eq 0 ]; then
+					SHAREPASS[$sharepass_index]=`echo -e "gotoShare: !$server|$shareid||\n$ldap_credential"`
+					sharepass_index=$(($sharepass_index + 1))
+				fi
+		
+				continue
+			else
+				dprint "Mounting //$server/$sharename failed with LDAP credentials!"
+				rm -f $HOME/.credentials.ssl.$server.$shareid
+				rm -f $HOME/.credentials.$server.$shareid
+			fi
+		fi
+
+		# Now replace the variables
+		mountpoint=$(decode64 $(echo $share | cut -d'|' -f3 )|subst)
+		sharename=$(echo $details | cut -d'|' -f5 | subst)
+		if [ -z "$mountpoint" ]; then
+			mountpoint="undefined"
+		fi
+		
+		#
+		# try to mount share with PAM password if mountuser is "%u" or "$SUDO_USER"
+		#
+		mountuser=$(echo $share | cut -d'|' -f5 | subst)
+		if [ "$is_profile" = "1" -o "$mountuser" = "$SUDO_USER" ]; then
+			dprint "trying to mount //$server/$shareid with PAM-Credentials ..."
+			dprint "mountShare $fstype /var/run/pw/$SUDO_USER $SUDO_USER $server $sharename $options $mountpoint $is_profile $charset $volume $symlinklevel"
+	
+			result=$(mountShare $fstype /var/run/pw/$SUDO_USER $SUDO_USER $server $sharename "$options" $mountpoint $is_profile $charset "$volume" $symlinklevel)   
+			
+			if [ "$result" = "0" ]; then
+				dprint "Mounting of //$server/$shareid successfully with PAM credentials!"
+
+				continue
+			else
+				dprint "Muonting of  //$server/$shareid failed with PAM-Credentials!"
+			fi  
+		fi
+
+		#
+		# Users ask for new credentials ...
+		#
+		mountfailed=1
+		while [ $mountfailed -eq 1 ]; do 
+			#
+			# Inform users that login failed ...
+			#
+			mountuser=$(echo $share | cut -d'|' -f5 | subst)
+			if [ -z "$mountuser" ]; then
+				mountuser=$SUDO_USER
+			fi
+
+			sharename=$(echo $details | cut -d'|' -f5 )
+
+			loginpassword=$(pwdialog "The mounting of the share //$server/$sharename failed.<br><br>Please enter your username / password combination and try again." "$mountuser")
+			if [ $? = 0 ]; then
+				dprint "loginpassword=XXXXXXXX"
+				login=$(echo "$loginpassword" | cut -d'/' -f1)
+				password=$(echo "$loginpassword" | cut -d'/' -f2)
+				dprint "login for //$server/$shareid : '$login'"
+				dprint "Password for //$server/$shareid : XXXXXXXX" 
+			else  
+				dprint "Login / password entry for //$server/$sharename aborted by user ..."
+				if [ -d "$mountpoint" ]; then
+					rmdir "$mountpoint"
+				fi
+				mountfailed=0
+				continue
+			fi
+			
+			#
+			# Credentials (login / password) to write to file and encrypt
+			#
+			echo "username=$login" > $HOME/.credentials.$server.$shareid
+			echo "password=$password" >> $HOME/.credentials.$server.$shareid
+			echo "$pam_password" | openssl enc -pass stdin -e -aes256 -in $HOME/.credentials.$server.$shareid -out $HOME/.credentials.ssl.$server.$shareid
+
+
+			# Now replace the variables
+			mountuser=$login
+			mountpoint=$(decode64 $(echo $share | cut -d'|' -f3)|subst)
+			sharename=$(echo $details | cut -d'|' -f5 | subst)
+			if [ -z "$mountpoint" ]; then
+				mountpoint="undefined"
+			fi
+
+			dprint "Mountpoint: $mountpoint"
+			dprint "Sharename: $sharename"
+			
+			#
+			# Verbinden mit neuen Credentials versuchen...
+			#
+			dprint "mountShare $fstype $HOME/.credentials.$server.$shareid $SUDO_USER $server $sharename $options $mountpoint $is_profile $charset $volume $symlinklevel"
+
+			result=$(mountShare $fstype $HOME/.credentials.$server.$shareid $SUDO_USER $server $sharename "$options" $mountpoint $is_profile $charset "$volume" $symlinklevel)   
+			
+			if [ "$result" = "0" ]; then
+				dprint "Mounting of //$server/$shareid succeded with the entered credentials"
+				ldap_credential=$(cat $HOME/.credentials.ssl.$server.$shareid | base64 | sed "s/^/ /g")
+
+				#
+				# Store share data and Credentials in array
+				#
+				found=0
+				for ((i=0; i<$sharepass_index; i++)); do
+					if [ "${SHAREPASS[${i}]%||*}" = "gotoShare: !$server|$shareid" ]; then
+						SHAREPASS[$i]=`echo -e "gotoShare: !$server|$shareid||\n$ldap_credential"`
+						found=1
+					fi
+				done
+				if [ $found -eq 0 ]; then
+					SHAREPASS[$sharepass_index]=`echo -e "gotoShare: !$server|$shareid||\n$ldap_credential"`
+					sharepass_index=$(($sharepass_index + 1))
+				fi
+			
+				#
+				# Delete the temp. Credentials File
+				#
+				rm -f $HOME/.credentials.$server.$shareid
+				mountfailed=0
+				password_changed=1
+			else
+				dprint "Mount failed with new credentials: Return-Code=$result"
+			fi
+			
+			# next try ...
+		done 
+	
+	done
+
+	#
+	# Store the credentials in the LDAP
+	#
+	if [ "$password_changed" = "1" ]; then
+		CN=$(ldapsearch -x -LLL "(&$UNIT_TAG_FILTER(uid=$SUDO_USER))" dn | fix_ldif | sed -e 's/\\2C/\\,/g' -e 's/^dn: //')
+		dprint "CN of the user: $CN"
+	
+		if [ -n "$CN" ]; then
+			encCN=$(echo "$CN" | base64 | sed -e 's/^/ /g')
+			DN="dn::$encCN"
+	
+			dprint "DN of the user: $DN"
+			
+			TEMPFILE="/tmp/mount-share-$SUDO_USER.ldif"
+			rm -f $TEMPFILE
+			
+			echo "$DN" >> $TEMPFILE
+			echo "changetype: modify" >> $TEMPFILE
+			echo "replace: gotoShare" >> $TEMPFILE
+			for share in $USER_SHARES; do
+				echo "$share" | grep -q '^!'
+				if [ $? -ne 0 ]; then
+					echo "gotoShare: $share" >> $TEMPFILE
+				fi
+			done
+			for ((i=0; i<$sharepass_index; i++)); do
+				echo "${SHAREPASS[${i}]}" >> $TEMPFILE
+			done
+	
+			echo "-" >> $TEMPFILE
+			
+			#dprint "ldapmodify -x -C -B cred -D \"$CN\" -w \"$pam_password\" -f $TEMPFILE"
+			ldapmodify -x -C -B cred -D "$CN" -w "$pam_password" -f $TEMPFILE
+			
+			#rm -f $TEMPFILE
+		fi
+	fi
+	#
+	# Adjusting permissions
+	#
+	dprint "find $HOME -mount \( -user root -o -group root \) -print -exec chown ${SUDO_UID}.${SUDO_GID} {} \;"
+	find $HOME -mount \( -user root -o -group root \) -print -exec chown ${SUDO_UID}.${SUDO_GID} {} \;
+	
+	if [ -d /mnt/profiles ]; then
+		chmod 755 /mnt/profiles
+	fi
+
+
+	#
+	# Clean-Up
+	#
+	rm -f $HOME/.credentials.*
+else
+	# No Home -> no LDAP -> END
+	dprint "No Home -> no LDAP -> END"
+fi
+
+#
+# Cleanup of PAM credentials
+#
+#if [ -f "/var/run/pw/$SUDO_USER" ]; then 
+#	rm /var/run/pw/$SUDO_USER
+#fi
+

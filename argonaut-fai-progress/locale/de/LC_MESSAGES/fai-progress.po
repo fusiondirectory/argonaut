@@ -1,0 +1,117 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: fai-progress\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2008-06-20 12:39+0200\n"
+"PO-Revision-Date: 2008-06-20 12:45+0200\n"
+"Last-Translator: Cajus Pollmeier <pollmeier@gonicus.de>\n"
+"Language-Team:  <de@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.11.4\n"
+
+msgid "Adapting system and package configuration"
+msgstr "Passe System- und Paketkonfiguration an"
+
+msgid "Bootstrapping base system"
+msgstr "Erstelle Basis-System"
+
+msgid "Configuring %s..."
+msgstr "Konfiguriere %s..."
+
+msgid "Configuring base system"
+msgstr "Konfiguriere Basis-System"
+
+msgid "Creating filesystems"
+msgstr "Erstelle Dateisysteme"
+
+msgid "Defining installation classes"
+msgstr "Definiere Installationsklassen"
+
+msgid "Defining installation variables"
+msgstr "Definiere Installations-Variablen"
+
+msgid "Detecting hardware"
+msgstr "Erkenne Hardware"
+
+msgid "Extracting %s..."
+msgstr "Entpacke %s..."
+
+msgid "FAI Installation Progress"
+msgstr "FAI Installations-Fortschritt"
+
+msgid "FAI Update Progress"
+msgstr "FAI Aktualisierungs-Fortschritt"
+
+msgid "Gathering client information"
+msgstr "Stelle Client-Informationen zusammen"
+
+msgid "Gathering information for package lists"
+msgstr "Stelle Paketlisten zusammen"
+
+msgid "Hardware detection started"
+msgstr "Hardwareerkennung gestartet"
+
+msgid "Initializing FAI"
+msgstr "Initialisiere FAI"
+
+msgid "Inspecting harddisks"
+msgstr "Untersuche Festplatten"
+
+msgid "Installation finished"
+msgstr "Installation abgeschlossen"
+
+msgid "Inventarizing hardware information"
+msgstr "Inventarisiere Hardware"
+
+msgid "Mounting filesystems"
+msgstr "Binde Dateisysteme ein"
+
+msgid "No activation server available"
+msgstr "Kein Aktivierungs-Server verfügbar"
+
+msgid "Partitioning harddisk"
+msgstr "Partitioniere die Festplatte"
+
+msgid "Preparing network install"
+msgstr "Bereite Netzwerk-Installation vor"
+
+msgid "Progress of installation"
+msgstr "Installations-Fortschritt"
+
+msgid "Progress of update"
+msgstr "Aktualisierungs-Fortschritt"
+
+msgid "Retrieving %s..."
+msgstr "Empfange %s..."
+
+msgid "Retrieving initial client configuration"
+msgstr "Beziehe initiale Client-Konfiguration"
+
+msgid "Running script %s (%s)..."
+msgstr "Führe Skript %s (%s) aus..."
+
+msgid "Software installation"
+msgstr "Software-Installation"
+
+msgid "Starting installation"
+msgstr "Starte Installation"
+
+msgid "System activated - retrieving configuration"
+msgstr "System wurde aktiviert - beziehe Konfiguration"
+
+msgid "System is locked. Waiting for activation..."
+msgstr "Das System ist gesperrt. Warte auf Aktivierung..."
+
+msgid "Unpacking %s..."
+msgstr "Entpacke %s..."
+
+msgid "Updating base system"
+msgstr "Aktualisiere Basis-System"
+
+msgid "Validating %s..."
+msgstr "Überprüfe %s..."
+
+msgid "Waiting for the system to be activated"
+msgstr "Warte auf Aktivierung des Systems"

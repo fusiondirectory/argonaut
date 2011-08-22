@@ -1,0 +1,100 @@
+#!/bin/sh
+# Copyright (C) 2005  Holger Burbach <holger.burbach@gonicus.de>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+##########################################################################
+
+[ -f /etc/ldap/ldap-shell.conf ] && . /etc/ldap/ldap-shell.conf
+. /usr/lib/argonaut/argonaut-support.lib
+. /etc/argonaut/argonaut-agent.conf
+
+##########################################################################
+##########################################################################
+##########################################################################
+
+DEBUG=YES
+LANG=de_DE
+USERID=$SUDO_USER
+HOME=$(ldap_get_home_of $USERID)
+USEPROFILE=$(ldap_user_has_profile $SUDO_USER && echo true)
+
+if [ -z $USEPROFILE ]; then
+	echo "Variable $USEPROFILE is empty - try to keep working ..."
+fi
+
+if [ -z $HOME ]; then
+	echo "Variable $HOME is not set, umount-shares will be canceled."
+	cat /proc/mounts
+	exit 1
+fi
+
+#
+# are still remaining /proc/mounts ?
+#
+
+LANG=C
+n=4
+
+while cat /proc/mounts | grep -q -e "$HOME" -e "/mnt/$USERID" -e "/mnt/profiles/$USERID"; do
+	cat /proc/mounts | grep -e "$HOME" -e "/mnt/$USERID" -e "/mnt/profiles/$USERID" | cut -d\  -f2| while read mount; do
+
+		dprint "Mount '$mount' verbunden... unmounting"
+
+		# Unmount drive - if it does not work, first making further
+		umount -f "$mount" || continue
+
+		# Shares in home directories located there, including path
+		# Delete - only if they are empty.
+		if echo "$mount" | grep -q -e "^$HOME" -e "^/mnt/$USERID" ; then
+			DIRECTORY="$mount"
+			while [ "$DIRECTORY" != "$HOME" -a "$DIRECTORY" != "/mnt" ]; do
+				dprint "DIRECTORY=$DIRECTORY";
+				rmdir --ignore-fail-on-non-empty "$DIRECTORY"
+				DIRECTORY=$(dirname $DIRECTORY)
+			done
+		fi
+
+	done
+
+	# Short break, try again
+	sleep 1
+
+	# A maximum of three attempts
+	(( n-- )) || break
+
+done
+
+
+#
+# No caching -> Home Directory delete
+#
+if [ $n -ne 0 -a -n "$USEPROFILE" ]; then
+	if [ ! -e "$HOME/.profile_upload-failed" ]; then 
+		dprint "Profile upload was successful."
+		FLAGS=$(ldap_get_profilecaching_of $SUDO_USER)
+		if echo "$FLAGS" | grep -q "C"; then
+			dprint "Caching enabled (FLAGS='$FLAGS')"
+			dprint "Keeping Profile: $HOME"
+		else
+			dprint "Caching disabled (FLAGS='$FLAGS')"
+			dprint "Deleting Profile: rm -rf $HOME"
+			rm -rf $HOME
+		fi
+	else
+		dprint "Profiles failed upload => profile is not deleted."
+	fi
+fi
+

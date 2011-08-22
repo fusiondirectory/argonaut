@@ -1,0 +1,58 @@
+#!/bin/sh 
+# This is the GOto xserver configuration script.
+
+. /usr/lib/argonaut/argonaut-support.lib
+
+# Read in what hwinfo/ldap has found for X
+[ -f /etc/sysconfig/argonaut ] && . /etc/sysconfig/argonaut
+
+# Some presets
+[ -z "$XKBVARIANT" ] && XKBVARIANT="nodeadkeys"
+[ -z "$XKBMODEL" ] && XKBMODEL="pc105"
+[ -z "$XKBLAYOUT" ] && XKBLAYOUT="de"
+[ -z "$XDRIVER" ] && XDRIVER="vesa"
+[ -z "$XCOLORDEPTH" ] && XCOLORDEPTH=16
+
+# Preset automatic monitor detection
+MONITOR='
+Section "Monitor"
+        Identifier   "Monitor0"
+        ModelName    "Automatic X11 detection"
+EndSection
+'
+
+# Just skip, if we've a couple of values
+if echo "$XHSYNC" | grep -q '-'; then
+MONITOR="
+Section \"Monitor\"
+        Identifier   \"Monitor0\"
+        ModelName    \"Configured Monitor\"
+        HorizSync    $XHSYNC
+        VertRefresh  $XVSYNC
+EndSection
+"
+fi
+
+# Generate modes line
+if [ -z $XRESOLUTION ]; then
+  mode="1024x768"
+else
+  mode="$XRESOLUTION"
+fi
+
+modlst="1900x1200 1600x1200 1280x1024 1024x768 800x600 640x480"
+MODES=$(echo "\"$mode ${modlst##* $mode}\"" | sed 's/  */\" \"/g')
+
+# Modify xorg.conf now
+echo "$MONITOR" > /tmp/monitor
+
+# Build sed expression
+expression=""
+for val in MODES XKBMODEL XKBLAYOUT XKBVARIANT XMOUSEPORT XMOUSETYPE XDRIVER XCOLORDEPTH; do
+	expression="s|@@$val@@|\$$val|g;$expression"
+done
+eval "exprs=\"$expression\""
+
+sed -e '/@@MONITOR@@/r '"/tmp/monitor" -e 's|@@MONITOR@@||g;' -e "$exprs" /etc/X11/xorg.conf.in > /etc/X11/xorg.conf
+
+rm -f /tmp/monitor

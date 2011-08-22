@@ -1,0 +1,164 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2008-06-20 12:39+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: fai-progress:139
+msgid "FAI Update Progress"
+msgstr ""
+
+#: fai-progress:140
+msgid "Progress of update"
+msgstr ""
+
+#: fai-progress:142
+msgid "FAI Installation Progress"
+msgstr ""
+
+#: fai-progress:143
+msgid "Progress of installation"
+msgstr ""
+
+#: fai-progress:147 Utils.pm:41
+msgid "Initializing FAI"
+msgstr ""
+
+#: fai-progress:190
+msgid "Hardware detection started"
+msgstr ""
+
+#: fai-progress:206
+msgid "System is locked. Waiting for activation..."
+msgstr ""
+
+#: Utils.pm:64
+msgid "Retrieving initial client configuration"
+msgstr ""
+
+#: Utils.pm:67
+msgid "Gathering client information"
+msgstr ""
+
+#: Utils.pm:70
+msgid "Defining installation classes"
+msgstr ""
+
+#: Utils.pm:73
+msgid "Defining installation variables"
+msgstr ""
+
+#: Utils.pm:76 Utils.pm:79
+msgid "Starting installation"
+msgstr ""
+
+#: Utils.pm:82
+msgid "Inspecting harddisks"
+msgstr ""
+
+#: Utils.pm:85
+msgid "Partitioning harddisk"
+msgstr ""
+
+#: Utils.pm:88
+msgid "Creating filesystems"
+msgstr ""
+
+#: Utils.pm:91
+msgid "Mounting filesystems"
+msgstr ""
+
+#: Utils.pm:96 Utils.pm:102 Utils.pm:106 Utils.pm:110 Utils.pm:114
+#: Utils.pm:118 Utils.pm:122
+msgid "Bootstrapping base system"
+msgstr ""
+
+#: Utils.pm:106 Utils.pm:143
+#, perl-format
+msgid "Retrieving %s..."
+msgstr ""
+
+#: Utils.pm:110 Utils.pm:147
+#, perl-format
+msgid "Extracting %s..."
+msgstr ""
+
+#: Utils.pm:114
+#, perl-format
+msgid "Validating %s..."
+msgstr ""
+
+#: Utils.pm:118
+#, perl-format
+msgid "Unpacking %s..."
+msgstr ""
+
+#: Utils.pm:122 Utils.pm:151
+#, perl-format
+msgid "Configuring %s..."
+msgstr ""
+
+#: Utils.pm:126
+msgid "Configuring base system"
+msgstr ""
+
+#: Utils.pm:129
+msgid "Preparing network install"
+msgstr ""
+
+#: Utils.pm:132
+msgid "Updating base system"
+msgstr ""
+
+#: Utils.pm:136
+msgid "Gathering information for package lists"
+msgstr ""
+
+#: Utils.pm:143 Utils.pm:147 Utils.pm:151 Utils.pm:155
+msgid "Software installation"
+msgstr ""
+
+#: Utils.pm:155
+msgid "Adapting system and package configuration"
+msgstr ""
+
+#: Utils.pm:162
+#, perl-format
+msgid "Running script %s (%s)..."
+msgstr ""
+
+#: Utils.pm:166
+msgid "Installation finished"
+msgstr ""
+
+#: Utils.pm:184
+msgid "No activation server available"
+msgstr ""
+
+#: Utils.pm:191
+msgid "Detecting hardware"
+msgstr ""
+
+#: Utils.pm:194 Utils.pm:200
+msgid "Waiting for the system to be activated"
+msgstr ""
+
+#: Utils.pm:196
+msgid "Inventarizing hardware information"
+msgstr ""
+
+#: Utils.pm:204
+msgid "System activated - retrieving configuration"
+msgstr ""

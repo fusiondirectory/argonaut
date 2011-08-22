@@ -1,0 +1,133 @@
+#!/bin/sh 
+# GONICUS /usr/lib/goto/update-mimelinks, Terminal Concept, GOto/GOslean
+#
+# (C) 2001-2006 Cajus Pollmeier <cajus.pollmeier@gonicus.de>
+#
+# Generate mimelinks for KDE, GNOME and mime.types aware applications.
+# The script only works on the users side - i.e. applinks have to exist
+# before beeing modified, no new entries are created/copied from system
+# directories.
+CONFIG=/etc/argonaut/mime-defs
+
+dprint() { true; }
+
+# Check for parameters
+#if [ $# -ne 0 ]; then
+#	if echo $* | grep -q debug; then
+#		dprint() { echo $*;}
+#	fi
+#fi
+
+if [ -f $CONFIG ]; then
+	# Create temporary file
+	TMP="/tmp/mimelink-tmp-$USER"
+	
+	cd ~/.local/share/applications/
+	for link in `ls`; do
+	cp $link $TMP
+	sed "/^MimeType=/d" $TMP > $link
+	done
+	rm -f $HOME/.kde/share/config/profilerc
+	rm -f $HOME/.mailcap
+	
+	
+	# Read definition list
+	while IFS=":" read mimetype applications; do
+		echo "Mimetype $mimetype";
+		IFS="	 
+	"
+	
+		# Copy global files
+		#kdefiles=`grep -sril "$mimetype" /usr/share/applications/kde/* `
+		#for file in $kdefiles; do
+		#  kdelink=`basename $file`
+		#  if [ ! -e "$HOME/.local/share/applications/$kdelink" ]; then
+		#    echo "  Copying global $kdelink"
+		#    mkdir -p $HOME/.local/share/applications/kde/
+		#    cp "/usr/share/applications/kde/$kdelink" $HOME/.local/share/applications/kde/
+		#  fi
+		#done
+	
+		# Find and remove affected files for KDE
+		#kdefiles=`grep -sril "$mimetype" $HOME/.kde/share/applnk/* $HOME/.local/share/applications/* `
+		#sm=`echo $mimetype|sed 's!/!\\\\/!g'`
+		#grep -sril "$mimetype" $HOME/.kde/share/applnk/* $HOME/.local/share/applications/* | while read file; do
+		#	echo "  removing mimetype from $file"
+		#	sed "/^MimeType=/ s/$sm;//g" "$file" | sed "/^MimeType=/ s/$sm$//g" > $TMP
+		#	sed "/^MimeType=;*$/d" $TMP > "$file"
+		#done
+		#sed "/ *\[$sm [^]]*\] *$/,/^$/ d" $HOME/.kde/share/config/profilerc > $TMP
+		#if [ -f "$TMP" ]; then
+		#	cp -f $TMP $HOME/.kde/share/config/profilerc
+		#else
+		#	touch $HOME/.kde/share/config/profilerc
+		#fi
+	
+		# Find and remove affected files for Ooo/Mozilla
+		#echo "  removing mailtype from mailcap"
+		#sed "/^$sm;/d" $HOME/.mailcap > $TMP
+		#if [ -f "$TMP" ]; then
+		#	cp -f $TMP $HOME/.mailcap
+		#else
+		#	touch $HOME/.mailcap
+		#fi
+	
+		# Loop through defined applications
+		let priority=1
+		let ipriority=`echo $applications | sed 's/[^;]//g' | wc -c`
+		echo "$applications;" | while read -d\; app; do
+			echo "  adding mimetype $mimetype (priority #$priority)"
+	
+			# Handle KDE applications: modify applink and profilerc
+			files=`grep -r "^Exec=.*$app" $HOME/.local/share/applications/ 2>/dev/null | cut -d: -f1; `
+			IFS="	
+	"
+			for file in $files; do
+				IFS="	 
+	"
+				if [ -n "$file" ]; then
+					echo "    patching $file"
+					if grep -q "^MimeType" "$file"; then
+					echo -e "/^MimeType=\na\n;$mimetype\n.\n-\nj\nwq\n\n" | ed "$file" &> /dev/null
+					else
+					echo "MimeType=" >> "$file"
+					echo -e "/^MimeType=\na\n$mimetype\n.\n-\nj\nwq\n\n" | ed "$file" &> /dev/null
+					fi
+				fi
+				IFS="	
+	"
+			done
+				IFS=" 	
+	"
+			if [ "$applications" != "$app" ]; then
+				echo "    patching $HOME/.kde/share/config/profilerc"
+				cat <<-EOF >> $HOME/.kde/share/config/profilerc
+				
+				[$mimetype - $priority]
+				AllowAsDefault=true
+				Application=kde-${app##*/}.desktop
+				GenericServiceType=Application
+				Preference=$ipriority
+				ServiceType=$mimetype
+				EOF
+	
+			fi
+	
+			# Handle Ooo/Mozilla/Standard applications: modify mailcap
+			# Priorities are ignored currently.
+			echo "    patching mailcap file"
+			echo "$mimetype;$app '%s'" >> $HOME/.mailcap
+	
+			# Increase priority, just in case there's more than
+			# one program listed.
+			let priority++
+			let ipriority--
+		done
+	
+	done < $CONFIG
+	
+	rm -f $TMP
+	
+	
+	kbuildsycoca --noincremental 2> /dev/null
+fi

@@ -1,0 +1,250 @@
+#!/usr/bin/perl -l -s
+# Copyright (c) 2008 Landeshauptstadt München
+#
+# Author: Matthias S. Benkmann
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use strict;
+use warnings;
+
+use lib ("/usr/lib/argonaut");
+use Net::LDAP;
+use Net::LDAP::Util qw(escape_filter_value ldap_explode_dn);
+use Argonaut::LDAP qw(ldap_get_object printEntry printAttribute);
+use Argonaut::Common qw(:ldap);
+
+{ # main()
+our ($user, $timeout, $filter, $debug, $object, $enctrigger, $format, 
+$subquery, $sublevel, $subconflict, $sort);
+
+my $USAGE = "USAGE: ldap_get_object
+-debug 
+-user=<user> -object=<objectClass>/<cn/ou> -filter=<filter> 
+-timeout=<seconds>
+-subquery=<filter> -sublevel=<level> -subconflict=<level>
+-enctrigger=<regex> -format=a:v|v 
+-sort=alpha|precedence
+attributeRegex [attributeRegex ...]
+
+Primary usage:
+  Searches the LDAP directory for information about the user identified by 
+  <user> (defaults to the environment variable \$USER). 
+  Information may come from the user's own node,
+  a posix group the user belongs to, an object group the user belongs to
+  or an object group that includes a posix group that the user belongs to.
+
+  Each attributeRegex is a regular expression that selects all attributes with
+  matching names for output. The 1st character of attributeRegex determines what
+  happens if different nodes (e.g. the user's posixAccount and a posixGroup)
+  provide an attribute with the same name. 
+  If attributeRegex starts with \@, then the attributes will be merged 
+  (i.e. the result will include all values).
+  If attributeRegex does NOT start with \@, then an attribute from the user's
+  posixAccount node beats a posix group, which beats an object group that
+  includes the user which beats an object group that contains a posix group.
+  This determination is done individually for each of the selected attributes,
+  so the output of this program may be a mixture of information from
+  different sources. 
+  If 2 sources with the same precedence (e.g. 2 posix groups) provide an attribute
+  of the same name, selected by an attributeRegex that doesn't start with \@,
+  a WARNING is signalled and the program picks one of the conflicting
+  attributes.
+  If multiple attributeRegexes match the same attribute, the 1st matching
+  attributeRegex determines conflict resolution.
+  If no attributeRegex is specified, all attributes will be merged and output.
+  
+Alternative usage:
+  Instead of searching for user information, you can pass 
+  -object=<objectClass>/<cn/ou> and the program will give information on the object
+  with the given object class and the given CN or OU (if no object with the 
+  CN exists).
+
+attributeRegexes are always matched against the complete attribute name, i.e.
+an attributeRegex \"name\" will NOT match an attribute \"surname\".
+Matching is always performed case-insensitive.
+
+If there is more than 1 posixAccount node for the given user id, the program 
+will exit with an error.
+
+If -timeout is passed, LDAP requests will use a timeout of <seconds> seconds.
+Note that this does *not* mean that ldap_get_object will finish
+within this time limit, since several LDAP requests may be involved.
+Default timeout is 10s.
+
+-filter is an LDAP-Expression that will be ANDed with all user/object/group
+searches done by this program (use this to select by gosaUnitTag).
+
+The -subquery parameter allows treating the contents of subtrees of 
+the user/object/group nodes as if they were attributes of the node
+itself. The names of these pseudo-attributes  have the form
+\"foo/bar/attr\". The <filter> (e.g. \"objectClass=foo\") 
+selects the sub-tree nodes whose attributes should be pulled in.
+
+  -sublevel specifies the maximum number of slashes the pseudo-attribute
+  names will contain. If the complete name of a pseudo-attribute 
+  has more slashes than <level> the name will be shortened to the longest
+  suffix that contains <level> slashes. Specifying -sublevel=0 will
+  effectively merge all subquery nodes with the user/object/group node
+  so that in the end result their attributes are indistinguishable from
+  those of the user/object/group node. Default -sublevel is 9999.
+  Note: attributeRegex matching is performed on the full name with 
+  all slashes.
+
+  -subconflict determines when 2 pseudo-attributes are treated as being
+  in conflict with each other. 2 pseudo-attributes are treated as
+  conflicting if the results of removing the shortest suffixes containing
+  <level> slashes from their names (shortened according to -sublevel) 
+  are identical. E.g. with -subconflict=0
+  the pseudo-attributes \"foo/bar\" and \"foo/bla\" are not conflicting,
+  whereas with -subconflict=1 they are. Default -subconflict is 1.
+
+If -enctrigger is set, all DNs and attribute values will be tested against
+the given <regex>. Whenever a value matches the <regex> it will be output
+base64 encoded. Matching is performed case-sensitive and unless ^ and \$ are
+used in the regex, matching substrings are enough to trigger encoding.
+If no -enctrigger is specified, the default \"[\\x00-\\x1f]\" is used.
+If you pass -enctrigger=none, encoding will be completely disabled.
+
+-format specifies the output format. Format \"a:v\" means to print 
+\"attributeName: value\" pairs. Format \"v\" means to print the values only.
+
+-sort allows you to change the order in which attributes are printed. With
+-sort=alpha (default) all attributes are printed in alphabetical order of the
+attribute names. With -sort=precedence attributes from sources with lower 
+precedence will be printed before those with higher precedence. 
+Within each group, alphabetical order is used. 
+The exception is the DN which is always first (if selected at all).
+-sort=precedence does not affect attributes
+that are not merged (because only one value is printed for those).
+If an attribute has multiple values (from the same source), they will all be
+output in alphabetical order. Unless -sort=precedence is selected, 
+duplicate values will be printed only once.
+
+";
+
+if (!defined($user) and !defined($object) and !defined($enctrigger) and !defined($timeout) 
+and !defined($filter) and !defined($sublevel) and !defined($subconflict) and
+!defined($subquery) and (scalar(@ARGV) == 0))
+{
+  print $USAGE;
+  exit 1;
+}
+
+if (not defined($user) and not defined($object))
+{
+  $user = $ENV{"USER"};
+  (defined($user) and $user ne "") or error("Please pass -user=... or -object=... or set \$USER to a non-empty string");
+}
+
+defined($enctrigger) or $enctrigger="[\x00-\x1f]"; #"
+$enctrigger eq "none" and $enctrigger="^\x00\$";
+
+if (defined($format))
+{
+  if ($format ne "a:v" and $format ne "v")
+  {
+    error("Illegal -format: $format");
+  }
+}
+else
+{
+  $format="a:v";
+}
+
+my $mergeResults = 1; 
+if (defined($sort) and not $sort eq "alpha")
+{
+  if ($sort eq "precedence")
+  {
+    $mergeResults = 0;
+  }
+  else
+  {
+    error("Illegal -sort: $sort");
+  }
+}
+
+my ($objectClass, $cn);
+
+if (defined($object))
+{
+  ($objectClass, $cn) = ($object =~ m(^([^/]*)/(.*)));
+  if (!defined($objectClass) or !defined($cn))
+  {
+    error("Illegal -object= parameter");
+  }
+}
+
+my @attributeSelectionRegexes = @ARGV;
+scalar(@attributeSelectionRegexes) == 0 and @attributeSelectionRegexes = ("\@.*");
+
+my ($ldapbase,$ldapuris) = goto_ldap_parse_config();
+ # Note: $ldapuris is a reference to an array of URIs
+my $ldap = Net::LDAP->new( $ldapuris, timeout => $timeout ) or error("Could not connect to LDAP server!");
+my $results = $ldap->bind() ;  # anonymous bind
+
+my @results = ldap_get_object(ldap => $ldap,
+                                basedn => $ldapbase,
+                                user => $user,
+                                timeout => $timeout,
+                                filter => $filter,
+                                debug => $debug,
+                                objectClass => $objectClass,
+                                cnou => $cn,
+                                subquery => $subquery,
+                                sublevel => $sublevel,
+                                subconflict => $subconflict,
+                                attributeSelectionRegexes => \@attributeSelectionRegexes,
+                                enctrigger => $enctrigger,
+                                format => $format,
+                                dups => 1,  # duplicate removal is done by printEntry()
+                                mergeResults => $mergeResults
+                );
+
+@results or exit 1;
+
+defined($debug) and print "x:========================== R E S U L T ==========================";
+
+ # print DN if selected by a regex
+foreach my $rx (@attributeSelectionRegexes)
+{
+  my $regex = $rx; # copy so that we don't change the original value
+  if (substr($regex, 0, 1) eq "\@") { $regex = substr($regex,1); }
+  $regex = "^" . $regex . "\$"; # always match complete string
+  if ("dn" =~ m/$regex/) 
+  {
+    my $dn = $results[0]->dn;
+    defined($dn) or $dn = "<undefined>";
+    printAttribute("dn", [$dn], $enctrigger, $format);
+    last;
+  }
+}
+
+ # print the other attributes
+foreach my $entry (reverse @results)
+{
+  printEntry($entry, \@attributeSelectionRegexes, $enctrigger, $format, 1);
+}
+
+$ldap->unbind();
+} #main()
+
+sub error
+{
+  print STDERR "ERROR: ", @_;
+  exit 1
+}
+
+

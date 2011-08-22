@@ -1,0 +1,16 @@
+#!/bin/sh
+
+fai_running
+{
+  ps ax | grep "fai.*softupdate" | grep -v fai-softupdate | grep -vq "grep"
+  return $?
+}
+
+# Wait until FAI is ready
+while fai_running; do sleep 2; done
+
+# Call softupdate and notify users
+[ -e /usr/bin/goto-notify ] && goto-notify start-update
+fai -N softupdate
+[ -e /usr/bin/goto-notify ] && goto-notify stop-update
+

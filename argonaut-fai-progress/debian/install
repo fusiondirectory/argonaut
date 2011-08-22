@@ -1,0 +1,8 @@
+fai-progress				usr/bin
+locale/de/LC_MESSAGES/fai-progress.mo	usr/share/locale/de/LC_MESSAGES
+locale/fr/LC_MESSAGES/fai-progress.mo   usr/share/locale/fr/LC_MESSAGES
+logo_debian.png				usr/share/graphics
+warning_icon.png			usr/share/graphics
+note_icon.png				usr/share/graphics
+directfbrc				etc
+gtkrc					etc/gtk-2.0

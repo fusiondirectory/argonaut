@@ -1,0 +1,13 @@
+CONVERTED_USERNAME=`echo $USER | tr A-Z a-z`
+if [ "$USER" != "$CONVERTED_USERNAME" ] ; then
+        Xdialog --title _"Error - Your user name includes upper case characters!" --screen-center --msgbox\
+        _"Please use lowercase user names for login, only." 8 80
+        exit 1
+fi
+
+if [ "$(pgrep kdeinit -u $USER)" ] ; then
+        Xdialog --title _"Error - multiple logins!" --screen-center --msgbox\
+        "You're already logged into this workstation.\nMultiple logins are not allowed." 8 80
+        exit 1
+fi
+

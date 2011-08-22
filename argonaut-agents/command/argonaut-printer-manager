@@ -1,0 +1,441 @@
+#!/usr/bin/perl -w 
+#
+# Requires libsys-utmp-perl
+#
+
+use strict;
+use warnings;
+
+use lib "/usr/lib/argonaut";
+
+use POSIX;
+use Switch;
+use Net::LDAP;
+use Net::LDAP::Util qw(:escape);
+use MIME::Base64;
+use Getopt::Long;
+use File::Basename;
+use Sys::Utmp;
+use Argonaut::Common qw(:ldap :file :array);
+use Argonaut::LDAP qw(ldap_get_object);
+
+my $verbose = 0;
+my $apply_ldap = 0;
+my $retag_tree = 0;
+my $ppd_dir = '/var/cache/argonaut';
+my $ldap_conf = '/etc/ldap/ldap.conf';
+my $goto_conf = '/etc/cups/argonaut-printers.conf';
+my $entry;
+
+use vars qw/ %opt /;
+
+# Parse options and count multiple (allow '-vvv')
+Getopt::Long::Configure( 'bundling' );
+
+GetOptions( 'v|verbose+' => \$verbose,
+            'c|ldap-config' => \$ldap_conf,
+            'g|argonaut-printer-config' => \$goto_conf,
+            'p|ppd-cache' => \$ppd_dir,
+            'h|help' => \&usage )
+  or usage( 'Wrong parameters' );
+
+# Get interface or mac parameter
+my $net_interface = shift @ARGV;
+if( ! defined $net_interface ) {
+  print( "No interface or MAC specified - assuming 'eth0'...\n" );
+  $net_interface = 'eth0';
+}
+
+my $ws_mac;
+if( $net_interface =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i ) {
+  # We already have a MAC
+  $ws_mac = $net_interface;
+}
+else {
+  # Get interface MAC
+  $ws_mac = `/sbin/ifconfig | awk '/${net_interface}/{ print \$5 }'`;
+  chomp( $ws_mac );
+  usage( "No valid interface (${net_interface}) specified - got MAC: ${ws_mac}." )
+    if( ! ($ws_mac =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i) );
+}
+
+do_exit( "Download directory ($ppd_dir) does not exists! Aborting.\n" )
+  if( ! -d $ppd_dir );
+
+# Check if the CUPS server is installed
+do_exit( "No CUPS server installed\n" )
+  if( ! -f '/etc/init.d/cupsys' );
+
+#
+# Collect all valid users from utmp
+#
+my @users = ();
+
+my $utmp = Sys::Utmp->new();
+while( my $utent =  $utmp->getutent() ) {
+  if( $utent->user_process 
+    && ($utent->ut_line =~ m/^:[0-9]/) ) 
+  {
+    push( @users, $utent->ut_user );
+  }
+}
+$utmp->endutent;
+
+do_exit( "No valid user found in login DB (utmp)\n" )
+  if( 0 == scalar @users );
+
+print( 'Current user(s) with GUI: ' 
+  . join( ' ', @users ) . "\n" );
+
+
+# Read GOsa tag filter and ldap params from config
+my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
+my ($base,$ldapuris,$tag_filter) = ($ldapinfo->{"LDAP_BASE"}, 
+                                    $ldapinfo->{"LDAP_URIS"}, 
+                                    $ldapinfo->{"UNIT_TAG_FILTER"});
+
+print( "Administrative unit filter: '$tag_filter'\n" );
+
+do_exit( "Couldn't find LDAP base in config!" ) if( ! defined $base );
+do_exit( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
+
+my $ldap = Net::LDAP->new( $ldapuris ) or
+  do_exit( sprintf( "LDAP 'new' error: %s (%i)", $@, __LINE__ ) );
+my $mesg = $ldap->bind();
+do_exit( "LDAP bind error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
+  if( 0 != $mesg->code );
+
+
+print( "Searching LDAP for valid printers...\n" );
+
+ # Collect CNs of posixGroups and object groups (gosaGroupOfNames) to which the users belong
+ # directly or indirectly
+ # ATTENTION: At present also includes the CNs of the users, but we don't bother filtering
+ #            them out. If a group exists with the same name as the user, then the user
+ #            has a moral right to use printers from that group :-)
+my %groupCNs = (); # a hash to eliminate duplicates (possible if multiple users belong to the same group)
+foreach my $user (@users)
+{
+  my $result = ldap_get_object(ldap => $ldap,
+                                       basedn => $base,
+                                       user => $user,
+                                       filter => $tag_filter,
+                                       attributeSelectionRegexes => ['@cn'],
+                                       dups => 1,  # dups are not possible here
+                                       #mergeResults => 1  already implied by scalar context
+                       );
+  $result or do_exit( "LDAP search error\n" );
+  foreach my $cn ($result->get_value("cn"))
+  {
+    $groupCNs{$cn} = 1;
+  }
+}
+
+
+#
+# Build the complex query filter to find the valid printers
+# All parts will be or'ed
+#
+
+my $filter = '';
+
+# We search for local printers
+$filter = "(macAddress=$ws_mac)";
+
+# We search for user printers
+foreach my $user (@users) {
+  $filter .= "(gotoUserPrinter=$user)(gotoUserAdminPrinter=$user)";
+}
+
+# We search for group printers
+# ATTENTION! As mentioned further above, the CNs of the users themselves sneak in here.
+foreach my $group (keys %groupCNs)
+{
+  $filter .= "(gotoGroupPrinter=". escape_filter_value($group) . 
+       ")(gotoGroupAdminPrinter=". escape_filter_value($group) . ")";
+}
+
+# Get all printers
+$mesg = $ldap->search(
+  base => "$base",
+  filter => "(&(objectClass=gotoPrinter)(|${filter})$tag_filter)"
+  );
+do_exit( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
+  if( 0 != $mesg->code );
+
+my @ldap_printers = $mesg->entries();
+
+print( '  found ' . $mesg->count . ' printers:' );
+foreach $entry (@ldap_printers) {
+  print( ' ' . $entry->get_value( 'cn' ) );
+}
+print( "\n" );
+
+
+# Get configured CUPS printers
+print( "Configured CUPS printers:" );
+
+my @printers = get_cups_printers();
+if( scalar @printers ) {
+  foreach my $printer (@printers) {
+    print( " $printer" );
+  }
+}
+else { print( '(none)' ); }
+print( "\n" );
+
+
+# Now we check all found printers to find any changes...
+print( "(Re)configuring printers...\n" );
+
+# First clean all unused printers
+foreach my $cups_printer (@printers) {
+  my $found = 0;
+  foreach $entry (@ldap_printers) {
+    if( $entry->get_value( 'cn' ) eq $cups_printer ) {
+      $found = 1;
+      last;
+    }
+  }
+  if( ! $found && ($cups_printer !~ m/\//) ) {
+    print( "  - removing printer $cups_printer\n" );
+    system( "lpadmin -h localhost -x $cups_printer" );
+  }
+}
+
+# Do we need network support?
+my $listen_network = 0;
+
+# Remove old printers config
+unlink( $goto_conf ) if( -f $goto_conf );
+
+my $domainname;
+if( open (F,"dnsdomainname |")) { $domainname=<F>; close(F); }
+
+# Now add or modify printers
+foreach $entry (@ldap_printers) {
+  my $id = $entry->get_value( 'cn' );
+  my $pr_mac = $entry->get_value( 'macAddress' );
+  print( "  $id: " );
+
+  # Construct printer URI
+  my $printer_uri;
+  my $is_local = 0;
+
+  # Is this a local printer?
+  if( $ws_mac eq $pr_mac ) {
+    $printer_uri = $entry->get_value( 'labeledUri' );
+    $is_local = 1;
+    $listen_network = 1;
+  }
+  else { # Real or CUPS "local" network printer...
+    # Is the printer connected to an other workstation and handled by CUPS?
+    $mesg = $ldap->search(
+      base => "$base",
+      filter => "(&(objectClass=gotoWorkstation)(macAddress=${pr_mac})$tag_filter)",
+      attrs => [ 'cn', 'dn' ] );
+    do_exit( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
+      if( 0 != $mesg->code );
+
+    # If there is a workstation with the same MAC it's handled by CUPS
+    if( 0 == $mesg->count() ) {
+      $printer_uri = $entry->get_value( 'labeledUri' ); 
+    } elsif( 1 == $mesg->count() ) {
+      my $ws_id = (($mesg->entries())[0])->get_value( 'cn' );
+      $printer_uri = "ipp://$ws_id:631/printers/$id"; 
+    } else {
+      print( '  - error - multi workstations with MAC (' 
+           . $mesg->count() . ")\n"
+           . "     MAC: ${pr_mac}\n" );
+      foreach my $macs ($mesg->entries()) {
+        print( '          ' . $macs->dn() . "\n" );
+      }
+      next;
+    }
+  }
+
+  my $descr = $entry->get_value( 'description' );
+  $descr = '' if( ! defined $descr );
+  my $location = $entry->get_value( 'l' );
+  $location = '' if( ! defined $location );
+
+  my $ppd_uri = $entry->get_value( 'gotoPrinterPPD' );
+  my $ppd_file = $ppd_dir . '/' . basename( $ppd_uri );
+
+  # Download printer PPD
+  my $sys_error = 
+    system( "wget --proxy=off -N -t 1 -q -O '$ppd_file' '$ppd_uri'" );
+  if( $sys_error ) {
+    print( "  - error downloading '$ppd_uri'\n" );
+    unlink( $ppd_file ) if( -f "$ppd_file" );
+    next;
+  }
+
+  # Build access rule
+  my @access;
+
+  # add users
+  push( @access, $entry->get_value( 'gotoUserPrinter' ) )
+    if( scalar $entry->get_value( 'gotoUserPrinter' ) );
+
+  push( @access, $entry->get_value( 'gotoUserAdminPrinter' ) )
+    if( scalar $entry->get_value( 'gotoUserAdminPrinter' ) );
+
+  # add groups
+  push( @access, split( ',', '@' . join( ',@', $entry->get_value( 'gotoGroupPrinter' ) ) ) )
+    if( scalar $entry->get_value( 'gotoGroupPrinter' ) );
+
+  push( @access, split( ',', '@' . join( ',@', $entry->get_value( 'gotoGroupAdminPrinter' ) ) ) )
+    if( scalar $entry->get_value( 'gotoGroupAdminPrinter' ) );
+
+  # may add local users
+  push( @access, @users )
+    if( $is_local );
+
+  if( ! scalar @access ) {
+    print( " no allowed users or groups - skipping\n" );
+    next;
+  }
+  
+  # Create CUPS printer
+  $sys_error = system( "lpadmin -h localhost -p '$id' -v '$printer_uri' "
+                     . " -P '$ppd_file' -D '$descr' -L '$location' -E -u "
+                     . "allow:'" . join( ',', @access ) . "'" );
+  if( $sys_error ) {
+    print( "  - error calling lpadmin\n" );
+    next;
+  }
+
+  # Set local printer as default destination for print jobs
+  if( $is_local ) {
+    $sys_error = system( "lpadmin -h localhost -E -d '$id'" );
+    if( $sys_error ) {
+      print( "  - error calling lpadmin\n" );
+      next;
+    }
+  }
+
+  # Write access config
+  if( $listen_network ) {
+    if( ! open( GOTO_PRINTERS, ">>${goto_conf}" ) ) {
+      print( "Unable to write printer config: $!\n" );
+      print( "  - removing printer\n" );
+      system( "lpadmin -h localhost -x $id" );
+      next;
+    }
+
+    print GOTO_PRINTERS <<"EOF";
+<Location /printers/$id>
+  AuthType None
+  Order Deny,Allow
+  Deny From All
+  Allow From .$domainname
+</Location>
+EOF
+    close( GOTO_PRINTERS );
+  }
+
+  print( "ok\n" );
+}
+
+# We don't need the LDAP connection anymore
+$ldap->disconnect();
+$ldap = undef;
+
+#
+# Finally modify CUPS server configuration and restart
+#
+my @cupsdconf;
+
+print( "Changeing CUPS server configuration...\n" );
+
+# First we set listening directives
+if( $listen_network ) {
+  push( @cupsdconf, "Port 631\n" );
+}
+else { push( @cupsdconf, "Listen 127.0.0.1:631\n" ); }
+
+# Read and modify cupsd.conf
+open( CUPSDCONF, '</etc/cups/cupsd.conf' ) or
+  do_exit( "Couldn't open CUPS config in read mode: $!\n" );
+my $wrote_include = 0;
+while( <CUPSDCONF> ) {
+  # Insert argonaut-printers before all comments
+  if( (! $wrote_include) and ($listen_network) and ($_ =~ /^\#/) ) {
+    push( @cupsdconf, "Include argonaut-printers.conf\n" );
+    $wrote_include = 1;
+  }
+
+  # Skip all argonaut-printers.conf und Listen / Port directives
+  if( ($_ !~ /^Include argonaut-printers.conf$/)
+    && ($_ !~ /^(Listen|Port)/) )
+  {
+    push( @cupsdconf, $_ );
+  }
+}
+close( CUPSDCONF );
+
+# Write new cupsd config
+open( CUPSDCONF, '>/etc/cups/cupsd.conf' ) or
+  do_exit( "Couldn't open CUPS config in write mode: $!\n" );
+foreach my $line (@cupsdconf) {
+  print( CUPSDCONF $line );
+}
+close( CUPSDCONF );
+
+system( "/etc/init.d/cupsys reload" );
+
+exit 0;
+
+# ================================================
+
+sub do_exit {
+  my ($msg) = @_;
+  $ldap->disconnect() if( defined $ldap );
+  print( "$msg\n" ) if( defined $msg );
+  exit( -1 );
+}
+
+sub do_warn {
+  my ($msg) = @_;
+  $ldap->disconnect() if( (defined $ldap) && $apply_ldap );
+  if( defined $msg ) {
+    if ( $apply_ldap ) {
+      print( "$msg\n" );
+    } else { print( "Warning: $msg\n" ); }
+  }
+  exit( -1 ) if ( $apply_ldap );
+}
+
+sub usage
+{
+  (@_) && ($_[0] ne 'h') && print STDERR "\n@_\n";
+
+  print STDERR << "EOF";
+
+ usage: $0 [-hv] [-cgi <file>] <MAC, iface or empty (=eth0)>
+
+  -h         : this (help) message
+  -c <file>  : LDAP config file (default: ${ldap_conf})
+  -g <file>  : CUPS argonaut printer config (default: ${goto_conf})
+  -p <dir>   : PPD download directory (default: ${ppd_dir})
+  -v         : be verbose
+
+EOF
+  exit -1;
+}
+
+sub get_cups_printers {
+  my @printers = ();
+  open( LPSTAT, 'lpstat -v |' );
+  while( <LPSTAT> ) {
+    if( $_ =~ /^device for ([^:]*)/ ) {
+      push( @printers, $1 );
+    }
+  }
+  close( LPSTAT );
+  return (@printers);
+}
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
+

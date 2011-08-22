@@ -1,0 +1,250 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use lib "/usr/lib/argonaut";
+use Net::LDAP;
+use Net::LDAP::LDIF;
+use Argonaut::Common qw(:ldap :file :array);
+use Argonaut::LDAP qw(ldap_get_object);
+
+my $ldap;
+my $ldapbase;
+my $ldapuris;
+my $ldapdir;
+my $mesg;
+my $user = $ENV{SUDO_USER};
+
+my $def_groupid="root";
+my $def_userid ="root";
+my $def_mode   ="0660";
+my $dev_udevfile="/etc/udev/rules.d/099_usbstorage-";
+my $dev_udevdeffile="/etc/udev/rules.d/100_usbstorage.rules";
+my $FILE;
+my $DEFFILE;
+
+##########################################################################
+# create rules for udev....
+# Params:
+#  -Devicestring from LDAP (gotoHotplugDevice) like this: 
+#     Name|Description|serial of device|Product(hex)|Vendor(hex)
+#  -Userid of the owner of the devicefile
+#  -Groupid of the belonging group
+#
+# Output:
+#  -a udev-alike rule for the device
+##########################################################################
+sub generate_udev_rule {
+
+    my( $devstring, $userid, $groupid ) = @_;
+
+    # First line is always a comment
+    my $retVal = '# ';
+    my $errmsg = "Ok\n";
+
+    if( $user ) { print( "  user rule for '$devstring': " ); }
+    else { print( "  group ($groupid) rule for '$devstring': " ); }
+
+    my( $descr, $iSerial, $idProduct, $idVendor, $type ) = split(/\|/,$devstring);
+
+    # Sometimes empty values are / were appended, sometimes not
+    # Be lax and define undefined values as empty strings
+    $idProduct = '' if( ! defined $idProduct );
+    $idVendor = '' if( ! defined $idVendor );
+
+    # Stript leading and trailing spaces
+    if( defined $iSerial ) {
+      $iSerial =~ s/^\s+//;
+      $iSerial =~ s/\s+$//;
+    }
+
+    # Add USB info comment before rule
+    $retVal .= "'${groupid}' - " if( $groupid );
+    $retVal .= "(${descr}): ";
+
+    # Check valid vendor ID (0x0000)
+    if( length $idVendor ) {
+      my $realVendor = $idVendor;
+      $idVendor =~ s/^0[xX]//;
+      if( lc( $idVendor ) !~ /^[0-9a-f]{4}$/ ) {
+        $errmsg = "wrong idVendor '${realVendor}'\n";
+        print $errmsg; $retVal .= $errmsg; goto genrule_bailout;
+      }
+    }
+
+    # Check valid product ID (0x0000)
+    if( length $idProduct ) {
+      my $realProduct = $idProduct;
+      $idProduct =~ s/^0[xX]//;
+      if( lc( $idProduct ) !~ /^[0-9a-f]{4}$/ ) {
+        $errmsg = "wrong idProduct '${realProduct}'\n";
+        print $errmsg; $retVal .= $errmsg; goto genrule_bailout;
+      }
+    }
+
+    # We enforce values to include at least
+    # 1. $iSerial != 0
+    # 2. $idProduct && $idVendor
+    if( ! ((('0' ne $iSerial) && (length $iSerial))
+        || ((length $idProduct) && (length $idVendor))) 
+      )
+    {
+      $errmsg = "Not enought information for identification\n";
+      print $errmsg; $retVal .= $errmsg; goto genrule_bailout;
+    }
+
+    # Print success msg
+    print $errmsg;
+    $retVal .= $errmsg;
+
+    # Build rule
+    $retVal .= 'ACTION=="add"';
+    $retVal .= ', SYSFS{idVendor}=="'.$idVendor.'"' if $idVendor;
+    $retVal .= ', SYSFS{idProduct}=="'.$idProduct.'"' if $idProduct;
+    $retVal .= ', SYSFS{serial}=="'.$iSerial.'"' if $iSerial;
+    $retVal .= ", ENV{VALIDDEVICE}=\"1\"";
+    $retVal .= ", OWNER:=\"". ($userid ? $userid : $def_userid) ."\"";
+    $retVal .= ", GROUP:=\"". ($groupid ? $groupid : $def_groupid) ."\"";
+    $retVal .= ", NAME:=\"%k\", MODE:=$def_mode";
+    $retVal .= ", OPTIONS=\"last_rule\"";
+    $retVal .= "\n\n";
+
+genrule_bailout:
+    return $retVal;
+}
+
+# get_devdesc($ldap, $dn)
+sub get_devdesc
+{
+  my ($ldap, $dn) = @_;
+  my $results = $ldap->search(
+                        base   => $dn,
+                        filter => "objectClass=*",
+                        scope => "base"
+                      );
+    ($results->code == 0) or die $results->error ;
+    ($results->count == 0) and return undef;
+  return $results->entry(0)->get_value("gotohotplugdevice");
+}
+
+##########################################################################
+# Delete the old rules
+##########################################################################
+sub clean_old_rules {
+   my @cleanlist = $dev_udevdeffile;
+   $user = $ENV{SUDO_USER};
+   push @cleanlist, $dev_udevfile."$user.rules";
+   $user = "*";
+   push @cleanlist, $dev_udevfile."$user.rules";
+
+   unlink @cleanlist;
+}
+
+die "SUDO_USER not set in environment - abort.\n"
+  if( ! defined $user );
+print( "Started usbmanager for user '$user'\n" );
+
+open(FILE, "> ".$dev_udevfile."$user.rules") 
+  || die "could not open $dev_udevfile$user.rules for writing.\n";
+open(DEFFILE, "> ".$dev_udevdeffile) 
+  || die "could not open $dev_udevdeffile for writing.\n";
+
+print FILE <<"EOF";
+###########################################
+#These lines were generated from usbmanager
+###########################################
+
+EOF
+
+##########################################################################
+# Initializing
+##########################################################################
+my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
+($ldapbase,$ldapuris) = ($ldapinfo->{"LDAP_BASE"}, $ldapinfo->{"LDAP_URIS"});
+
+##########################################################################
+# Init LDAP
+##########################################################################
+$ldap = Net::LDAP->new( $ldapuris, timeout => 2 ) or die "$@";
+$mesg = $ldap->bind ;  # an anonymous bind
+
+##########################################################################
+# read devices from ldap (incl. user, group and object group assignments)
+##########################################################################
+my $person = ldap_get_object(ldap => $ldap,
+                            basedn => $ldapbase,
+                            user => $user,
+                            timeout => 10,
+                            filter => $$ldapinfo{UNIT_TAG_FILTER},
+                            attributeSelectionRegexes => ['@gotoHotplugDeviceDn']
+                            );
+defined($person) or die "Error reading from LDAP";
+
+print( "Generating udev rules...\n" );
+print FILE <<"EOF";
+#
+# udev rules
+#
+
+EOF
+
+my @devices = $person->get_value( 'gotoHotplugDeviceDn' );
+my %alreadyseen = ();
+if( @devices && (0 < scalar @devices) ) {
+  foreach my $device (@devices) {
+    if (!defined($alreadyseen{$device}))
+    {
+      my $devdesc = get_devdesc($ldap, $device);
+      if (!defined($devdesc))
+      {
+        warn "hotplug device not found: DN=", $device;
+      }
+      else
+      {
+        print FILE generate_udev_rule( $devdesc, $user, '' );
+      }
+      $alreadyseen{$device} = 1;
+    }
+  }
+}
+
+$ldap->unbind;
+
+print FILE <<"EOF";
+##########################################
+#end of generated lines
+##########################################
+EOF
+close (FILE);
+
+print DEFFILE <<"EOF";
+###########################################
+#These lines were generated from usbmanager
+###########################################
+
+ACTION!="add", GOTO="exit_usbpolicy"
+BUS=="usb", ENV{USBDEVICE}="1"
+BUS=="block", ENV{USBDEVICE}=="1", GOTO="usbpolicy_deny"
+
+GOTO="exit_usbpolicy"
+
+LABEL="usbpolicy_deny"
+ENV{VALIDDEVICE}=="1", GOTO="exit_usbpolicy"
+
+KERNEL=="sd[a-z]", ENV{MAJOR}=="8", PROGRAM="/usr/lib/argonaut/usblock %k"
+NAME="", OPTIONS="ignore_device", OPTIONS="last_rule"
+
+LABEL="exit_usbpolicy"
+
+##########################################
+#end of generated lines
+##########################################
+EOF
+
+close (DEFFILE);
+
+print( "Restarting udev...\n" );
+system "nohup -- /etc/init.d/udev restart &> /dev/null &"
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
+

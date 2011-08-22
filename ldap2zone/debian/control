@@ -1,0 +1,20 @@
+Source: ldap2zone
+Section: utils
+Priority: optional
+Maintainer: GOsa packages maintainers group <gosa-pkg@oss.gonicus.de>
+Uploaders: Cajus Pollmeier <cajus@debian.org>, Benoit Mortier <benoit.mortier@opensides.be>
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 7.0.50~), libldap2-dev, ldap-utils
+Homepage: https://oss.gonicus.de/labs/gosa
+Vcs-Browser: https://oss.gonicus.de/repositories/goto/trunk/ldap2zone
+Vcs-Svn: https://oss.gonicus.de/repositories/goto/trunk/ldap2zone
+DM-Upload-Allowed: yes
+
+Package: ldap2zone
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, bind9
+Conflicts: ldapdns, ldap2dns
+Description: Extract DNS zones from LDAP trees
+ This is a tool that reads info for a zone from LDAP and constructs
+ a standard plain ascii zone file. The LDAP information has to be
+ stored using the dnszone schema.

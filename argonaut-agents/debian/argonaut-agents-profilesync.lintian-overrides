@@ -1,0 +1,3 @@
+argonaut-agents-profilesync: binary-without-manpage usr/sbin/argonaut-profile-download
+argonaut-agents-profilesync: binary-without-manpage usr/sbin/argonaut-profile-sync
+argonaut-agents-profilesync: binary-without-manpage usr/sbin/argonaut-profile-upload

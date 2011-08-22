@@ -1,0 +1,3 @@
+argonaut-agents-usbmanager: binary-without-manpage usr/sbin/argonaut-start-usb
+argonaut-agents-usbmanager: binary-without-manpage usr/sbin/argonaut-stop-usb
+

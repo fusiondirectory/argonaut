@@ -1,0 +1,3 @@
+argonaut-enable-printer		usr/sbin
+argonaut-printer-manager	usr/sbin
+plugins/S92printer		etc/argonaut/plugins	

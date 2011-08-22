@@ -1,0 +1,18 @@
+Source: kprogress
+Section: kde
+Priority: optional
+Maintainer: GOsa packages maintainers group <gosa-pkg@oss.gonicus.de>
+Uploaders: Cajus Pollmeier <cajus@debian.org>, Benoit Mortier <benoit.mortier@opensides.be>
+Standards-Version: 3.9.2
+Build-Depends: qt3-dev-tools, libqt3-mt-dev, debhelper (>= 5)
+Homepage: https://oss.gonicus.de/labs/gosa
+Vcs-Browser: https://oss.gonicus.de/repositories/goto/trunk/kprogress
+Vcs-Svn: https://oss.gonicus.de/repositories/goto/trunk/kprogress
+DM-Upload-Allowed: yes
+
+Package: kprogress
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: KDE login progress indicator
+ Kde frontend that displays a progress bar and some informative text
+ during login.

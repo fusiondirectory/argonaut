@@ -1,0 +1,5 @@
+#!/bin/sh
+
+if which ethtool &> /dev/null; then
+	ethtool -s eth0 wol g &> /dev/null
+fi

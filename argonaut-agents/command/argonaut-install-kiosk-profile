@@ -1,0 +1,122 @@
+#!/bin/sh 
+# Script to set the KIOSK profile
+# Autor: Cajus Pollmeier <pollmeier@gonicus.de>
+#
+# This script needs the following settings in your sudoers file
+# ALL     ALL=NOPASSWD: /usr/lib/goto/install-kiosk-profile ""
+
+. /usr/lib/argonaut/argonaut-support.lib
+
+# We need to change to a directory with *some* permissions, because
+# it will break the setup on AFS systems elseways.
+cd /tmp
+
+KIOSK_URLS=""
+[ -r /etc/argonaut/argonaut-agent.conf ] && . /etc/argonaut/argonaut-agent.conf
+
+
+##########################################################################
+##########################################################################
+## Hauptroutine
+##########################################################################
+##########################################################################
+
+dprint "Start."
+
+
+DEBUG=YES
+LANG=C
+url="$(ldap_get_kiosk_profile_of "$SUDO_USER")"
+
+if [ -n "$url" ]; then
+	# Download
+	echo "url='$url'"
+	urlbase=$(echo "$url" | sed -s 's|htt[ps]*://[^/]*/||')
+	URLS="$url $KIOSK_URLS"
+	
+	[ ! -d /etc/kde-profile/.incoming ] && mkdir -p /etc/kde-profile/.incoming
+
+	success=0
+	for url in $URLS; do
+		if wget --no-check-certificate --proxy=off -N -t 1 -q "$url" -O /etc/kde-profile/.incoming/$(basename "$url"); then
+			dprint "Download of '$url' successfull."
+			success=1
+			break
+		else
+			dprint "Download of '$url' failed."
+		fi	
+	done
+	
+	if [ "$success" == "1" ]; then
+	
+		# Unpack
+		fn=/etc/kde-profile/.incoming/$(basename "$url")
+		type=$(file "$fn")
+
+		dprint "Unpacking..."
+	
+		mkdir -p /etc/kde-profile/.incoming/unpack.$$
+		if echo $type | grep -q 'bzip2'; then
+			bzip2 -cd "$fn" > /etc/kde-profile/.incoming/unpack.$$/archive.tar
+		elif echo $type | grep -q 'gzip'; then
+			gzip -cd "$fn" > /etc/kde-profile/.incoming/unpack.$$/archive.tar
+		else
+			cp "$fn" /etc/kde-profile/.incoming/unpack.$$/archive.tar
+		fi
+	
+		# Unpack tar archive
+		tar xf /etc/kde-profile/.incoming/unpack.$$/archive.tar -C /etc/kde-profile/.incoming/unpack.$$
+		chown -R root.root /etc/kde-profile/.incoming/unpack.$$/
+		find /etc/kde-profile/.incoming/unpack.$$/ -type d -exec chmod 755 {} \;
+		find /etc/kde-profile/.incoming/unpack.$$/ -type f -exec chmod 644 {} \;
+		profile=$(find /etc/kde-profile/.incoming/unpack.$$/* -maxdepth 0 -type d | while read line; do
+			[ -d /etc/kde-profile/$(basename $line) ] && rm -rf /etc/kde-profile/$(basename $line)
+			rm -rf /etc/kde-profile/$line
+			mv "$line" /etc/kde-profile
+			basename $line
+			break
+			done)
+
+		dprint "Unpacking finished. Profile '$profile' extracted."
+				
+		# Adapt kde-profile files
+		cat <<-EOF > /etc/kderc
+		[Directories]
+		kioskAdmin=root:
+		userProfileMapFile=/etc/kde-user-profile
+		EOF
+		for d in /etc/kde-profile/*; do
+			echo -e "\n[Directories-$(basename $d)]" >> /etc/kderc
+			echo "prefixes=$d" >> /etc/kderc
+		done
+	
+		dprint "/etc/kderc adapted."
+
+		if grep -q "^$SUDO_USER=" /etc/kde-user-profile; then
+			sed -i -e "s/^$SUDO_USER=.*/$SUDO_USER=$profile/g" /etc/kde-user-profile
+		else
+			if [ -s /etc/kde-user-profile ]; then
+				echo "$SUDO_USER=$profile" >> /etc/kde-user-profile
+			else
+				cat <<-EOF > /etc/kde-user-profile
+				[Users]
+				$SUDO_USER=$profile
+				EOF
+			fi
+		fi
+
+		dprint "/etc/kde-user-profile angepasst."
+
+		# Remove old tree
+		rm -rf /etc/kde-profile/.incoming/unpack.$$
+	else
+		dprint "Download of the KIOSK-profile has failed."	
+		dprint "the last settings from /etc/kde-user-profile will be used."	
+	fi	
+else
+	dprint "No profile assigned => Deleting the /etc/kde-profile user."
+
+	rm -f /etc/kde-user-profile
+fi
+
+dprint "End."

@@ -1,0 +1,32 @@
+.TH ldap2zone 1
+.SH NAME
+ldap2zone \- convert zones saved inside the LDAP to bind9 zone files
+.SH SYNOPSIS
+.PP
+.B ldap2zone
+zone-name LDAP-URL default-ttl [serial] 
+.SH DESCRIPTION
+Convert zones saved in LDAP to ordinary zones files via
+.B ldap2zone
+in order to avoid dependencies from LDAP to bind.
+.SH OPTIONS
+.TP
+.BR zone-name
+name of the zone to be extracted from LDAP. This can be a forward or
+a reverse zone.
+.TP
+.BR LDAP-URL
+URL to access the LDAP server in the format ldap[s]://server-ip/base.
+.TP
+.BR default-ttl
+Zone TTL in seconds
+.TP
+.BR serial
+Zone serial number.
+.SH "RETURN VALUE"
+The script return zero values on success.
+.SH EXAMPLES
+.B ldap2zone
+example.net ldap://ldap.example.net/dc=example,dc=net 1200 200708291528
+.SH AUTHOR
+Cajus Pollmeier <cajus@debian.org>

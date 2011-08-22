@@ -1,0 +1,69 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides: fts
+# Required-Start:    $remote_fs $syslog $network
+# Required-Stop:     $remote_fs $syslog $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start fts service
+### END INIT INFO
+
+# Start/stop the fts daemon.
+NAME="argonaut-fuse"
+DAEMON="/usr/sbin/${NAME}"
+PIDFILE="/var/run/${NAME}.pid"
+PATH="/sbin:/bin:/usr/sbin:/usr/bin"
+
+. /lib/lsb/init-functions
+
+test -f "${DAEMON}" || exit 0
+
+case "$1" in
+  start)
+    log_daemon_msg "Starting FUSE TFTP data provider" "${NAME}"
+    start-stop-daemon -b --start -p "${PIDFILE}" --startas "${DAEMON}"
+    log_end_msg 0
+  ;;
+
+  stop)
+    log_daemon_msg "Stopping Fuse TFTP data provider" "${NAME}"
+    killproc -p "${PIDFILE}" "${DAEMON}"
+    mp=$(sed -n 's/^pxelinux_cfg=//p' /etc/fts/fts.conf)
+    if mount | grep -q "$mp"; then
+      fusermount -u "$mp"
+    fi
+    log_end_msg 0
+  ;;
+
+  restart) 
+    log_daemon_msg "Restarting FUSE TFTP data provider" "${NAME}"
+    killproc -p "${PIDFILE}" "${DAEMON}"
+    mp=$(sed -n 's/^pxelinux_cfg=//p' /etc/fts/fts.conf)
+    if mount | grep -q "$mp"; then
+      fusermount -u "$mp"
+    fi
+    start-stop-daemon -b --start -p "${PIDFILE}" --startas "${DAEMON}"
+  log_end_msg 0
+  ;;
+
+  reload|force-reload)
+    restart
+  ;;
+
+  status) 
+    status=0
+    pidofproc -p "${PIDFILE}" "${DAEMON}" >/dev/null || status="$?"
+    log_daemon_msg "Status of FUSE TFTP data provider" "${NAME}"
+    if [ "$status" = 0 ]; then
+      log_progress_msg "is running"
+      log_end_msg 0
+    else
+      log_progress_msg "is not running"
+      log_end_msg $status
+    fi
+  ;;
+
+  *)	echo "Usage: /etc/init.d/fts start|stop|restart|reload|force-reload|status" >&2
+    exit 1 
+  ;;
+esac

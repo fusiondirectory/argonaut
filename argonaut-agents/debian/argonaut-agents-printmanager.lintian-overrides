@@ -1,0 +1,4 @@
+argonaut-agents-printmanager: binary-without-manpage usr/sbin/argonaut-enable-printer
+argonaut-agents-printmanager: binary-without-manpage usr/sbin/argonaut-printer-manager
+argonaut-agents-printmanager: depends-on-obsolete-package depends: cupsys
+

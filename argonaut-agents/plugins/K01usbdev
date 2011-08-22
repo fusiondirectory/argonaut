@@ -1,0 +1,6 @@
+#NAME:Restoring USB service
+
+if [ -x /usr/sbin/argonaut-usbmanager ]; then
+  sudo /usr/sbin/argonaut-usbmanager cleanup
+fi
+

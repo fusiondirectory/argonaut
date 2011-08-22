@@ -1,0 +1,165 @@
+# Slovak translation of goto-fai-progress.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the goto-fai-progress package.
+# Ivan Masár <helix84@centrum.sk>, 2010.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: goto-fai-progress\n"
+"Report-Msgid-Bugs-To: Source: fai-progress@packages.debian.org\n"
+"POT-Creation-Date: 2008-06-27 11:03+0200\n"
+"PO-Revision-Date: 2010-02-18 18:40+0100\n"
+"Last-Translator: Ivan Masár <helix84@centrum.sk>\n"
+"Language-Team: Slovak <sk-i18n@lists.linux.sk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
+
+#. Type: title
+#. Description
+#. Type: text
+#. Description
+#. Type: text
+#. Description
+#. Type: text
+#. Description
+#. Type: text
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:1001
+#: ../fai-progress.templates:2001
+#: ../fai-progress.templates:3001
+#: ../fai-progress.templates:6001
+#: ../fai-progress.templates:9001
+#: ../fai-progress.templates:15001
+msgid "${i}"
+msgstr "${i}"
+
+#. Type: title
+#. Description
+#: ../fai-progress.templates:4001
+msgid "GOto - Hardware detection"
+msgstr "GOto - Detekciu hardvéru"
+
+#. Type: text
+#. Description
+#: ../fai-progress.templates:5001
+msgid "Progress of hardware detection"
+msgstr "Priebeh detekcie hardvéru"
+
+#. Type: title
+#. Description
+#: ../fai-progress.templates:7001
+msgid "GOto - System Activation"
+msgstr "GOto - aktivácia systému"
+
+#. Type: text
+#. Description
+#: ../fai-progress.templates:8001
+msgid "Waiting"
+msgstr "Čaká sa"
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:10001
+#: ../fai-progress.templates:11001
+msgid "Error in network configuration"
+msgstr "Chyba v konfigurácii siete"
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:10001
+msgid "The system could not determine a network address."
+msgstr "Systém nedokázal určiť sieťovú adresu."
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:10001
+#: ../fai-progress.templates:11001
+msgid "The installation cannot continue without this information."
+msgstr "Inštalácie nemôže bez tejto informácie pokračovať."
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:11001
+msgid "The system could not determine a system name for ip ${i}."
+msgstr "Systém nedokázal určiť názov systému pre IP ${i}."
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:12001
+msgid "FAI error"
+msgstr "Chyba FAI"
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:12001
+#: ../fai-progress.templates:14001
+msgid "The last installation failed. Please unlock this system after the error has been resolved."
+msgstr "Posledná inštalácia zlyhala. Prosím, odomknite tento systém po vyriešení chyby."
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:12001
+#: ../fai-progress.templates:14001
+msgid "Error code: ${i}"
+msgstr "Kód chyby: ${i}"
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:12001
+#: ../fai-progress.templates:13001
+#: ../fai-progress.templates:14001
+#: ../fai-progress.templates:15001
+msgid "Please inform your administrator."
+msgstr "Prosím, informujte svojho správcu."
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:13001
+msgid "GOto error"
+msgstr "Chyba GOto"
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:13001
+msgid "Cannot register client. There is no activation server available."
+msgstr "Nepodarilo sa zaregistrovať klienta. Žiaden aktivačný server nie je dostupný."
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:14001
+#: ../fai-progress.templates:15001
+msgid "LDAP error"
+msgstr "Chyba LDAP"
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:15001
+msgid "Cannot retrieve information about this system."
+msgstr "Nepodarilo sa získať informácie o tomto systéme."
+
+#. Type: text
+#. Description
+#: ../fai-progress.templates:16001
+msgid "Debconf language"
+msgstr "Jazyk Debconf"
+

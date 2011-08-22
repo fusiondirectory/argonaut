@@ -1,0 +1,4 @@
+argonaut-mount-shares		usr/sbin
+argonaut-umount-shares		usr/sbin
+plugins/S01mount-shares		etc/argonaut/plugins
+plugins/K99umount-shares	etc/argonaut/plugins

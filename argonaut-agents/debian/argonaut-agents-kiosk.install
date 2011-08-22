@@ -1,0 +1,2 @@
+argonaut-install-kiosk-profile	usr/sbin
+plugins/S05kiosk		etc/argonaut/plugins

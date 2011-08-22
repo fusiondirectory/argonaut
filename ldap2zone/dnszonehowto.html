@@ -1,0 +1,202 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HEAD>
+<TITLE>How to use dnsZone with the BIND 9 sdb back-end</TITLE>
+</HEAD>
+<BODY>
+<H1>How to use dnsZone with the BIND 9 sdb back-end</H1>
+<H2>Record types</H2>
+The dnsZone class does not contain attributes for all known record types. The
+following types are missing: MF, MB, MG, MR, NULL, WKS, RP, AFSDB, X25, ISDN,
+RT, NSAP, NSAP-PTR, PX and GPOS. Anything defined after this document was
+written is obviously missing. If you want to add some record types that are
+defined by <A href="http://www.iana.org/assignments/dns-parameters">IANA</A>,
+please define it similar to what I've done for the existing ones. The name
+should be <em>{TYPE}Record</em>, and OID should be
+<em>1.3.6.1.4.1.2428.20.1.value</em>. For instance the RR type <em>LOC</em> has
+value <em>29</em>, so attribute name should be <em>LocRecord</em> (casing
+shouldn't matter), and the OID is <em>1.3.6.1.4.1.2428.20.1.29</em>. If you
+follow this, you know that it will be compatible with what I and others
+use, and I guarantee that the OIDs are unique.
+<p>
+The dnsZone class has attributes for some
+basic record types like A, SOA, etc. which are defined in the cosine schema
+and not in this schema. This means that your LDAP server must use both the
+cosine schema and this one. If you're not you should get an error from your
+LDAP server.
+<H2>Example 1</H2>
+Let's look at the following simple zone file.
+<pre>
+@       3600    IN      SOA     ns.my-domain.com. hostmaster.my-domain.com. (
+		                2001030201 3600 1800 604800 86400 )
+		        NS      ns.my-domain.com.
+		        NS      ns.other-domain.com.
+		        MX      10 mail.my-domain.com.
+		        MX      20 mail.other-domain.com.
+
+my-hosta                A       10.10.10.10
+                        MX	10 mail.my-domain.com.
+		        MX      20 mail.other-domain.com.
+www	 1800	 	CNAME	my-hosta.my-domain.com.
+my-hostb 3600           A       10.10.10.11
+                        MX	10 mail.my-domain.com.
+		        MX      20 mail.other-domain.com.
+</pre>
+This can be represented by the following LDIF file:
+<pre>
+dn: relativeDomainName=@, dc=my-domain, dc=com
+objectClass: dNSZone
+relativeDomainName: @
+zoneName: my-domain.com
+dNSTTL: 3600
+dNSClass: IN
+sOARecord: ns.my-domain.com. hostmaster.my-domain.com. 2001030201 3600 1800 604800 86400
+nSRecord: ns.my-domain.com.
+nSRecord: ns.other-domain.com.
+mXRecord: 10 mail.my-domain.com.
+mXRecord: 20 mail.other-domain.com.
+
+dn: relativeDomainName=my-hosta, dc=my-domain, dc=com
+objectClass: dNSZone
+relativeDomainName: my-hosta
+zoneName: my-domain.com
+dNSTTL: 86400
+dNSClass: IN
+aRecord: 10.10.10.10
+mXRecord: 10 mail.my-domain.com.
+mXRecord: 20 mail.other-domain.com.
+
+dn: relativeDomainName=www, dc=my-domain, dc=com
+objectClass: dNSZone
+relativeDomainName: www
+zoneName: my-domain.com
+dNSTTL: 1800
+dNSClass: IN
+cNAMERecord: my-hosta.my-domain.com.
+
+dn: relativeDomainName=my-hostb, dc=my-domain, dc=com
+objectClass: dNSZone
+relativeDomainName: my-hostb
+zoneName: my-domain.com
+dNSTTL: 3600
+dNSClass: IN
+aRecord: 10.10.10.11
+
+dn: relativeDomainName=my-hostb + dNSTTL=86400, dc=my-domain, dc=com
+objectClass: dNSZone
+relativeDomainName: my-hostb
+zoneName: my-domain.com
+dNSTTL: 86400
+dNSClass: IN
+mXRecord: 10 mail.my-domain.com.
+mXRecord: 20 mail.other-domain.com.
+</pre>
+<p>
+zoneName is the name of the zone, i.e. the name of the node in the zone
+that is highest up in the DNS tree. relativeDomainName is the name of
+the nodes relative to this, just like relative names in zone files
+dNSClass is not used by the sdb back-end, so you can leave it out if you
+like. The dNSTTL can also be left out, it will then default to the TTL
+specified in named.conf.
+<p>
+If you want RRs with the same name to have different TTLs (like
+my-hostb in the example), you will have to store it as multiple entries
+all including <em>relativeDomainName=my-hostb</em>. You will need at least as
+many entries as there are different TTLs. The main difficulty is to make
+sure that they all have unique DNs. The way I've chosen is to have a
+multi-valued RDN including dNSTTL, and put all RRs with the same TTL together.
+This is a bit ugly, but I think this is better than having one entry per RR.
+Let me know if you have other ideas.
+<p>
+When storing multiple zones you must make sure of course that the dn's are
+unique. This can easily be done by including the zoneName attribute in the
+DN. This can be done in several ways, one example would be
+<em>relativeDomainName=www, zoneName=my-zone, dc=my-domain, dc=com</em>.
+
+<H2>Example 2</H2>
+The schema is quite flexible as I'll try to show in the next two examples.
+If you have say the same MX records for the three hosts hosta, hostb and
+hostc, you might have one entry for each host and have the same mXRecord
+values in all the entries, or you can have one common entry with the
+mXRecords like this:
+<pre>
+dn: relativeDomainName=hosta, dc=my-domain, dc=com
+objectClass: dNSZone
+relativeDomainName: hosta
+relativeDomainName: hostb
+relativeDomainName: hostc
+zoneName: my-domain.com
+mXRecord: 10 mail.my-domain.com.
+mXRecord: 20 mail.other-domain.com.
+</pre>
+
+<H2>Example 3</H2>
+Assume that we have one web server with one IP address that is a virtual
+web server for hundreds of domains. Rather than having hundreds of similar
+entries, one for each zone, you might do as follows:
+<pre>
+dn: relativeDomainName=www, dc=my-domain, dc=com
+objectClass: dNSZone
+relativeDomainName: www
+zoneName: customerdomain1.com
+zoneName: customerdomain2.com
+...
+zoneName: customerdomain999.com
+aRecord: 10.10.10.10
+mXRecord: 10 mail.my-domain.com.
+mXRecord: 20 mail.other-domain.com.
+</pre>
+If you have a bunch of zones that are identical, except for the zone name,
+you might combine all their entries like above. Sort of like using the same
+zone file for multiple zones.
+
+<H2>Example 4</H2>
+Let's have a look at PTR records for reverse lookups for IPv4 addresses.
+Say you want to have a reverse for the address <em>1.2.3.4</em>. You then
+need a PTR record for <em>4.3.2.1.in-addr.arpa</em>. Using normal zone
+files you would typically have a file for the zone <em>3.2.1.in-addr.arpa</em>
+and inside that put say
+<pre>4 PTR my-hostc.my-domain.com.
+</pre>
+Using this back-end, you change <em>named.conf</em> like above, and use an
+LDAP entry like this:
+<pre>
+dn: relativeDomainName=4, zoneName=3.2.1.in-addr.arpa, dc=my-domain, dc=com
+objectClass: dNSZone
+relativeDomainName: 4
+zoneName: 3.2.1.in-addr.arpa
+pTRRecord: my-hostc.my-domain.com.
+</pre>
+Note that the DN can be whatever you like. If you use a DN like the above,
+you can use <em>zoneName=3.2.1.in-addr.arpa, dc=my-domain, dc=com</em> as
+the search base in the URL in <em>named.conf</em>.
+
+<H2>Example 5</H2>
+As a final example, you might try to search below
+<A href="ldap://ldap.venaas.no/dc=venaas,dc=com,o=DNS,dc=venaas,dc=no">
+ldap://ldap.venaas.no/dc=venaas,dc=com,o=DNS,dc=venaas,dc=no</A>. There
+you will find the zone data for venaas.com.
+You can also browse my directory data using
+<a href="http://sites.inka.de/ms/cgi-bin/web2ldap.fcgi/ldapurl?ldap://garibaldi.venaas.no/dc=venaas,dc=com,o=DNS,dc=venaas,dc=no??sub?(objectclass=*)">web2ldap</a>.
+The master server for
+venaas.com uses this server. The slave uses normal zone transfers.
+
+<H2>Summary</H2>
+As should be evident from the examples, you have great flexibility when
+using this schema with the BIND9 back-end. The tree structure, the dn's,
+doesn't matter at all, the back-end simply does a sub-tree search using
+the base specified in named.conf for all entries in the wanted zone with
+the wanted name. For example when someone tries to look up the node
+<em>my-hosta.my-domain.com</em> it simply does a sub-tree search at the base
+given in <em>named.conf</em> with the filter
+<em>(&(zoneName=my-domain.com)(relativeDomainName=my-hosta))</em>. If someone
+looks up <em>my-domain.com</em> it uses the filter
+<em>(&(zoneName=my-domain.com)(relativeDomainName=@))</em>, and finally if
+someone wants to get the entire zone, for example a secondary using AXFR,
+it uses the filter <em>(zoneName=my-domain.com)</em>. Wildcards are not
+supported.
+<hr>
+<address>
+<a href="mailto:venaas@uninett.no">venaas@uninett.no</a>
+</address>
+Last modified: 2002-02-03
+</BODY>

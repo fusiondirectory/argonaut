@@ -1,0 +1,42 @@
+.TH LDAP2BIND 1 
+.SH NAME
+ldap2bind \- update bind's DNS zones from LDAP
+.SH SYNOPSIS
+.B ldap2bind
+.SH DESCRIPTION
+The 
+.BR ldap2bind 
+program converts DNS zones from LDAP to bind zone
+configuration files and reloads these zones.
+It uses
+.BR ldap2zone (1)
+to do the conversion.  
+.PP
+The script takes no options, but some variables are defined and can be
+modified in 
+.I /etc/defaults/ldap2zone.   
+.PP
+Usually 
+.BR ldap2bind 
+is called from a cron job that updates the zones
+regularly from LDAP.  
+.SH Notes
+The file 
+.I named.conf.ldap2zone 
+must exist in bind's configuration directory and has to be included in
+bind's configuration. This is usually done by including it in 
+.I named.conf.local.  
+.SH "EXIT STATUS"
+.BR ldap2bind 
+returns 0 on success, 1 on failures.
+.SH FILES
+.nf
+.ta \w'/etc/bind/named.conf.ldap2zone\     'u
+\fI/etc/default/ldap2zone\fR	configuration variables
+\fI/etc/bind/named.conf.ldap2zone\fR	zones extracted from LDAP
+.SH AUTHOR
+This manual page has been written by Andreas B. Mundt
+<andi.mundt@web.de> for the Debian Project (but may be used by
+others). 
+.SH "SEE ALSO"
+.BR ldap2zone (1).

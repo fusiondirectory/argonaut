@@ -1,0 +1,398 @@
+#!/bin/sh
+###############################################################################
+#                             GOsa agent library                              #
+###############################################################################
+
+SSH='ssh -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile /dev/null" -o "BatchMode yes" '
+GOTO_SYSCFG="/etc/sysconfig"
+GOTO_ERROR_STR=""
+GOTO_LDIF="/tmp/upload.ldif"
+
+# Source ldap-info, if available
+if [ -r /etc/ldap/ldap-shell.conf ]; then
+	. /etc/ldap/ldap-shell.conf
+        [ -f /etc/ldap/ldap-offline.conf ] && . /etc/ldap/ldap-offline.conf
+else
+	# Fallback for non ldap2base config
+	for config in $LDAPCONF /etc/*ldap/ldap.conf /etc/ldap.conf; do  	 
+		# Not readable? Continue
+		[ ! -r $config ] && continue
+
+		# Extract LDAP_BASE
+		LDAP_BASE=$(sed -ne 's/^BASE[\t ]\+\(.\+\)[[\t ]*$/\1/p' $config)
+
+		# Break, if found
+		[ "x" != "x$LDAP_BASE" ] && break
+	done
+fi
+
+if [ "x" = "x$LDAP_BASE" ]; then
+  eval_gettext "No readable LDAP information - LDAP functions may fail!"
+fi
+
+set_dir_sysconfig() {
+  GOTO_SYSCFG=$1
+}
+
+get_fqdn_from_ip() {
+	v=$(host -i $1); w=${v##*[ 	]}
+	echo ${w%%.*} | grep -q 'NX'
+	if [ $? -eq 0  ]; then
+		echo "unknown"
+	else
+		echo "$v" | grep -q ';;'
+		if [ $? -eq 0 ]; then
+			if [ -n "$HOSTNAME" ]; then
+				echo "$HOSTNAME"
+			else
+				echo "unknown"
+			fi
+		else
+			echo ${w%.*}
+		fi
+	fi
+}
+
+get_hostname_from_ip() {
+	FQDN=$(get_fqdn_from_ip $1)
+	if [ "unknown" != "${FQDN}" ]; then
+		echo "${FQDN%%.*}"
+	else
+		echo "${FQDN}"
+	fi
+}
+
+get_hostname_from_display()
+{
+        if [ -n "$DISPLAY" ]; then
+
+                HOST=${DISPLAY%%:*}
+                NUMBER=${DISPLAY##*:}
+
+                # IP addresses are not supported here
+                echo $HOST | grep -q '^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$'
+                if [ $? -ne 0 ]; then
+                        echo ${DISPLAY%%.*}
+				else
+					get_hostname_from_ip $HOST
+				fi
+
+        else
+                echo "unknown"
+        fi
+}
+
+
+kill_user_processes() {
+	# don't let root do this
+	if [ "$USER" = "root" -o "$(id -ru)" -eq 0 ]; then
+		return
+	fi
+
+	# Preset, or load from file
+	candidates="kdeinit\: soffice.bin mozilla-bin"
+	[ -r /etc/goto/kill-process.conf ] && candidates=$(cat /etc/goto/kill-process.conf)
+
+	# kill old existing user processes
+	for process in $candidates; do
+		ps -fu $USER | grep "$process" | grep -v 'kprogress' | awk ' FS=" " { system("kill "$2) } '
+	done
+
+	# kill old existing user processes that didn't left us with SIGTERM
+	for process in $candidates; do
+		ps -fu $USER | grep "$process" | grep -v 'kprogress' | awk ' FS=" " { system("kill "$2) } '
+	done
+}
+
+fix_ldif_all() {
+        (cat -; echo "bank") | awk '
+/^[a-zA-Z]/     {
+        if(line!=""){
+                print line
+        }
+
+        line    = $0
+}
+/^ /    {
+        line    = line substr($0,2)
+}
+' | while read line; do
+	if echo $line | grep -q -e '^[[:alnum:]]*:: ' ; then
+		attr=${line%%:*}
+		arg=${line##*:}
+		echo $attr: $(echo $arg|base64 -d)
+	else
+		echo $line
+	fi
+    done
+}
+
+ldap_count() {
+	ldapsearch -x -LLL "$1" dn | grep '^dn:' | wc -l
+}
+
+
+decode_blob() {
+	base64 -d > /tmp/agent-lib-decode.$$
+	file /tmp/agent-lib-decode.$$ 2>/dev/null| grep -qi 'text'
+	[ $? -eq 0 ] && cat /tmp/agent-lib-decode.$$ | recode 'utf8..latin1'
+	[ -f /tmp/agent-lib-decode.$$ ] && rm /tmp/agent-lib-decode.$$
+}
+
+ldap_import() {
+  for v in $(set grep ldap_import_ | cut -d= -f1); do unset $v; done
+  vname_lastrun=""
+  counter=0
+  > /tmp/agent-lib.$$
+  (ldapsearch -x -LLL $2 "$1" $3 2> /dev/null) | fix_ldif | sed 's/^\([^:]*\):\(.*\)$/\1="\2"/' | while read line; do
+		vname=$(echo $line|cut -d= -f1)
+		vvalue=$(echo $line|cut -d= -f2-)
+
+		echo $line | grep -q '=": '
+		if [ $? -eq 0 ]; then
+			vvalue=`echo $line|sed 's/^[^="]*=": //'|decode_blob`
+			vvalue="$vvalue\""
+		else
+			vvalue=`echo $line|sed 's/^[^="]*=" //'`
+		fi
+
+		if [ "$vname_lastrun" = "$vname" ]; then
+			counter=$(( $counter + 1 ));
+		else
+			counter=0
+			vname_lastrun=$vname
+		fi
+		
+		echo "ldap_import_$vname[$counter]=\"$vvalue" >> /tmp/agent-lib.$$
+	done
+
+	eval $(cat /tmp/agent-lib.$$)
+	rm /tmp/agent-lib.$$
+}
+
+ldap_cat() {
+   vname_lastrun=""
+   counter=0
+   > /tmp/agent-lib.$$
+   (ldapsearch -x -LLL  -b "$1" -s base 2> /dev/null) | fix_ldif | sed 's/^\([^:]*\):\(.*\)$/\1="\2"/' | while read line; do
+               vname=$(echo $line|cut -d= -f1)
+               vvalue=$(echo $line|cut -d= -f2-)
+
+               echo $line | grep -q '=": '
+               if [ $? -eq 0 ]; then
+                       vvalue=`echo $line|sed 's/^[^="]*=": //'|decode_blob`
+                       vvalue="$vvalue\""
+               else
+                       vvalue=`echo $line|sed 's/^[^="]*=" //'`
+               fi
+
+               if [ "$vname_lastrun" = "$vname" ]; then
+                       counter=$(( $counter + 1 ));
+               else
+                       counter=0
+                       vname_lastrun=$vname
+               fi
+
+               echo "ldap_import_$vname[$counter]=\"$vvalue" >> /tmp/agent-lib.$$
+       done
+
+       eval $(cat /tmp/agent-lib.$$)
+       rm /tmp/agent-lib.$$
+ }
+
+
+
+ldap_get_group_membership_of() {
+	ldapsearch -x -LLL "(&$UNIT_TAG_FILTER(memberUid=$1))" \
+		cn 2> /dev/null | fix_ldif | awk '/^cn: / {print $2}'
+}
+
+ldap_get_home_of() {
+        ldapsearch -x -LLL "(&$UNIT_TAG_FILTER(uid=$1))" homeDirectory | fix_ldif | \
+                                awk '/^homeDirectory:/ {print $2}' | sed -e "s/\(.*\)\/$/\1/g"
+}
+
+ldap_get_kiosk_profile_of() {
+ ldap_get_object -user="$1" -enctrigger=none -format=v -filter="$UNIT_TAG_FILTER" gotoKioskProfile
+}
+
+ldap_get_profilequota_of() {
+ ldap_get_object -user="$1" -enctrigger=none -format=v -filter="$UNIT_TAG_FILTER" gotoProfileQuota
+}
+
+ldap_get_profileserver_of() {
+  ldap_get_object -user="$1" -enctrigger=none -format=v -filter="$UNIT_TAG_FILTER" gotoProfileServer
+}
+
+ldap_get_login_scripts_of() {
+  ldap_get_object -user="$1" -filter="$UNIT_TAG_FILTER" -enctrigger=none \
+     -format=v -sort=precedence @gotoLogonScript
+}
+
+ldap_user_has_profile() {
+  ldap_get_profileserver_of "$1" | grep -q ..
+}
+
+##########################################################################
+#
+# ldap_get_user_shares_of: Liefert Shares des Benutzers
+#                          (ueber Benutzerobjekt)
+#
+# Argument $1: UID des Benutzers
+# 
+##########################################################################
+ldap_get_user_shares_of() {
+        ldapsearch -x -LLL "(&$UNIT_TAG_FILTER(uid=$1))" gotoShare | fix_ldif | \
+        	grep "^gotoShare:" | sed 's/^gotoShare: //g' | LC_ALL=C sort | uniq
+}
+
+##########################################################################
+#
+# ldap_get_shares_of: Liefert Shares des Benutzers 
+#                     (ueber Benutzer und Gruppenobjekte)
+#
+# Argument $1: UID des Benutzers
+# 
+##########################################################################
+ldap_get_shares_of() {
+  ldap_get_object -user="$1" -filter="$UNIT_TAG_FILTER" -enctrigger=none \
+     -format=v @gotoShare
+}
+
+
+
+ldap_get_appservers() {
+	ldapsearch -x -LLL "(objectclass=goTerminalServer)" cn | fix_ldif | grep -w cn: |cut -d' ' -f 2
+}
+
+
+translate() {
+	# Look for translation
+	while read line; do
+		string="${line%%=*}"
+		if [ "$string" = "$*" ]; then
+			echo "${line##*=}"
+			return
+		fi
+	done < /etc/goto/goto-locales.dat
+	echo $*
+}
+
+
+show_progress() {
+	# No translation available
+	echo $PROGRESS $(translate "$*")
+}
+
+
+create_desktop_link() {
+	echo "$gosaApplicationFlags" | grep -q "D"
+	if [ $? -eq 0 ]; then
+		[ "$DEBUG" = "YES" ] && echo "goto_setup: creating desktop link for application $application" 1>&2
+		ln -f -s ~/.local/share/applications/$cn.desktop ~/Desktop/.
+	fi
+}
+
+
+create_menu_entry() {
+	echo "$gosaApplicationFlags" | grep -q "M"
+	if [ $? -eq 0 ]; then
+		[ "$DEBUG" = "YES" ] && echo "goto_setup: creating menu link for application $application" 1>&2
+		cat << EOF > ~/.local/share/applications/$cn.desktop
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Exec=$gosaApplicationExecute
+Name=$gosaApplicationName
+GenericName=$description
+Comment=$description
+Icon=$HOME/.kde/share/icons/${cn}.png
+Terminal=false
+Categories=$appcat
+EOF
+	fi
+}
+
+ 
+delete_all_applinks() {
+	list=`ldapsearch -x -LLL "objectClass=gosaApplication" cn | fix_ldif | awk '/^cn: / {print $2}'`
+	for link in $list; do
+		[ -f $HOME/Desktop/$link ] && rm -f $HOME/Desktop/$link
+		[ -f $HOME/.kde/share/applnk/$link.desktop ] && rm -rf $HOME/.kde/share/applnk/$link.desktop
+	done
+}
+
+
+terminal_load_hardware_profile() {
+	echo -n > "${RAM}${GOTO_SYSCFG}/GOto"
+	ldapsearch -x -LLL "(&(objectClass=goHard)(macAddress=$1))" 2> /dev/null | fix_ldif_all | sed -e 's/^\([^:]*\): \(.*\)$/\U\1\E="\2"/' -e 's/^GOTO//g' >> "${GOTO_SYSCFG}/GOto"
+
+	# Get DN and load all parent defaults from tree
+	current=$(grep "^DN=" ${GOTO_SYSCFG}/GOto|sed 's/\"//g;s/, /,/g;s/^.*,ou=\(workstations|terminals\),ou=systems,//g')
+	self=$(grep "^DN=" ${GOTO_SYSCFG}/GOto|sed 's/DN="*\([^"]*\)"*$/\1/g;s/, /,/g')
+
+	# Load potential object group entries 
+	ldapsearch -x -LLL "(&(objectClass=gosaGroupOfNames)(|(gosaGroupObjects=[T])(gosaGroupObjects=[S])(gosaGroupObjects=[W]))(member=$self))" 2> /dev/null | fix_ldif_all | sed -e 's/^\([^:]*\): \(.*\)$/\U\1\E="\2"/' -e 's/^GOTO//g' >> "${GOTO_SYSCFG}/GOto"
+
+	# Reverse sysconfig/GOto
+	tac "${GOTO_SYSCFG}/GOto" > /tmp/GOto.tmp
+	cat /tmp/GOto.tmp > "${GOTO_SYSCFG}/GOto"
+	rm /tmp/GOto.tmp
+}
+
+terminal_has_hardware_profile() {
+	# Do we have a configuration?
+	terminal_load_hardware_profile $1
+	grep -v "cn=wdefault," "${GOTO_SYSCFG}/GOto" | grep -q "DN="
+}
+
+terminal_do_softupdate() {
+	terminal_load_hardware_profile $1
+	grep -q -i '^FAISTATE=.scheduledupdate' "${GOTO_SYSCFG}/GOto"
+}
+
+terminal_activated() {
+	ldapsearch -x -LLL "(&(objectClass=goHard)(macAddress=$1)(gotoMode=active))" gotoMode | grep -q active
+}
+
+terminal_reboot_needed() {
+	if ldapsearch -x -LLL "(&(objectClass=gotoTerminal)(macAddress=$1)(gotoMode=active))" gotoMode | grep -q active; then
+		if [ -f /.THIS_IS_THE_FAI_NFSROOT ]; then
+			return 0
+		fi
+	fi
+
+	# Also restart, if we're not in LDAP anymore - i.e. in case of OPSI hosts
+	if ! ldapsearch -x -LLL "macAddress=$1" dn | grep -q ^dn:; then
+		return 0
+	fi
+
+	return 1
+}
+
+ldap_init() {
+	echo "Warning: use of obsolete function ldap_init()!";
+}
+
+
+dprint()
+{
+    if [ "$DEBUG" = "YES" ]; then
+       echo "goto-umount-shares: $*"
+    fi
+}
+
+
+# $1 = variable name
+# $2 = LDIF line
+decode_base64()
+{
+        if echo "$2" | grep -iq '^[A-Za-z0-9]\+::'; then
+                dec_res=$(echo $2 | cut -d\  -f2- | base64 -d)
+        else
+                dec_res=$(echo $2 | cut -d\  -f2-)
+        fi
+        eval "$1=\"$dec_res\""
+}
+
+# vim:filetype=sh

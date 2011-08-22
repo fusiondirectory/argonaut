@@ -1,0 +1,7 @@
+README.Debian for argonaut-fuse
+-------------------------------
+
+This package is used to provide a modularized tftp supplicant to make the various
+installation methods of the Argonaut based deployment work.
+
+For now the FAI (Fully automated install) is supported.

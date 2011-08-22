@@ -1,0 +1,4 @@
+#NAME:Profile synchronization
+if [ -x /usr/sbin/argonaut-profile-download ]; then
+		sudo /usr/sbin/argonaut-profile-download
+fi

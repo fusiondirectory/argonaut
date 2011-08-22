@@ -1,0 +1,23 @@
+# translation of goto-common.po to Français
+# Copyright (C) 2007 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the goto-common package.
+#
+# Benoit Mortier <benoit.mortier@opensides.be>, 2007.
+msgid ""
+msgstr ""
+"Project-Id-Version: goto-common\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2007-09-12 19:10+0200\n"
+"PO-Revision-Date: 2007-09-12 19:32+0200\n"
+"Last-Translator: Benoit Mortier <benoit.mortier@opensides.be>\n"
+"Language-Team: Français <fr@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.11.4\n"
+"Plural-Forms:  nplurals=2; plural=(n > 1);\n"
+
+#: goto-support.lib:29
+msgid "No readable LDAP information - LDAP functions may fail!"
+msgstr "Pas d'informations ldap accessibles - Les fonctions LDAP peuvent échouer!"
+

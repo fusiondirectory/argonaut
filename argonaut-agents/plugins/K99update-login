@@ -1,0 +1,3 @@
+#NAME:Unregister login
+
+sudo /usr/sbin/argonaut-update-login

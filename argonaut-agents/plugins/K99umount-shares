@@ -1,0 +1,6 @@
+#NAME:Unmounting network shares
+if [ -x /usr/sbin/argonaut-umount-shares ]; then
+  xhost +localhost
+  sudo /usr/sbin/argonaut-umount-shares
+  xhost -localhost
+fi

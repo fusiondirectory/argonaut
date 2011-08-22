@@ -1,0 +1,45 @@
+In order to make all these scripts work, you need to add some
+special sudo rules. These include:
+
+8<---------------------------------------------------------------
+
+# Allow kiosk updater to be called
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-install-kiosk-profile ""
+
+# Allow usbmanager to be called
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-start-usb ""
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-start-usb cleanup
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-stop-usb ""
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-printer-manager ""
+
+# Connect network drives
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-mount-shares ""
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-umount-shares ""
+
+# Profile sync
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-profile-upload ""
+ALL     ALL=NOPASSWD: /usr/sbin/argonaut-profile-download ""
+
+# Allow last to be called
+ALL     ALL=NOPASSWD: /usr/bin/last -R -n2 [a-z0-9_][a-z0-9_]*
+
+8<---------------------------------------------------------------
+
+If you have users which are administrators, you need these additional
+settings to let them do a "sudo -s":
+
+8<---------------------------------------------------------------
+
+# Members of the admin group may gain root privileges
+# (!) The shell is a workaround to make the above rules play
+# (!) well, please do not replace /bin/bash with ALL!
+root            ALL=(ALL) ALL
+%admins         ALL=(ALL) /bin/bash
+
+-----------------------------------------------------------------
+
+This will allow "root" to do any things as usual (you cannot and
+should not use this as a graphical login account), and ordinary
+users inside of the group "admins" is allowed to do a "sudo -s" -
+set that /bin/bash is your login shell.
+

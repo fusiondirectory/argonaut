@@ -1,0 +1,122 @@
+USAGE of the ldap_get_object program
+
+ldap_get_object -user=$USER
+
+List all the attributes, that are set for $USER, either by its own
+node or POSIX-groups/Objectgroups where he is a member or by Objectgroups
+containing the POSIX groups where he is a member.
+
+
+ldap_get_object -user=$USER -debug
+
+To find out where individual attributes are, the-debug switch
+can be added. Then, the program show the result from all the nodes
+where attributes are found.
+
+
+ldap_get_object -object=gotoWorkstation/$HOSTNAME
+
+List all the attributes that the system $ HOSTNAME gets set,
+either by its own node or object groups where its Member.
+(Note: The switch-object expects a pair objectClass / cn
+objectClass or / ou)
+
+
+ldap_get_object -object=posixGroup/camera -filter="gosaUnitTag=1152296234058713500"
+
+List all the attributes that someone gets when he is in the POSIX group"camera",
+either through the nodes of the group itself or by Object groups that contains
+the group "camera". Since there are multiple "camera" groups, we need to filter
+based on the gosaUnitTag.
+
+
+ldap_get_object -user=$USER "@.*uid.*"
+
+List all the attributes that the user $USER have, and in the name somewhere "uid".
+
+Note: Because this also lists attributes, this also lists all persons (memberUid), that
+have at least one group in common with $USER.
+
+
+ldap_get_object -user=$USER "@gotoprofile.*"
+
+Alle mit der Profilsync im Zusammenhang stehenden Attribute ausgeben, die von irgendeinem
+Knoten auf $USER potentiell Einfluss haben könnten.
+
+Note: The @ in front of the regular Ldap_get_object expression says that it should output
+all attribute values​​, ie if the User attribute gotoprofileflags both by its own node and
+through Objectgroup gets one set, two values ​​are listed (but only if they are different).
+
+
+ldap_get_object -user=$USER "gotoprofile.*"
+
+Die mit der Profilsync im Zusammenhang stehenden Attribute ausgeben, die effektiv für
+den Benutzer gültig sind.Der kleine Unterschied zum vorigen Befehl ist das Fehlen des @.
+Ohne das @ wird die auch in den goto-agents Skripten implementierte Konfliktauflösung
+verwendet, nämlich dass ein Attribut im Knoten des Benutzers Vorrang hat vor einem
+Attribut aus einer POSIX-Gruppe, das wiederum Vorrang hat vor einem Attribut aus
+einer Objektgruppe, die $USER enthält, was wiederum Vorrang hat vor einem Attribut aus
+einer Objektgruppe, die eine POSIX-Gruppe enthält, die den Benutzer enthält.
+Hinweis: Sollte der Benutzer das selbe Attribut aus 2 Quellen gleicher Präzedenz
+bekommen (typischer Konfigurationsfehler), so gibt das Skript eine Warnung aus. Dies
+ist sehr nützlich zum Debuggen des Problems
+"Aber ich habe hier bei der Gruppe doch ... eingestellt. Wieso greift das nicht?"
+
+
+ldap_get_object -user=$USER -enctrigger=none "hobjwt"
+
+The decoded output attribute hobjwt. By default, are all ldap_get_object
+attribute values ​​that contain control characters (ie ASCII code <32) base64-encoded.
+enctrigger = none-encoding can be switched off completely. The fix_ldif script must
+never be used with ldap_get_object.
+
+Note:-enctrigger expects a regular expression (or none). If any Part of an attribute
+value matches it, Base64 encoding is used.
+
+
+ldap_get_object -user=$USER -enctrigger="."
+
+All attributes of $USER are Base64 encoded.
+
+Note:-enctrigger expects a regular expression (or none). If any
+part of an attribute value matches it, Base64 encoding is used.
+
+
+
+ldap_get_object -format=v -enctrigger=none -user=$USER "gotoprofileserver"
+
+Den effektiv gültigen Profilserver ausgeben ohne vorangestellten Attributnamen
+und unabhängig vom Wert ohne Base64-Kodierung.
+
+(eg useful for further processing in shell scripts, Using awk to pick out
+the second field).
+
+
+
+ldap_get_object -object=organizationalUnit/groups \
+     -filter="gosaUnitTag=1152296234058713500" \
+     -subquery="objectClass=posixGroup"
+
+All POSIX groups (including all its attributes).
+
+
+
+ldap_get_object -object=organizationalUnit/groups \
+     -filter="gosaUnitTag=1152296234058713500" \
+     -subquery="objectClass=*"
+
+All groups (POSIX and object groups) together with their attributes.
+
+
+
+ldap_get_object -object=organizationalUnit/systems \
+                  -filter="gosaUnitTag=1152296234058713500" \
+                  -subquery="objectClass=*"
+
+All systems issue (along with all their attributes)
+
+
+
+ldap_get_object -user=$USER -subquery="objectClass=gotoMenuEntry" "@halut/2.0.0beta1/.*"
+
+Spend on BC 2.0, the menu structure, the user $USER receive for the release halut/2.0.0beta1:

@@ -1,0 +1,273 @@
+#!/bin/sh
+
+# Include information from fai-nfsroot
+. /etc/fai/make-fai-nfsroot.conf
+
+echo "Break if no nfsroot is present!";
+
+PATH=/usr/lib/goto:$PATH
+data=/usr/share/goto/data
+
+usage() {
+	echo "Aufruf: $(basename $0) [-u Benutzer | -g Gruppe] [-t Zielverzeichnis] MAC-Adresse"
+	echo
+	exit 1
+}
+
+TTARGET="/srv/iso/$$"
+MAC=
+CUSER=
+CGROUP=
+BATCH=0
+FAI_MIRROR=/srv/repository/ftp/
+FAI_CONFIGDIR=$TTARGET/fai
+SECTIONS="main contrib non-free lhm ff"
+
+while getopts "u:g:t:b" opt; do
+  case $opt in
+    u)	CUSER="-u $OPTARG"
+	;;
+    g)	CGROUP="-g $OPTARG"
+	;;
+    t)  TARGET="$OPTARG"
+        ;;
+    b)  BATCH=1
+        ;;
+    *)  usage
+  esac
+done
+shift $(($OPTIND - 1))
+
+[ -z "$CUSER" -a -z "$CGROUP" ] && usage
+[ $# -ne 1 ] && usage
+MAC=$1
+HOSTNAME=$(ldapsearch -x "(&(objectClass=gotoWorkstation)(macAddress=$MAC))" cn | awk '/^cn:/ {print $2}')
+if [ -z "$HOSTNAME" ]; then
+	echo "Kann keinen Rechner mit der angegebenen MAC-Adresse finden. Abgebrochen."
+	exit 1
+fi
+
+REL=$(ldapsearch -x -LLL "(&(objectClass=gotoWorkstation)(macAddress=$MAC))" FAIclass | fix_ldif | sed -n '/^FAIclass:/s/^FAIclass: .*:\([0-9a-z./]*\).*$/\1/gp')
+if [ -z "$REL" ]; then
+	#search DN of our client.
+	DN=$(ldapsearch -x -LLL "(&(objectClass=gotoWorkstation)(macAddress=$MAC))" dn | /usr/bin/fix_ldif | cut -d\  -f2-)
+
+	#now search groups for the FAIclass to get the release.
+	REL=$(ldapsearch -x -LLL "(&(objectClass=gosaGroupOfNames)(member=$DN)(objectClass=gotoWorkstationTemplate))" FAIclass | sed -n '/^FAIclass:/s/^FAIclass: .*:\([0-9a-z./]*\).*$/\1/gp')
+	if [ -z "$REL" ]; then
+		echo "Kann die Releaseversion des Clients nicht ermittlen. Abgebrochen."
+		exit 1
+	fi
+	APTSOURCE="deb $(ldapsearch -x "(&(objectClass=gosaGroupOfNames)(member=$DN))" FAIdebianMirror| awk '/^FAIdebianMirror:/ {print $2}') ${REL} ${SECTIONS}"
+else
+	APTSOURCE="deb $(ldapsearch -x "(&(objectClass=gotoWorkstation)(macAddress=$MAC))" FAIdebianMirror| awk '/^FAIdebianMirror:/ {print $2}') ${REL} ${SECTIONS}"
+fi
+
+if [ -z "$REL" ]; then
+        echo "Kann die Paketquellen des Clients nicht ermittlen. Abgebrochen."
+        exit 1
+fi
+
+if [ "$(pwd)" == "$TTARGET" ]; then
+	echo "Kann das momentane Arbeitsverzeichnis nicht als Ziel verwenden. Abgebrochen."
+	exit 1
+fi
+
+cat <<EOF
+
+------------------------------------------------
+Zusammenfassung für einen ISO-Build
+------------------------------------------------
+System  : $HOSTNAME ($MAC)
+Release : $REL
+Apt-src : $APTSOURCE
+Benutzer: $CUSER
+Gruppe  : $CGROUP
+Ziel    : $TARGET
+ISO	: $TARGET/$HOSTNAME.iso
+------------------------------------------------
+
+EOF
+if [ $BATCH -eq 0 ]; then
+	read -s -n1 -p "Möchten Sie die CD erstellen (j/n)?" ans; echo
+
+	case $ans in
+	  j|J|y|Y)	;;
+	  *)		exit 1;
+	esac
+fi
+
+# Remove old iso
+echo -e "\nVorbereiten...";
+[ -f "$TARGET/$HOSTNAME.iso" ] && rm "$TARGET/$HOSTNAME.iso"
+[ -d "$TARGET" ] || mkdir -p "$TARGET"
+
+# Prepare clean target directory
+[ -d $TTARGET ] && rm -rf $TTARGET
+mkdir -p $TTARGET/fai
+
+# Retrieve FAI config for the mac
+echo -e "\nAktionen";
+echo "* Rechner-Konfiguration wird ermittelt";
+ldap2fai -d $TTARGET/fai $MAC
+
+# Fake non set hostname
+echo "* Spezielle Anpassungen der Konfiguration werden erstellt";
+for file in $TTARGET/fai/class/$HOSTNAME*; do
+	cp $file $(dirname $file)/\(none\)$(echo -n $file | sed -n 's/^.*\(\..*\)$/\1/p')
+done
+
+# Remove sources.list
+rm -rf $TTARGET/fai/files/etc/apt/sources.list
+
+# Copy current NFSROOT
+echo "Kopiere NFSROOT..."
+tar c -C $NFSROOT . | tar x -C $TTARGET
+
+touch $TTARGET/boot/RUNNING_FROM_FAICD
+echo "deb file:/mirror $REL $SECTIONS" > $TTARGET/etc/apt/sources.list
+
+# Binde Mirror ein
+mkdir $TTARGET/mirror
+FAI_CONFIGDIR=$TTARGET/fai ./fai-mirror -a $TTARGET/mirror
+
+# Build cd
+sed "s#%SRC%#$TTARGET#" /etc/fai/bootcdwrite.conf.in > /etc/fai/bootcdwrite.conf
+bootcdwrite -c /etc/fai
+
+exit 0
+
+
+
+
+
+
+
+
+
+######################################################################################################
+
+
+
+
+
+
+
+
+
+
+# Fix dhclient-exit-hooks in order to be offline-compliant
+#sed -i '/^ldap2base/s/cli$/cli_offline/' $TTARGET/config/files/etc/dhclient-exit-hooks/LiMuxClient
+
+# Generate offline ldif for this client, insert templates/scripts
+#eval $(cat /etc/gosa/gosa.conf | sed -n '/<referral/,/\location>/ { s/<referral//g;s/\/>//g;s/^[ 	]*//g;/location/d; p }')
+#mkdir -p $TTARGET/config/files/tmp/initial.ldif
+#cache-ldap.pl $CUSER $CGROUP -D "$admin" -w "$password" $MAC > $TTARGET/config/files/tmp/initial.ldif/OFFLINE-LDAP
+#cat <<EOF > $TTARGET/config/scripts/OFFLINE-LDAP/99-bootstrap-ldap
+##!/bin/sh
+#
+## Copy needed files
+#fcopy /tmp/initial.ldif
+#fcopy /usr/lib/goto/install-kiosk-profile
+#fcopy /etc/init.d/goto-configure
+#fcopy /usr/lib/goto/goto-support.lib
+#\$ROOTCMD mkdir -p /var/cache/goto
+#cp \$FAI/files/var/cache/goto/* \$FAI_ROOT/var/cache/goto
+#
+## LDAP stuff
+#\$ROOTCMD touch /etc/ldap/schema/fake.schema
+#
+#allattrs=\$(cat \$FAI_ROOT/tmp/initial.ldif | fix_ldif | sed -e 's/:.*$//g' | sort | uniq)
+#
+#i=0
+#for attr in \$allattrs; do
+#        if ! rgrep -i -q "\$attr" \$FAI_ROOT/etc/ldap/schema/*; then
+#                i=\$((\$i + 1))
+#                echo "attributetype ( 1.3.6.1.4.1.10098.1000.1.11.\$i NAME '\$attr'" >> \$FAI_ROOT/etc/ldap/schema/fake.schema
+#                echo "  DESC 'GOto - \$attr'" >> \$FAI_ROOT/etc/ldap/schema/fake.schema
+#                echo "  EQUALITY caseIgnoreMatch" >> \$FAI_ROOT/etc/ldap/schema/fake.schema
+#                echo "  SUBSTR caseIgnoreSubstringsMatch" >> \$FAI_ROOT/etc/ldap/schema/fake.schema
+#                echo "  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 SINGLE-VALUE)" >> \$FAI_ROOT/etc/ldap/schema/fake.schema
+#                echo >> \$FAI_ROOT/etc/ldap/schema/fake.schema
+#        fi
+#done
+#
+#\$ROOTCMD slapadd -cvvvv -l/tmp/initial.ldif
+
+# Patch antivir configuration
+sed -i 's/^HTTPUpdateServer/#HTTPUpdateServer/g' \$FAI_ROOT/etc/antivir.conf
+
+# Unpack kiosk profiles
+cat /fai/files/etc/kiosk/OFFLINE-LDAP.tar.gz | \$ROOTCMD tar xz -C /etc
+
+# Enable LDAP passwords
+\$ROOTCMD touch /etc/goto/ldap-client-password
+
+# Cleanup
+\$ROOTCMD rm /tmp/initial.ldif /tmp/*.exe
+\$ROOTCMD rm /etc/goto/plugins/S00init-ldap-cache
+\$ROOTCMD rm /etc/ifplugd/action.d/00ldapupdown
+
+echo -n $HOSTNAME > \$FAI_ROOT/etc/hostname
+echo -e "\nretry 1;\ntimeout 4;\n" >> \$FAI_ROOT/etc/dhclient.conf
+EOF
+chmod go+x $TTARGET/config/scripts/OFFLINE-LDAP/99-bootstrap-ldap
+
+# Copy files to be exchanged...
+for file in /usr/lib/goto/install-kiosk-profile /etc/init.d/goto-configure /usr/lib/goto/goto-support.lib; do
+	[ ! -d $TTARGET/config/files$file ] && mkdir -p $TTARGET/config/files$file
+	cp $data/$(basename $file) $TTARGET/config/files$file/OFFLINE-LDAP
+done
+
+# Install modified hook
+cp $data/confdir.DEFAULT.source $TTARGET/config/hooks/
+
+# Pack kiosk profiles
+echo "* Kiosk-Profile werden paketiert";
+mkdir -p $TTARGET/config/files/etc/kiosk
+pushd . &> /dev/null
+cd /tmp
+wget -np -nH -m -Xgosa -Agz http://$(hostname -f)/kiosk &> /dev/null
+tar cfz $TTARGET/config/files/etc/kiosk/OFFLINE-LDAP.tar.gz kiosk
+rm -rf gosa
+popd &> /dev/null
+
+# Pack required ppds
+echo "* Benötigtes PPD wird paketiert";
+url=$(ldapsearch -x "(&(macAddress=$MAC)(objectClass=gotoPrinter))" gotoPrinterPPD | fix_ldif | grep '^gotoPrinterPPD:' | cut -d\  -f2-)
+if [ ! -z "$url" ]; then
+	mkdir -p $TTARGET/config/files/var/cache/goto
+	pushd . &> /dev/null
+	cd $TTARGET/config/files/var/cache/goto
+	wget -np -N -t 1 -q "$url" &> /dev/null
+	popd &> /dev/null
+fi
+
+# Create fai mirror
+echo "* Pakete werden gespiegelt";
+mkdir -p $TTARGET/mirror
+[ ! -d /usr/local/share/fai ] && mkdir -p /usr/local/share/fai
+mount -obind $TTARGET/config /usr/local/share/fai
+
+export REL
+
+#generate apt-source dor /etc/fai/sources.list.cd
+#deb http://se2--021/repository limux contrib lhm main non-free
+echo $APTSOURCE > $TTARGET/config/sources.list.cd
+mount -o bind $TTARGET/config/sources.list.cd /etc/fai/sources.list.cd
+
+fai-mirror -a $TTARGET/mirror
+
+exit
+
+# Generate rest of FAI-CD
+echo "* ISO-Datei wird erzeugt";
+fai-cd -m $TTARGET/mirror $TARGET/$HOSTNAME.iso
+
+echo -e "\nAufräumen.."
+rm -rf "$TTARGET"
+
+umount /usr/local/share/fai
+umount /etc/fai/sources.list.cd
+
+exit 0

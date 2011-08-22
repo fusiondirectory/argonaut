@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+# Install template
+/usr/lib/cdebconf/debconf-loadtemplate root /usr/share/argonaut-fai-progress/templates
+
+#DEBHELPER#

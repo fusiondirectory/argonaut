@@ -1,0 +1,36 @@
+#!/bin/sh
+# show user a message, that his device is not allowed to be used....
+#
+PATH=$PATH:/usr/bin
+
+translate() {
+        # Look for translation
+        while read line; do
+                string="${line%%=*}"
+                if [ "$string" == "$*" ]; then
+                        echo "${line##*=}"
+                        return
+                fi
+        done < /etc/argonaut/argonaut-locales.dat
+	echo $*
+}
+
+for i in `ls -d1 /sys/class/usb_device/*/device`; do
+        if find $i -follow -maxdepth 6|grep -q block/sd; then
+                serial=`cat $i/serial`
+                echo "/dev/$1" > /tmp/udev.debug
+                if [ -f $HP_ALLOW ] && grep -q $serial $HP_ALLOW; then
+                        rm -rf /var/lock/pmount/_dev_$1
+                        locked=0
+                else
+                        mkdir -p /var/lock/pmount/_dev_$1
+                        touch /var/lock/pmount/_dev_$1/1
+                        locked=1
+                fi
+        fi
+done
+
+MESSAGE=$(translate "The removable device you have inserted has not been enabled for usage.")
+
+dcop --all-sessions --all-users knotify default notify USBPLUG USBLOCK "$MESSAGE" '' '' 2 0
+exit 0

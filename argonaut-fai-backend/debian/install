@@ -1,0 +1,15 @@
+ldap2fai                usr/sbin
+ldap2fai-loc            usr/sbin
+fai-softupdate          usr/sbin
+ldap2repository         usr/sbin/
+get-config-dir-argonaut usr/lib/fai
+confdir.DEFAULT.source  /var/lib/fai/config/hooks
+error.DEFAULT           /var/lib/fai/config/hooks
+extrbase.DEFAULT        /var/lib/fai/config/hooks
+prepareapt.DEFAULT      /var/lib/fai/config/hooks
+00-copy-templates       /var/lib/fai/config/scripts/DEFAULT
+hooks/argonaut-fai-backend  etc/fai/nfsroot-hooks
+templates/initramfs.conf          etc/fai/nfsroot-templates
+templates/update-initramfs.conf   etc/fai/nfsroot-templates
+templates/usplash.conf            etc/fai/nfsroot-templates
+

@@ -1,0 +1,2 @@
+argonaut-agents-shares: binary-without-manpage usr/sbin/argonaut-mount-shares
+argonaut-agents-shares: binary-without-manpage usr/sbin/argonaut-umount-shares

@@ -1,0 +1,20 @@
+#NAME:Settings screen resolution 
+. /usr/lib/argonaut/argonaut-support.lib
+. /etc/argonaut/argonaut-agent.conf
+
+echo "resolution: Initializing LDAP."
+
+# Get some user informations
+if [ $(ldap_count "(&(uid=$USER)(objectClass=gotoEnvironment))") -eq 1 ]; then
+        ldap_import "(&(uid=$USER)(objectClass=gotoEnvironment))" "" gotoXResolution
+
+        resolution=${ldap_import_gotoXResolution[0]}
+	echo "resolution: resolution='$resolution'"
+        nr=$(xrandr -q | sed 's/^\*/ /'| awk '/^ [0-9]/ {print $2$3$4":"$1}' | grep $resolution | cut -d: -f2 | head -n1)
+	echo "resolution: nr='$nr'"
+        if [ -n "$nr" ]; then
+                xrandr -s $nr
+        fi
+fi
+
+echo "resolution: Done."

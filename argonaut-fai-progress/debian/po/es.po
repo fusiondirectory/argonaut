@@ -1,0 +1,185 @@
+# goto-fai po-debconf translation to Spanish
+# Copyright (C) 2010 Software in the Public Interest
+# This file is distributed under the same license as the goto-fai package.
+#
+# Changes:
+#   - Initial translation
+#       Francisco Javier Cuadrado <fcocuadrado@gmail.com>, 2010
+#
+# Traductores, si no conocen el formato PO, merece la pena leer la
+# documentación de gettext, especialmente las secciones dedicadas a este
+# formato, por ejemplo ejecutando:
+#       info -n '(gettext)PO Files'
+#       info -n '(gettext)Header Entry'
+#
+# Equipo de traducción al español, por favor lean antes de traducir
+# los siguientes documentos:
+#
+#   - El proyecto de traducción de Debian al español
+#     http://www.debian.org/intl/spanish/
+#     especialmente las notas y normas de traducción en
+#     http://www.debian.org/intl/spanish/notas
+#
+#   - La guía de traducción de po's de debconf:
+#     /usr/share/doc/po-debconf/README-trans
+#     o http://www.debian.org/intl/l10n/po-debconf/README-trans
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: goto-fai-progress 2.0-4\n"
+"Report-Msgid-Bugs-To: Source: fai-progress@packages.debian.org\n"
+"POT-Creation-Date: 2008-06-27 11:03+0200\n"
+"PO-Revision-Date: \n"
+"Last-Translator: Francisco Javier Cuadrado <fcocuadrado@gmail.com>\n"
+"Language-Team: Debian l10n Spanish <debian-l10n-spanish@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: title
+#. Description
+#. Type: text
+#. Description
+#. Type: text
+#. Description
+#. Type: text
+#. Description
+#. Type: text
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:1001
+#: ../fai-progress.templates:2001
+#: ../fai-progress.templates:3001
+#: ../fai-progress.templates:6001
+#: ../fai-progress.templates:9001
+#: ../fai-progress.templates:15001
+msgid "${i}"
+msgstr "${i}"
+
+#. Type: title
+#. Description
+#: ../fai-progress.templates:4001
+msgid "GOto - Hardware detection"
+msgstr "GOto - Detección de hardware"
+
+#. Type: text
+#. Description
+#: ../fai-progress.templates:5001
+msgid "Progress of hardware detection"
+msgstr "Progreso de la detección de hardware"
+
+#. Type: title
+#. Description
+#: ../fai-progress.templates:7001
+msgid "GOto - System Activation"
+msgstr "GOto - Activación del sistema"
+
+#. Type: text
+#. Description
+#: ../fai-progress.templates:8001
+msgid "Waiting"
+msgstr "Esperando"
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:10001
+#: ../fai-progress.templates:11001
+msgid "Error in network configuration"
+msgstr "Se ha producido un error en la configuración de la red"
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:10001
+msgid "The system could not determine a network address."
+msgstr "El sistema no pudo determinar una dirección de red."
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:10001
+#: ../fai-progress.templates:11001
+msgid "The installation cannot continue without this information."
+msgstr "La instalación no puede continuar sin esta información."
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:11001
+msgid "The system could not determine a system name for ip ${i}."
+msgstr "El sistema no pudo determinar un nombre del sistema para la ip ${i}."
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:12001
+msgid "FAI error"
+msgstr "Error de FAI"
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:12001
+#: ../fai-progress.templates:14001
+msgid "The last installation failed. Please unlock this system after the error has been resolved."
+msgstr "La última instalación falló. Por favor, desbloquee este sistema después de resolver el error."
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:12001
+#: ../fai-progress.templates:14001
+msgid "Error code: ${i}"
+msgstr "Código de error: ${i}"
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:12001
+#: ../fai-progress.templates:13001
+#: ../fai-progress.templates:14001
+#: ../fai-progress.templates:15001
+msgid "Please inform your administrator."
+msgstr "Avise a su administrador."
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:13001
+msgid "GOto error"
+msgstr "Error de GOto"
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:13001
+msgid "Cannot register client. There is no activation server available."
+msgstr "No se pudo registrar el cliente. No hay un servidor de activación disponible."
+
+#. Type: error
+#. Description
+#. Type: error
+#. Description
+#: ../fai-progress.templates:14001
+#: ../fai-progress.templates:15001
+msgid "LDAP error"
+msgstr "Error de LDAP"
+
+#. Type: error
+#. Description
+#: ../fai-progress.templates:15001
+msgid "Cannot retrieve information about this system."
+msgstr "No se pudo conseguir la información del sistema."
+
+#. Type: text
+#. Description
+#: ../fai-progress.templates:16001
+msgid "Debconf language"
+msgstr "Idioma de debconf"
+

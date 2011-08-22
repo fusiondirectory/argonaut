@@ -1,0 +1,4 @@
+#NAME:Adapting printer settings
+if [ -x /usr/sbin/argonaut-printer-manager ]; then
+	sudo /usr/sbin/argonaut-printer-manager 
+fi

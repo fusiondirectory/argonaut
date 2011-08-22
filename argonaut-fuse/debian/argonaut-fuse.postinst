@@ -1,0 +1,37 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+	configure|reconfigure)
+
+	. /usr/share/debconf/confmodule
+	db_version 2.0
+	db_get "fts/tftppath"
+	tftppath="$RET"
+	
+	# Create user
+	if ! getent passwd | grep -q "tftpd"
+	then
+		adduser --group --system tftpd
+	fi
+
+	### Create pxelinux.cfg path
+	[ ! -d "$tftppath/pxelinux.cfg" ] && mkdir -p "$tftppath/pxelinux.cfg"
+	
+	### Create pxelinux.static path
+	[ ! -d "$tftppath/pxelinux.static" ] && mkdir -p "$tftppath/pxelinux.static"
+
+	### Create default file
+	if [ ! -f "$tftppath/pxelinux.static/default" ]; then
+	 	echo "localboot 0" > "$tftppath/pxelinux.cfg/default"
+	fi
+
+	# Apply to config
+	sed -i "s~^pxelinux_cfg=/.*$~pxelinux_cfg=$tftppath\/pxelinux.cfg~" /usr/share/doc/argonaut-fuse/argonaut-fuse.conf
+	sed -i "s~^pxelinux_cfg_static=/.*$~pxelinux_cfg_static=$tftppath\/pxelinux.static~" /usr/share/doc/argonaut-fuse/argonaut-fuse.conf
+	ucf --three-way --debconf-ok /usr/share/doc/argonaut-fuse/argonaut-fuse.conf /etc/argonaut-fuse/argonaut-fuse.conf
+	;;
+esac
+
+#DEBHELPER#

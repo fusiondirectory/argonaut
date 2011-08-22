@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Skip syslog configuration if we've no config file
+[ -f /etc/sysconfig/argonaut ] || exit
+
+# Source configuration file
+. /etc/sysconfig/argonaut
+
+# Adapt configuration if a syslog server has been specified
+if [ -n "$SYSLOGSERVER" ]; then
+
+	# Check if there is a @ logging line inside our configuration
+	if grep -q '^\*\.\*[ 	][ 	]*@.*$' /etc/syslog.conf; then
+		sed "s%^\*\.\*[ 	][ 	]*@.*$%*.*       @$SYSLOGSERVER%" /etc/syslog.conf > /etc/syslog.conf.$$
+		cat /etc/syslog.conf.$$ > /etc/syslog.conf
+	else
+		echo "*.*       @$SYSLOGSERVER" >> /etc/syslog.conf
+	fi
+
+fi
+
+# Cleanup
+[ -f /etc/syslog.conf.$$ ] && rm -f /etc/syslog.conf.$$

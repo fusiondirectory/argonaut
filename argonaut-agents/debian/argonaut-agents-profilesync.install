@@ -1,0 +1,6 @@
+profile-exclude.list		etc/argonaut
+argonaut-profile-download	usr/sbin
+argonaut-profile-sync 		usr/sbin
+argonaut-profile-upload		usr/sbin
+plugins/S03profile-download	etc/argonaut/plugins
+plugins/K98profile-upload	etc/argonaut/plugins

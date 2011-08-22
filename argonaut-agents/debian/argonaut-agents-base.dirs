@@ -1,0 +1,6 @@
+etc/init.d
+etc/argonaut/plugins
+etc/argonaut/modules
+etc/sysconfig
+usr/share/locale/de/LC_MESSAGES
+usr/share/locale/fr/LC_MESSAGES

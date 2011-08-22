@@ -1,0 +1,7 @@
+argonaut-agents.conf		etc/argonaut
+argonaut-locales.dat		etc/argonaut
+sample.sh			usr/share/doc/argonaut-agents-base
+modules/timeserver		etc/argonaut/modules
+modules/syslog			etc/argonaut/modules
+modules/wake-on-lan		etc/argonaut/modules
+argonaut-agents			etc/default

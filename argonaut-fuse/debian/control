@@ -1,0 +1,30 @@
+Source: argonaut-fuse
+Section: utils
+Priority: optional
+Maintainer: FusionDirectory Packagers <fusiondirectory-packages@lists.fusiondirectory.org>
+Uploaders: Benoit Mortier <benoit.mortier@opensides.be>
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 7.0.50~), coreutils (>= 5.97.5-3), po-debconf
+Homepage: https://forge.fusiondirectory.org/projects/goto2
+Vcs-Browser: http://git.fusiondirectory.org/code/main/goto2.git/
+Vcs-Git: http://git.fusiondirectory.org/main/goto2.git
+DM-Upload-Allowed: yes
+
+Package: argonaut-fuse
+Architecture: all
+Depends: ${misc:Depends}, libconfig-inifiles-perl, libproc-daemon-perl, adduser, ucf, po-debconf, libfuse-perl, libfile-pid-perl, fuse-utils
+Recommends: tftpd | atftpd | tftpd-hpa
+Description: Modular TFTP/Fuse supplicant
+ Argonaut-fuse is a modular fuse-tftp-supplicant written in perl which allows
+ to create pxelinux configurations for different types of clients
+ using external modules
+ . 
+ There is already written modules for FAI (Fully automated install).
+
+Package: argonaut-fuse-fai-ldap
+Architecture: all
+Depends: ${misc:Depends}, libnet-ldap-perl, fts
+Description: LDAP FAI module for the TFTP/Fuse supplicant
+ FAI module for argonaut-fuse which is using the LDAP backend in conjunction
+ with FusionDirectory and Argonaut to generate client configurations.
+ .

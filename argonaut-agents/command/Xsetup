@@ -1,0 +1,44 @@
+#!/bin/sh
+# Xsetup - run as root before the login dialog appears
+
+# Check for fai-state
+if [[ -f /etc/gosa-si/event ]]; then
+
+	# If no one is logged in...
+	if ! w | awk '{print $2}' | grep -q :; then
+
+		# Calculate progress bar positions, initialize progress
+		RES=$(xdpyinfo | awk '/dimensions:/ {print $2}')
+		XPOS=$(( (${RES%%x*} - 490) / 2 ))
+		YPOS=$(( (${RES##*x} - 65) / 2 ))
+
+		# Save and remove state
+		state=$(</etc/gosa-si/event)
+		rm /etc/gosa-si/event
+
+		case $state in
+
+			install)
+				{ for i in 0 33 66 100; do echo "$i Das System startet sich nun zur Installation neu..."; sleep 2; done; echo '-1'; } | kprogress -geometry +$XPOS+$YPOS
+				/sbin/reboot
+				sleep 10000
+				# never reached
+				;;
+
+			reboot)
+				{ for i in 0 33 66 100; do echo "$i Das System startet sich nun neu..."; sleep 2; done; echo '-1'; } | kprogress -geometry +$XPOS+$YPOS
+				/sbin/reboot
+				sleep 10000
+				# never reached
+				;;
+
+			halt)
+				{ for i in 0 33 66 100; do echo "$i Das System schaltet sich nun aus..."; sleep 2; done; echo '-1'; } | kprogress -geometry +$XPOS+$YPOS
+				/sbin/halt
+				sleep 10000
+				# never reached
+				;;
+
+		esac
+	fi
+fi

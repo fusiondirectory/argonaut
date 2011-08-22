@@ -1,0 +1,2 @@
+argonaut-agents-kiosk: binary-without-manpage usr/sbin/argonaut-install-kiosk-profile
+
