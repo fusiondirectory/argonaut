@@ -1,4 +1,5 @@
 # Copyright (c) 2008 Landeshauptstadt München
+# Copyright (C) 2011 FusionDirectory project
 #
 # Author: Jan-Marek Glogowski
 #

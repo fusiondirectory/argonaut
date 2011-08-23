@@ -1,4 +1,5 @@
 # Copyright (c) 2008 Landeshauptstadt München
+# Copyright (C) 2011 FusionDirectory project
 #
 # Author: Matthias S. Benkmann
 #
@@ -14,9 +15,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
 
 package Argonaut::Common;
-# $Id$
 
 use strict;
 use Net::LDAP;

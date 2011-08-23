@@ -2,7 +2,8 @@
 #
 # Argonaut::Utils package -- Log parsing aid.
 #
-# (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (C) 2011 FusionDirectory project
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

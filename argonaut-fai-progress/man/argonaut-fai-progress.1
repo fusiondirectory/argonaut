@@ -123,26 +123,24 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "FAI-PROGRESS 1"
-.TH FAI-PROGRESS 1 "2011-08-17" "GOto2 1.1" "GOto2 Documentation"
+.IX Title "ARGONAUT-FAI-PROGRESS 1"
+.TH ARGONAUT-FAI-PROGRESS 1 "2011-08-23" "Argonaut 1.0" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-fai\-progress \- show an informative progress bar during FAI operations.
+argonaut\-fai\-progress \- show an informative progress bar during FAI operations.
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-/usr/lib/cdebconf/debconf fai-progress
+/usr/lib/cdebconf/debconf argonaut-fai-progress
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-fai-progress is a script used to display an informative progress bar
-during installations or softupdates using \s-1FAI\s0 and a standard cdebconf
-method.
+argonaut-fai-progress is a script used to display an informative progress bar
+during installations or softupdates using \s-1FAI\s0 and a standard cdebconf method.
 .PP
 Use vga=788 as your kernel start parameter and you're getting the
-\&\s-1GTK\s0 backend instead of textual \s-1NEWT\s0. You can use dpatch to change
-the graphical logo to your own one.
+\&\s-1GTK\s0 backend instead of textual \s-1NEWT\s0.
 .SH "ENVIRONMENT VARIABLES"
 .IX Header "ENVIRONMENT VARIABLES"
 .IP "\fB\s-1FAI_LOG_PATH\s0\fR        \s-1FAI\s0 logfile to monitor for changes" 3
@@ -155,7 +153,8 @@ the graphical logo to your own one.
 .PD
 .SH "USAGE"
 .IX Header "USAGE"
-This example is from the confdir.default.source hook. It creates a new \s-1VT\s0 and starts the fai-progress process inside of this \s-1VT\s0. It can be stopped by \*(L"echo fai-progress: hangup >> \f(CW$FAI_LOG_PATH\fR\*(R".
+This example is from the confdir.default.source hook. It creates a new \s-1VT\s0 and starts the argonaut-fai-progress process inside of this \s-1VT\s0. It can be 
+stopped by \*(L"echo argonaut-fai-progress: hangup >> \f(CW$FAI_LOG_PATH\fR\*(R".
 .PP
 FAI_PROGRESS_VT=$(openvt \-v 2>&1 \*(-- sh \-c "
         export TERM=linux ;
@@ -189,7 +188,7 @@ In order to display the installation progress correctly, you have to set the \s-
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/fdirectory/issues/new>
+<https://forge.fusiondirectory.org/projects/argonaut\-agents/issues/new>
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
@@ -207,6 +206,9 @@ but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty
 .SH "POD ERRORS"
 .IX Header "POD ERRORS"
 Hey! \fBThe above document had some coding errors, which are explained below:\fR
-.IP "Around line 45:" 4
-.IX Item "Around line 45:"
+.IP "Around line 43:" 4
+.IX Item "Around line 43:"
 You forgot a '=back' before '=head1'
+.IP "Around line 74:" 4
+.IX Item "Around line 74:"
+=back without =over

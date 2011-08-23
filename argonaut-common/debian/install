@@ -1,10 +1,10 @@
-goto-support.lib        			usr/lib/argonaut
+lib/argonaut-support.lib       			usr/lib/argonaut
 Argonaut/Common.pm      			usr/share/perl5/Argonaut
 Argonaut/LDAP.pm        			usr/share/perl5/Argonaut
 Argonaut/Utils.pm       			usr/share/perl5/Argonaut
-fix_ldif                			usr/share/argonaut
-ldap_get_object         			usr/share/argonaut
+bin/fix_ldif                			usr/share/argonaut
+bin/ldap_get_object         			usr/share/argonaut
 locale/de/LC_MESSAGES/de-goto-common.mo		usr/share/locale/de/LC_MESSAGES/goto-common.mo
 locale/de/LC_MESSAGES/fr-goto-common.mo		usr/share/locale/fr/LC_MESSAGES/goto-common.mo
-ldap_get_object.examples			usr/share/doc/argonaut-common
+doc/ldap_get_object.examples			usr/share/doc/argonaut-common
 

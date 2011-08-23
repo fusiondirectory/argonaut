@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 #*********************************************************************
 #
-# fai-progress -- monitor process that does progress and error
-#                 display for FAI installations.
+# argoanaut-fai-progress -- monitor process that does progress and error
+#                           display for FAI installations.
 #
 # (c) 2008-2010 by Cajus Pollmeier <pollmeier@gonicus.de>
 # (c) 2011 The FusionDirectory Project <contact@fusiondirectory.org>
@@ -11,21 +11,19 @@
 
 =head1 NAME
 
-fai-progress - show an informative progress bar during FAI operations.
+argonaut-fai-progress - show an informative progress bar during FAI operations.
 
 =head1 SYNOPSIS
 
-/usr/lib/cdebconf/debconf fai-progress
+/usr/lib/cdebconf/debconf argonaut-fai-progress
 
 =head1 DESCRIPTION
 
-fai-progress is a script used to display an informative progress bar
-during installations or softupdates using FAI and a standard cdebconf
-method.
+argonaut-fai-progress is a script used to display an informative progress bar
+during installations or softupdates using FAI and a standard cdebconf method.
 
 Use vga=788 as your kernel start parameter and you're getting the
-GTK backend instead of textual NEWT. You can use dpatch to change
-the graphical logo to your own one.
+GTK backend instead of textual NEWT.
 
 =head1 ENVIRONMENT VARIABLES
 
@@ -44,7 +42,8 @@ the graphical logo to your own one.
 
 =head1 USAGE
 
-This example is from the confdir.default.source hook. It creates a new VT and starts the fai-progress process inside of this VT. It can be stopped by "echo fai-progress: hangup >> $FAI_LOG_PATH".
+This example is from the confdir.default.source hook. It creates a new VT and starts the argonaut-fai-progress process inside of this VT. It can be 
+stopped by "echo argonaut-fai-progress: hangup >> $FAI_LOG_PATH".
 
 FAI_PROGRESS_VT=$(openvt -v 2>&1 -- sh -c "
         export TERM=linux ;
@@ -72,16 +71,16 @@ echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/fai-progress-vt
 chvt ${FAI_PROGRESS_VT##/dev/tty}
 
 
+=back
+
 =head1 PRESUMPTION
 
 In order to display the installation progress correctly, you have to set the MAXPACKAGES FAI variable to a large value - i.e. 10000.
 
-
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/fdirectory/issues/new>
-
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -114,12 +113,12 @@ use Argonaut::Utils;
 
 # I18N setup
 setlocale(LC_MESSAGES, "");
-textdomain("fai-progress");
+textdomain("argonaut-fai-progress");
 
 # Global variables
 my $percent= 0;
 my $last_percent= 0;
-my $template= "fai-progress";
+my $template= "argonaut-fai-progress";
 my $update= 0;
 my $monitor_path= "/var/log/fai.log";
 my $gosa_si_path= "/var/run/gosa-si/gosa-si-client.socket";

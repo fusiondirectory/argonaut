@@ -1,12 +1,12 @@
-Template: fai-progress/title
+Template: argonaut-fai-progress/title
 Type: title
 _Description: ${i}
 
-Template: fai-progress/info
+Template: argonaut-fai-progress/info
 Type: text
 _Description: ${i}
 
-Template: fai-progress/step
+Template: argonaut-fai-progress/step
 Type: text
 _Description: ${i}
 
@@ -34,21 +34,21 @@ Template: goto-activation/step
 Type: text
 _Description: ${i}
 
-Template: fai-progress/error-ip
+Template: argonaut-fai-progress/error-ip
 Type: error
 _Description: Error in network configuration
  The system could not determine a network address.
  .
  The installation cannot continue without this information.
 
-Template: fai-progress/error-dns
+Template: argonaut-fai-progress/error-dns
 Type: error
 _Description: Error in network configuration
  The system could not determine a system name for ip ${i}.
  .
  The installation cannot continue without this information.
 
-Template: fai-progress/error-fai
+Template: argonaut-fai-progress/error-fai
 Type: error
 _Description: FAI error
  The last installation failed. Please unlock this system after the error has been resolved.
@@ -57,14 +57,14 @@ _Description: FAI error
  .
  Please inform your administrator.
 
-Template: fai-progress/error-gosa-si-no-server
+Template: argonaut-fai-progress/error-gosa-si-no-server
 Type: error
 _Description: GOto error
  Cannot register client. There is no activation server available.
  .
  Please inform your administrator.
 
-Template: fai-progress/error-ldap
+Template: argonaut-fai-progress/error-ldap
 Type: error
 _Description: LDAP error
  The last installation failed. Please unlock this system after the error has been resolved.
@@ -73,7 +73,7 @@ _Description: LDAP error
  .
  Please inform your administrator.
 
-Template: fai-progress/ldap2fai-error
+Template: argonaut-fai-progress/ldap2fai-error
 Type: error
 _Description: LDAP error
  Cannot retrieve information about this system.

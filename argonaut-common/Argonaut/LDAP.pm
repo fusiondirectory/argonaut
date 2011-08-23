@@ -1,5 +1,6 @@
 #!/usr/bin/perl -l -s
 # Copyright (c) 2008 Landeshauptstadt München
+# Copyright (C) 2011 FusionDirectory project
 #
 # Author: Matthias S. Benkmann
 #
@@ -601,12 +602,12 @@ __END__
 
 =head1 NAME
 
-GOto::LDAP - Support library for goto-* scripts to access LDAP
+Argonaut::LDAP - Support library for goto-* scripts to access LDAP
 
 =head1 SYNOPSIS
 
-  use GOto::Common qw(:ldap);
-  use GOto::LDAP qw(ldap_get_object);
+  use Argonaut::Common qw(:ldap);
+  use Argonaut::LDAP qw(ldap_get_object);
  
   my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
   my ($ldapbase,$ldapuris) = ($ldapinfo->{"LDAP_BASE"}, $ldapinfo->{"LDAP_URIS"});
@@ -797,6 +798,26 @@ C<attributeName: value> pairs. Format C<v> means to print the values only.
 
 =back
 
+=head1 BUGS
 
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 2
+
+=item Copyright (C) 2008 Matthias S. Benkmann
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
 =cut

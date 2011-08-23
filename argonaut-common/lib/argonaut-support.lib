@@ -1,6 +1,6 @@
 #!/bin/sh
 ###############################################################################
-#                             GOsa agent library                              #
+#                             Argonaut agent library                          #
 ###############################################################################
 
 SSH='ssh -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile /dev/null" -o "BatchMode yes" '
@@ -235,10 +235,10 @@ ldap_user_has_profile() {
 
 ##########################################################################
 #
-# ldap_get_user_shares_of: Liefert Shares des Benutzers
-#                          (ueber Benutzerobjekt)
+# ldap_get_user_shares_of: Supplies Shares of the user
+#                          (User Object)
 #
-# Argument $1: UID des Benutzers
+# Argument $1: UID of the user
 # 
 ##########################################################################
 ldap_get_user_shares_of() {
@@ -248,10 +248,10 @@ ldap_get_user_shares_of() {
 
 ##########################################################################
 #
-# ldap_get_shares_of: Liefert Shares des Benutzers 
-#                     (ueber Benutzer und Gruppenobjekte)
+# ldap_get_shares_of: Supplies Shares of the user 
+#                     (about user and group objects)
 #
-# Argument $1: UID des Benutzers
+# Argument $1: UID of the user
 # 
 ##########################################################################
 ldap_get_shares_of() {

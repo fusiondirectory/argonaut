@@ -124,18 +124,18 @@
 .\" ========================================================================
 .\"
 .IX Title "Argonaut::LDAP 3"
-.TH Argonaut::LDAP 3 "2011-08-17" "Argonaut 1.0" "Argonaut Documentation"
+.TH Argonaut::LDAP 3 "2011-08-23" "Argonaut 1.0" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-GOto::LDAP \- Support library for goto\-* scripts to access LDAP
+Argonaut::LDAP \- Support library for goto\-* scripts to access LDAP
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .Vb 2
-\&  use GOto::Common qw(:ldap);
-\&  use GOto::LDAP qw(ldap_get_object);
+\&  use Argonaut::Common qw(:ldap);
+\&  use Argonaut::LDAP qw(ldap_get_object);
 \& 
 \&  my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
 \&  my ($ldapbase,$ldapuris) = ($ldapinfo\->{"LDAP_BASE"}, $ldapinfo\->{"LDAP_URIS"});
@@ -308,3 +308,21 @@ If you pass \f(CW\*(C`enctrigger=none\*(C'\fR, encoding will be completely disab
 This parameter is only relevant when \f(CW\*(C`debug\*(C'\fR is \f(CW\*(C`true\*(C'\fR. It affects the way, attribute values
 are printed. Format \f(CW"a:v"\fR means to print 
 \&\f(CW\*(C`attributeName: value\*(C'\fR pairs. Format \f(CW\*(C`v\*(C'\fR means to print the values only.
+.SH "BUGS"
+.IX Header "BUGS"
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut\-agents/issues/new>
+.SH "LICENCE AND COPYRIGHT"
+.IX Header "LICENCE AND COPYRIGHT"
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+.IP "Copyright (C) 2008 Matthias S. Benkmann" 2
+.IX Item "Copyright (C) 2008 Matthias S. Benkmann"
+.PD 0
+.IP "Copyright (C) 2011 FusionDirectory project" 2
+.IX Item "Copyright (C) 2011 FusionDirectory project"
+.PD
+.PP
+This program is distributed in the hope that it will be useful,
+but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty of
+\&\s-1MERCHANTABILITY\s0 or \s-1FITNESS\s0 \s-1FOR\s0 A \s-1PARTICULAR\s0 \s-1PURPOSE\s0.  See the
+\&\s-1GNU\s0 General Public License for more details.

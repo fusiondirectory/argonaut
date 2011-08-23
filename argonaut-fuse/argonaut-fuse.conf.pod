@@ -1,12 +1,14 @@
 
 =head1 NAME
 
-fts.conf - Configuration file for fts a FUSE/TFTP supplicant targeted to work with LDAP entries written by GOsa
+argonaut-fuse.conf - Configuration file for FUSE/TFTP supplicant targeted to work with LDAP entries written by FusionDirectory
 
 
 =head1 DESCRIPTION
 
-The fts.conf file defines all parameter fts needs for running. It is normally located in the /etc/fts/ directory and is generated automatically by the fts(1) program during installation. 
+The argonaut-fuse.conf file defines all parameter arogonaut-fuse needs for running. It is normally located in the /etc/argonaut-fuse directory and 
+is 
+generated automatically by the argonaut-fuse(1) program during installation. 
 
 =head1 DIRECTIVES
 
@@ -17,13 +19,13 @@ The fts.conf file defines all parameter fts needs for running. It is normally lo
 
 =item dflt_init = install
 
-Defines the default fts initialisation mode.
+Defines the default argonaut-fuse initialisation mode.
 
 =item logfile = /var/log/fts.log
 
 Define the location of the logfile.
 
-=item pid-file = /var/run/fts.pid
+=item pid-file = /var/run/argonaut-fuse.pid
 
 Defines the location for the pid file.
 
@@ -38,11 +40,11 @@ Define the default loglevel
 
 =over 2
 
-=item pxelinux_cfg = /srv/fai/boot/pxelinux.cfg
+=item pxelinux_cfg = /srv/tftp/pxelinux.cfg
 
 Define the location for the tftp root
 
-=item pxelinux_cfg_static = /srv/fai/boot/pxelinux.static
+=item pxelinux_cfg_static = /srv/tftp/pxelinux.static
 
 Define the location for directory containing files that should be present in "pxelinux.cfg" when mounted (i.e. /srv/fai/boot/pxelinux.static/default will be accessible as /srv/fai/boot/pxelinux.cfg/default)
 
@@ -80,11 +82,11 @@ Define where the ldap config is stored
 
 =item fai_flags = verbose,syslogd,reboot vga=0
 
-Define the fai flags used by fts
+Define the fai flags used by argonaut-fuse
 
 =item nfs_opts =
 
-Define the nfs options that can be passed to fts for fai
+Define the nfs options that can be passed to argonaut-fuse for fai
 
 =item nfs_root = /srv/fai/nfsroot
 
@@ -96,33 +98,10 @@ Define the type of filesystem used in fai live system
 
 =back
 
-
-=head2  [OPSI]
-
-=over 4
-
-=item admin = 
-
-Define the admin user for the opsi server
-
-=item password = 
-
-Define the admin password for the opsi server
-
-=item server = 
-
-Define the ip of fqdn address of the opsi server
-
-=item lang = de
-
-Define the default language for the opsi installer
-
-=back
-
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/goto2/issues/new>
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 

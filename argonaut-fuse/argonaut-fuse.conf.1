@@ -123,40 +123,42 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "FTS.CONF 1"
-.TH FTS.CONF 1 "2011-08-17" "GOto2 1.1" "GOto2 Documentation"
+.IX Title "ARGONAUT-FUSE.CONF 1"
+.TH ARGONAUT-FUSE.CONF 1 "2011-08-23" "Argonaut 1.0" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-fts.conf \- Configuration file for fts a FUSE/TFTP supplicant targeted to work with LDAP entries written by GOsa
+argonaut\-fuse.conf \- Configuration file for FUSE/TFTP supplicant targeted to work with LDAP entries written by FusionDirectory
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-The fts.conf file defines all parameter fts needs for running. It is normally located in the /etc/fts/ directory and is generated automatically by the \fIfts\fR\|(1) program during installation.
+The argonaut\-fuse.conf file defines all parameter arogonaut-fuse needs for running. It is normally located in the /etc/argonaut\-fuse directory and 
+is 
+generated automatically by the \fIargonaut\-fuse\fR\|(1) program during installation.
 .SH "DIRECTIVES"
 .IX Header "DIRECTIVES"
 .SS "[General]"
 .IX Subsection "[General]"
 .IP "dflt_init = install" 4
 .IX Item "dflt_init = install"
-Defines the default fts initialisation mode.
+Defines the default argonaut-fuse initialisation mode.
 .IP "logfile = /var/log/fts.log" 4
 .IX Item "logfile = /var/log/fts.log"
 Define the location of the logfile.
-.IP "pid-file = /var/run/fts.pid" 4
-.IX Item "pid-file = /var/run/fts.pid"
+.IP "pid-file = /var/run/argonaut\-fuse.pid" 4
+.IX Item "pid-file = /var/run/argonaut-fuse.pid"
 Defines the location for the pid file.
 .IP "loglevel=5" 4
 .IX Item "loglevel=5"
 Define the default loglevel
 .SS "[\s-1TFTP\s0]"
 .IX Subsection "[TFTP]"
-.IP "pxelinux_cfg = /srv/fai/boot/pxelinux.cfg" 2
-.IX Item "pxelinux_cfg = /srv/fai/boot/pxelinux.cfg"
+.IP "pxelinux_cfg = /srv/tftp/pxelinux.cfg" 2
+.IX Item "pxelinux_cfg = /srv/tftp/pxelinux.cfg"
 Define the location for the tftp root
-.IP "pxelinux_cfg_static = /srv/fai/boot/pxelinux.static" 2
-.IX Item "pxelinux_cfg_static = /srv/fai/boot/pxelinux.static"
+.IP "pxelinux_cfg_static = /srv/tftp/pxelinux.static" 2
+.IX Item "pxelinux_cfg_static = /srv/tftp/pxelinux.static"
 Define the location for directory containing files that should be present in \*(L"pxelinux.cfg\*(R" when mounted (i.e. /srv/fai/boot/pxelinux.static/default will be accessible as /srv/fai/boot/pxelinux.cfg/default)
 .SS "[\s-1LDAP\s0]"
 .IX Subsection "[LDAP]"
@@ -181,34 +183,20 @@ Define where the ldap config is stored
 .IX Subsection "[FAI]"
 .IP "fai_flags = verbose,syslogd,reboot vga=0" 4
 .IX Item "fai_flags = verbose,syslogd,reboot vga=0"
-Define the fai flags used by fts
+Define the fai flags used by argonaut-fuse
 .IP "nfs_opts =" 4
 .IX Item "nfs_opts ="
-Define the nfs options that can be passed to fts for fai
+Define the nfs options that can be passed to argonaut-fuse for fai
 .IP "nfs_root = /srv/fai/nfsroot" 4
 .IX Item "nfs_root = /srv/fai/nfsroot"
 Define the nfsroot for fai
 .IP "union = aufs" 4
 .IX Item "union = aufs"
 Define the type of filesystem used in fai live system
-.SS "[\s-1OPSI\s0]"
-.IX Subsection "[OPSI]"
-.IP "admin =" 4
-.IX Item "admin ="
-Define the admin user for the opsi server
-.IP "password =" 4
-.IX Item "password ="
-Define the admin password for the opsi server
-.IP "server =" 4
-.IX Item "server ="
-Define the ip of fqdn address of the opsi server
-.IP "lang = de" 4
-.IX Item "lang = de"
-Define the default language for the opsi installer
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/goto2/issues/new>
+<https://forge.fusiondirectory.org/projects/argonaut\-agents/issues/new>
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>

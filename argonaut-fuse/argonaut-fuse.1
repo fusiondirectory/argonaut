@@ -123,26 +123,26 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "FTS 1"
-.TH FTS 1 "2011-08-17" "GOto2 1.1" "GOto2 Documentation"
+.IX Title "ARGONAUT-FUSE 1"
+.TH ARGONAUT-FUSE 1 "2011-08-23" "Argonaut 1.0" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-argonaut\-tftpd \- FUSE/TFTP supplicant targeted to work with LDAP entries written by FusionDirectory
+argonaut\-fuse \- FUSE/TFTP supplicant targeted to work with LDAP entries written by FusionDirectory
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-argonaut-tftpd [\-hnfsv] [\-d <show>] [\-c config]
+argonaut-fuse [\-hnfsv] [\-d <show>] [\-c config]
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-\&\fBfts\fR is a modular fuse-tftp-supplicant written in perl which allows one to create pxelinux configurations for different types of clients using external modules.
-There is already written modules for \s-1FAI\s0 (Fully automated install), \s-1OPSI\s0 (OpenPc integration) and \s-1LTSP5\s0 (Linux Terminal server project)
-.IP "\fB\-c\fR <cfg>  fts config file (default: /etc/fts/fts.conf)" 10
-.IX Item "-c <cfg>  fts config file (default: /etc/fts/fts.conf)"
+\&\fBargonaut-fuse\fR is a modular fuse-tftp-supplicant written in perl which allows one to create pxelinux configurations for different types of clients using external modules.
+There is already written modules for \s-1FAI\s0 (Fully automated install).
+.IP "\fB\-c\fR <cfg>  argonaut-fuse config file (default: /etc/argonaut\-fuse/argonaut\-fuse.conf)" 10
+.IX Item "-c <cfg>  argonaut-fuse config file (default: /etc/argonaut-fuse/argonaut-fuse.conf)"
 .PD 0
-.IP "\fB\-d\fR <dump> dump fts config to stdout ( 1 = current, 2 = default )" 10
-.IX Item "-d <dump> dump fts config to stdout ( 1 = current, 2 = default )"
+.IP "\fB\-d\fR <dump> dump argonaut-fuse config to stdout ( 1 = current, 2 = default )" 10
+.IX Item "-d <dump> dump argonaut-fuse config to stdout ( 1 = current, 2 = default )"
 .IP "\fB\-h\fR        display this help and exit" 10
 .IX Item "-h        display this help and exit"
 .IP "\fB\-n\fR        dry-run" 10
@@ -157,23 +157,23 @@ There is already written modules for \s-1FAI\s0 (Fully automated install), \s-1O
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/goto2/issues/new>
+<https://forge.fusiondirectory.org/projects/argonaut\-agents/issues/new>
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
 .PP
 This code was Based on ctftpd
-.IP "Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>" 5
-.IX Item "Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>"
-.PD 0
-.IP "Copyright (C) 2011 FusionDirectory project" 5
-.IX Item "Copyright (C) 2011 FusionDirectory project"
 .IP "Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>" 5
 .IX Item "Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>"
+.PD 0
 .IP "Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>" 5
 .IX Item "Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>"
 .IP "Copyright (c) 2008,2009 by Jan Wenzel <wenzel@gonicus.de>" 5
 .IX Item "Copyright (c) 2008,2009 by Jan Wenzel <wenzel@gonicus.de>"
+.IP "Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>" 5
+.IX Item "Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>"
+.IP "Copyright (C) 2011 FusionDirectory project" 5
+.IX Item "Copyright (C) 2011 FusionDirectory project"
 .PD
 .PP
 This program is distributed in the hope that it will be useful,
