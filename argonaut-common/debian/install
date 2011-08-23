@@ -5,6 +5,6 @@ Argonaut/Utils.pm       			usr/share/perl5/Argonaut
 bin/fix_ldif                			usr/share/argonaut
 bin/ldap_get_object         			usr/share/argonaut
 locale/de/LC_MESSAGES/de-goto-common.mo		usr/share/locale/de/LC_MESSAGES/goto-common.mo
-locale/de/LC_MESSAGES/fr-goto-common.mo		usr/share/locale/fr/LC_MESSAGES/goto-common.mo
+locale/fr/LC_MESSAGES/fr-goto-common.mo		usr/share/locale/fr/LC_MESSAGES/goto-common.mo
 doc/ldap_get_object.examples			usr/share/doc/argonaut-common
 
