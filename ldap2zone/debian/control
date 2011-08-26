@@ -1,13 +1,13 @@
 Source: ldap2zone
 Section: utils
 Priority: optional
-Maintainer: GOsa packages maintainers group <gosa-pkg@oss.gonicus.de>
-Uploaders: Cajus Pollmeier <cajus@debian.org>, Benoit Mortier <benoit.mortier@opensides.be>
+Maintainer: FusionDirectory Packagers <fusiondirectory-packages@lists.fusiondirectory.org>
+Uploaders: Benoit Mortier <benoit.mortier@opensides.be>
 Standards-Version: 3.9.2
 Build-Depends: debhelper (>= 7.0.50~), libldap2-dev, ldap-utils
-Homepage: https://oss.gonicus.de/labs/gosa
-Vcs-Browser: https://oss.gonicus.de/repositories/goto/trunk/ldap2zone
-Vcs-Svn: https://oss.gonicus.de/repositories/goto/trunk/ldap2zone
+Homepage: https://forge.fusiondirectory.org/projects/argonaut-agents
+Vcs-Browser: http://git.fusiondirectory.org/code/main/argonaut-agents.git
+Vcs-Git: http://git.fusiondirectory.org/main/argonaut-agents.git
 DM-Upload-Allowed: yes
 
 Package: ldap2zone

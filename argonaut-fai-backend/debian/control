@@ -5,9 +5,9 @@ Maintainer: FusionDirectory Packagers <fusiondirectory-packages@lists.fusiondire
 Uploaders: Benoit Mortier <benoit.mortier@opensides.be>
 Standards-Version: 3.9.2
 Build-Depends: debhelper (>= 7.0.50~), gettext
-Homepage: https://forge.fusiondirectory.org/projects/goto2
-Vcs-Browser: http://git.fusiondirectory.org/code/main/goto2.git/
-Vcs-Git: http://git.fusiondirectory.org/main/goto2.git
+Homepage: https://forge.fusiondirectory.org/projects/argonaut-agents
+Vcs-Browser: http://git.fusiondirectory.org/code/main/argonaut-agents.git
+Vcs-Git: http://git.fusiondirectory.org/main/argonaut-agents.git
 DM-Upload-Allowed: yes
 
 Package: argonaut-fai-backend
