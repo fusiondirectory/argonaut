@@ -13,13 +13,13 @@ trap '' INT
 # Short-Description: get $FAI from an ldap server.
 ### END SUBROUTINE INFO
 
-# Start si client
-pkill gosa-si-client &> /dev/null
-/usr/sbin/gosa-si-client -vvvvvvvvvv
+# Get task id from argonaut-server
+argonaut-client-fai-getid
+if [ 0 -ne $? ]; then
+  task error 500 1 "$(< $LOGDIR/argonaut-client.log)\n\nPress enter to reboot." 15 60
+fi
 
-# Wait for the si-client to get up
-while [ ! -f /var/run/gosa-si/gosa-si-client.opts ]; do sleep 0.5; done
-. /var/run/gosa-si/gosa-si-client.opts
+# use argonaut support lib
 . /usr/lib/argonaut/argonaut-support.lib
 
 if [ "$action" != "softupdate" ]; then

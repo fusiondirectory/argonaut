@@ -27,5 +27,6 @@ else
         echo goto-error-fai:$1 >> $LOGDIR/fai.log
 fi
 
-echo TASKERROR $1 > /var/run/gosa-si/gosa-si-client.socket
+#echo TASKERROR $1 > /var/run/gosa-si/gosa-si-client.socket
+echo TASKERROR $1 | argonaut-client-fai-sendmon
 

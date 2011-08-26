@@ -37,18 +37,18 @@ FAI_PROGRESS_VT=$(openvt -v 2>&1 -- sh -c "
 
         setterm -blank 0 -powersave off -powerdown 0 ;
         touch -f $LOGDIR/fai.log ;
-        /usr/lib/cdebconf/debconf /usr/bin/fai-progress ;
+        /usr/lib/cdebconf/debconf /usr/bin/argonaut-fai-progress ;
         reset")
 export FAI_PROGRESS_VT=${FAI_PROGRESS_VT##* }
-echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/fai-progress-vt
+echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/argonaut-fai-progress-vt
 fi
 
-# Redefine sendmon in order to get the progress bar and GOsa-SI
+# Redefine sendmon in order to get the progress bar and Argonaut-server
 # informed
 unset sendmon
 sendmon() {
-        # Send message to gosa-si-client
-        echo $* >> /var/run/gosa-si/gosa-si-client.socket &
+        # Send message to 
+        echo $* | argonaut-client-fai-sendmon 
 }
 
 if [ "$action" != "softupdate" ]; then
