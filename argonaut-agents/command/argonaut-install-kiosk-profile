@@ -3,7 +3,7 @@
 # Autor: Cajus Pollmeier <pollmeier@gonicus.de>
 #
 # This script needs the following settings in your sudoers file
-# ALL     ALL=NOPASSWD: /usr/lib/goto/install-kiosk-profile ""
+# ALL     ALL=NOPASSWD: /usr/lib/argonaut/install-kiosk-profile ""
 
 . /usr/lib/argonaut/argonaut-support.lib
 

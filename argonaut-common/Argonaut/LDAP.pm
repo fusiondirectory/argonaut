@@ -684,7 +684,7 @@ then attribute values from different sources will be merged (i.e. the result wil
 If attributeRegex does NOT start with C<@>, then an attribute from the queried object's own node
 beats a posix group, which beats an object group (=gosaGroupOfNames) that
 includes the object directly which beats an object group that contains a posix group containing
-the object. Object groups containing other object groups are not supported by GOsa, so this
+the object. Object groups containing other object groups are not supported by FusionDirectory, so this
 case cannot occur.
 
 If 2 sources with the same precedence (e.g. 2 posix groups) provide an attribute

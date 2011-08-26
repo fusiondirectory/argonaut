@@ -89,7 +89,7 @@ sub goto_ldap_init {
   my %results;
 
   # Parse ldap config
-  my ($base,$ldapuris,$binddn,$file) = gosa_ldap_parse_config( $ldap_conf );
+  my ($base,$ldapuris,$binddn,$file) = goto_ldap_parse_config( $ldap_conf );
   %results = ( 'BASE' => $base, 'URIS' => $ldapuris, 'BINDDN' => $binddn );
   $results{ 'CFGFILE' } = $file if( $file ne $ldap_conf );
 

@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 #
-# GONICUS /usr/lib/goto/update-mimelinks, Terminal Concept, GOto/GOslean
-#
 # (C) 2008 Carsten Sommer <carsten.sommer@gonicus.de>
 #
 # Generate mimelinks for KDE, GNOME and mime.types aware applications.

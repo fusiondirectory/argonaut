@@ -36,7 +36,7 @@ debian repositories needed by FusionDirectory FAI plugin.
 
 =item B<-i>        network interface (default: eth0)
 
-=item B<-j>        create a new /etc/cron.d/goto-fai-backend
+=item B<-j>        create a new /etc/cron.d/argonaut-mirror
 
 =item B<-r>        server root (default: /srv/www)
 
@@ -168,7 +168,7 @@ usage: $0 [-hvnpejsg] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a ar
   -c    : LDAP config file (default: ${ldapdir})
   -d    : output dir (default: ${outdir})
   -i    : network interface (default: ${interface})
-  -j    : create a new cron.d/goto-fai-backend
+  -j    : create a new cron.d/argonaut-mirror
   -n    : skip cleanup for mirrors
   -p    : show progress in cronjob
   -r    : server root (default ${srvdir})
@@ -209,19 +209,19 @@ sub generate_cronjob {
 
   open (SOURCES,">${outdir}/sources.list")
     || die "Can't create ${outdir}/sources.list: $!\n";
-  open (CRON, ">${outdir}/update-cronjob")
-    || die "Can't create ${outdir}/update-cronjob: $!\n";
+  open (CRON, ">${outdir}/mirror-update-cronjob")
+    || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
 
-  # generate new /etc/cron.d/goto-fai-backend if asked
+  # generate new /etc/cron.d/argonaut-mirror if asked
   # this option allows to add option neccessary
   # to the got-fai-backend cron
   if( $newcrond ) {
-    open (CROND, ">${crond_dir}/goto-fai-backend")
-      || die "Can't create ${crond_dir}/goto-fai-backend: $!\n";
+    open (CROND, ">${crond_dir}/argonaut-mirror")
+      || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
 
     print CROND "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
-    print CROND "\@reboot root  ldap2repository -n -p -e -i $interface -a $arch $proxy;  [ -f /etc/gosa/fai/update-cronjob ] && sh /etc/gosa/fai/update-cronjob\n";
-    print CROND "\@daily  root  ldap2repository -n -p -e -i $interface -a $arch $proxy;  [ -f /etc/gosa/fai/update-cronjob ] && sh /etc/gosa/fai/update-cronjob\n";
+    print CROND "\@reboot root  ldap2repository -n -p -e -i $interface -a $arch $proxy;  [ -f /etc/fusiondirectory/fai/mirror-update-cronjob ] && sh /etc/fusiondirectory/fai/mirror-update-cronjob\n";
+    print CROND "\@daily  root  ldap2repository -n -p -e -i $interface -a $arch $proxy;  [ -f /etc/fusiondirectory/fai/mirror-update-cronjob ] && sh /etc/fusiondirectory/fai/mirror-update-cronjob\n";
 
     close (CROND);
   }

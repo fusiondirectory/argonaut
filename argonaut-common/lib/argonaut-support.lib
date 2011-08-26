@@ -5,6 +5,7 @@
 
 SSH='ssh -o "StrictHostKeyChecking=no" -o "UserKnownHostsFile /dev/null" -o "BatchMode yes" '
 GOTO_SYSCFG="/etc/sysconfig"
+GOTO_DIR="argonaut"
 GOTO_ERROR_STR=""
 GOTO_LDIF="/tmp/upload.ldif"
 
@@ -91,7 +92,7 @@ kill_user_processes() {
 
 	# Preset, or load from file
 	candidates="kdeinit\: soffice.bin mozilla-bin"
-	[ -r /etc/goto/kill-process.conf ] && candidates=$(cat /etc/goto/kill-process.conf)
+	[ -r /etc/argonaut/kill-process.conf ] && candidates=$(cat /etc/argonaut/kill-process.conf)
 
 	# kill old existing user processes
 	for process in $candidates; do
@@ -274,7 +275,7 @@ translate() {
 			echo "${line##*=}"
 			return
 		fi
-	done < /etc/goto/goto-locales.dat
+	done < /etc/argonaut/argonaut-locales.dat
 	echo $*
 }
 
@@ -324,31 +325,31 @@ delete_all_applinks() {
 
 
 terminal_load_hardware_profile() {
-	echo -n > "${RAM}${GOTO_SYSCFG}/GOto"
-	ldapsearch -x -LLL "(&(objectClass=goHard)(macAddress=$1))" 2> /dev/null | fix_ldif_all | sed -e 's/^\([^:]*\): \(.*\)$/\U\1\E="\2"/' -e 's/^GOTO//g' >> "${GOTO_SYSCFG}/GOto"
+	echo -n > "${RAM}${GOTO_SYSCFG}/${GOTO_DIR}"
+	ldapsearch -x -LLL "(&(objectClass=goHard)(macAddress=$1))" 2> /dev/null | fix_ldif_all | sed -e 's/^\([^:]*\): \(.*\)$/\U\1\E="\2"/' -e 's/^GOTO//g' >> "${GOTO_SYSCFG}/${GOTO_DIR}"
 
 	# Get DN and load all parent defaults from tree
-	current=$(grep "^DN=" ${GOTO_SYSCFG}/GOto|sed 's/\"//g;s/, /,/g;s/^.*,ou=\(workstations|terminals\),ou=systems,//g')
-	self=$(grep "^DN=" ${GOTO_SYSCFG}/GOto|sed 's/DN="*\([^"]*\)"*$/\1/g;s/, /,/g')
+	current=$(grep "^DN=" ${GOTO_SYSCFG}/${GOTO_DIR}|sed 's/\"//g;s/, /,/g;s/^.*,ou=\(workstations|terminals\),ou=systems,//g')
+	self=$(grep "^DN=" ${GOTO_SYSCFG}/${GOTO_DIR}|sed 's/DN="*\([^"]*\)"*$/\1/g;s/, /,/g')
 
 	# Load potential object group entries 
-	ldapsearch -x -LLL "(&(objectClass=gosaGroupOfNames)(|(gosaGroupObjects=[T])(gosaGroupObjects=[S])(gosaGroupObjects=[W]))(member=$self))" 2> /dev/null | fix_ldif_all | sed -e 's/^\([^:]*\): \(.*\)$/\U\1\E="\2"/' -e 's/^GOTO//g' >> "${GOTO_SYSCFG}/GOto"
+	ldapsearch -x -LLL "(&(objectClass=gosaGroupOfNames)(|(gosaGroupObjects=[T])(gosaGroupObjects=[S])(gosaGroupObjects=[W]))(member=$self))" 2> /dev/null | fix_ldif_all | sed -e 's/^\([^:]*\): \(.*\)$/\U\1\E="\2"/' -e 's/^GOTO//g' >> "${GOTO_SYSCFG}/${GOTO_DIR}"
 
-	# Reverse sysconfig/GOto
-	tac "${GOTO_SYSCFG}/GOto" > /tmp/GOto.tmp
-	cat /tmp/GOto.tmp > "${GOTO_SYSCFG}/GOto"
-	rm /tmp/GOto.tmp
+	# Reverse sysconfig/argonaut
+	tac "${GOTO_SYSCFG}/${GOTO_DIR}" > /tmp/${GOTO_DIR}.tmp
+	cat /tmp/${GOTO_DIR}.tmp > "${GOTO_SYSCFG}/${GOTO_DIR}"
+	rm /tmp/${GOTO_DIR}.tmp
 }
 
 terminal_has_hardware_profile() {
 	# Do we have a configuration?
 	terminal_load_hardware_profile $1
-	grep -v "cn=wdefault," "${GOTO_SYSCFG}/GOto" | grep -q "DN="
+	grep -v "cn=wdefault," "${GOTO_SYSCFG}/${GOTO_DIR}" | grep -q "DN="
 }
 
 terminal_do_softupdate() {
 	terminal_load_hardware_profile $1
-	grep -q -i '^FAISTATE=.scheduledupdate' "${GOTO_SYSCFG}/GOto"
+	grep -q -i '^FAISTATE=.scheduledupdate' "${GOTO_SYSCFG}/${GOTO_DIR}"
 }
 
 terminal_activated() {

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "Argonaut::LDAP 3"
-.TH Argonaut::LDAP 3 "2011-08-23" "Argonaut 1.0" "Argonaut Documentation"
+.TH Argonaut::LDAP 3 "2011-08-26" "Argonaut 1.0" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -207,7 +207,7 @@ then attribute values from different sources will be merged (i.e. the result wil
 If attributeRegex does \s-1NOT\s0 start with \f(CW\*(C`@\*(C'\fR, then an attribute from the queried object's own node
 beats a posix group, which beats an object group (=gosaGroupOfNames) that
 includes the object directly which beats an object group that contains a posix group containing
-the object. Object groups containing other object groups are not supported by GOsa, so this
+the object. Object groups containing other object groups are not supported by FusionDirectory, so this
 case cannot occur.
 .Sp
 If 2 sources with the same precedence (e.g. 2 posix groups) provide an attribute

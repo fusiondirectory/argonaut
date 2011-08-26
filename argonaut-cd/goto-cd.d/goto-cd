@@ -1,7 +1,7 @@
 #!/bin/sh
 
-PATH=/usr/lib/goto:$PATH
-data=/usr/share/goto/data
+PATH=/usr/lib/argonaut:$PATH
+data=/usr/share/argonaut/data
 
 usage() {
 	echo "Aufruf: $(basename $0) [-u Benutzer | -g Gruppe] [-t Zielverzeichnis] MAC-Adresse"
@@ -131,11 +131,11 @@ exit 0
 #
 ## Copy needed files
 #fcopy /tmp/initial.ldif
-#fcopy /usr/lib/goto/install-kiosk-profile
-#fcopy /etc/init.d/goto-configure
-#fcopy /usr/lib/goto/goto-support.lib
-#\$ROOTCMD mkdir -p /var/cache/goto
-#cp \$FAI/files/var/cache/goto/* \$FAI_ROOT/var/cache/goto
+#fcopy /usr/lib/argonaut/install-kiosk-profile
+#fcopy /etc/init.d/argonaut-configure
+#fcopy /usr/lib/argonaut/argonaut-support.lib
+#\$ROOTCMD mkdir -p /var/cache/argonaut
+#cp \$FAI/files/var/cache/argonaut/* \$FAI_ROOT/var/cache/argonaut
 #
 ## LDAP stuff
 #\$ROOTCMD touch /etc/ldap/schema/fake.schema
@@ -164,11 +164,11 @@ sed -i 's/^HTTPUpdateServer/#HTTPUpdateServer/g' \$FAI_ROOT/etc/antivir.conf
 cat /fai/files/etc/kiosk/OFFLINE-LDAP.tar.gz | \$ROOTCMD tar xz -C /etc
 
 # Enable LDAP passwords
-\$ROOTCMD touch /etc/goto/ldap-client-password
+\$ROOTCMD touch /etc/argonaut/ldap-client-password
 
 # Cleanup
 \$ROOTCMD rm /tmp/initial.ldif /tmp/*.exe
-\$ROOTCMD rm /etc/goto/plugins/S00init-ldap-cache
+\$ROOTCMD rm /etc/argonaut/plugins/S00init-ldap-cache
 \$ROOTCMD rm /etc/ifplugd/action.d/00ldapupdown
 
 echo -n $HOSTNAME > \$FAI_ROOT/etc/hostname
@@ -177,7 +177,7 @@ EOF
 chmod go+x $TTARGET/config/scripts/OFFLINE-LDAP/99-bootstrap-ldap
 
 # Copy files to be exchanged...
-for file in /usr/lib/goto/install-kiosk-profile /etc/init.d/goto-configure /usr/lib/goto/goto-support.lib; do
+for file in /usr/lib/argonaut/install-kiosk-profile /etc/init.d/argonaut-configure /usr/lib/argonaut/argonaut-support.lib; do
 	[ ! -d $TTARGET/config/files$file ] && mkdir -p $TTARGET/config/files$file
 	cp $data/$(basename $file) $TTARGET/config/files$file/OFFLINE-LDAP
 done
@@ -199,9 +199,9 @@ popd &> /dev/null
 echo "* Benötigtes PPD wird paketiert";
 url=$(ldapsearch -x "(&(macAddress=$MAC)(objectClass=gotoPrinter))" gotoPrinterPPD | fix_ldif | grep '^gotoPrinterPPD:' | cut -d\  -f2-)
 if [ ! -z "$url" ]; then
-	mkdir -p $TTARGET/config/files/var/cache/goto
+	mkdir -p $TTARGET/config/files/var/cache/argonaut
 	pushd . &> /dev/null
-	cd $TTARGET/config/files/var/cache/goto
+	cd $TTARGET/config/files/var/cache/argonaut
 	wget -np -N -t 1 -q "$url" &> /dev/null
 	popd &> /dev/null
 fi

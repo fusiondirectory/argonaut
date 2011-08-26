@@ -88,7 +88,7 @@ print( 'Current user(s) with GUI: '
   . join( ' ', @users ) . "\n" );
 
 
-# Read GOsa tag filter and ldap params from config
+# Read FusionDirectory tag filter and ldap params from config
 my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
 my ($base,$ldapuris,$tag_filter) = ($ldapinfo->{"LDAP_BASE"}, 
                                     $ldapinfo->{"LDAP_URIS"}, 

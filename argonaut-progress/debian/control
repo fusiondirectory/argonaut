@@ -1,4 +1,4 @@
-Source: kprogress
+Source: argonaut-progress
 Section: kde
 Priority: optional
 Maintainer: FusionDirectory Packagers <fusiondirectory-packages@lists.fusiondirectory.org>
@@ -10,7 +10,7 @@ Vcs-Browser: http://git.fusiondirectory.org/code/main/argonaut-agents.git
 Vcs-Git: http://git.fusiondirectory.org/main/argonaut-agents.git
 DM-Upload-Allowed: yes
 
-Package: kprogress
+Package: argonaut-progress
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: KDE login progress indicator

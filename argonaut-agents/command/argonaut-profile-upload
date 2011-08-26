@@ -136,7 +136,7 @@ if ldap_user_has_profile $SUDO_USER; then
 	
 		rm -f $p_profile/profile/$HOMEDIR/1.0/.profileTimestamp
 
-		/usr/sbin/goto-profile-sync -v -s $l_profile -d $p_profile/profile/$HOMEDIR/1.0 -e $BLACKLISTFILE backup
+		/usr/sbin/argonaut-profile-sync -v -s $l_profile -d $p_profile/profile/$HOMEDIR/1.0 -e $BLACKLISTFILE backup
 		result=$?
 
 		if [ $result -eq 0 ]; then

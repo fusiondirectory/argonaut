@@ -26,7 +26,7 @@ use Net::LDAP;
 use File::Path;
 use Switch;
 
-use Argonaut::Common qw(:ldap :misc);
+use Argonaut::Common qw(:ldap :misc :string :file);
 
 BEGIN
 {
@@ -69,7 +69,7 @@ sub prepare_filter {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# Constructor for GOsa::FAI object
+# Constructor for Argonaut::FAI object
 #
 # $ldap    = Net::LDAP handle
 # %options = Hash of options like (Net::LDAP)
@@ -136,7 +136,7 @@ sub dumpdir {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# Get or set GOsa unit tag
+# Get or set FusionDirectory unit tag
 #
 sub tag {
   my( $self, $tag ) = @_;
@@ -189,7 +189,7 @@ sub flags {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self    = GOsa::FAI handle
+# $self    = Argonaut::FAI handle
 # $release = Release version
 # $force   = Ignore cached values and recheck
 #
@@ -297,7 +297,7 @@ my %fai_items = (
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self    = GOsa::FAI handle
+# $self    = Argonaut::FAI handle
 # $release = Release version
 # $flags   = Bit flags for cache lookup
 #            FAI_CACHE_GENERATE = generate cache if not available
@@ -335,7 +335,7 @@ sub get_class_cache {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self    = GOsa::FAI handle
+# $self    = Argonaut::FAI handle
 # $release = Release version
 #
 # Returns a hashref including the classes for the FAI types
@@ -410,7 +410,7 @@ sub generate_class_cache {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self    = GOsa::FAI handle
+# $self    = Argonaut::FAI handle
 #
 # Quick fill of the class cache for all releases.
 # This fuction needs just two LDAP queries to fill the whole class cache.
@@ -436,7 +436,7 @@ sub fill_class_cache {
     my $norm_release = substr( $branch->dn, 0, length( $branch->dn ) - length( $base ) );
     if( length( $norm_release ) > 0 ) {
       $norm_release = substr( $norm_release, 0, length( $norm_release ) - 1 );
-      my @rdns = gosa_ldap_split_dn( $norm_release );
+      my @rdns = goto_ldap_split_dn( $norm_release );
       $norm_release = join( ',', reverse @rdns );
       $norm_release =~ s/,ou=/\//g;
       $norm_release =~ s/\./\//g;
@@ -463,7 +463,7 @@ sub fill_class_cache {
   foreach my $entry ($mesg->entries()) {
     my $dn = substr( $entry->dn, 0, length( $entry->dn ) - length( $base ) );
     $dn = substr( $dn, 0, length( $dn ) - 1 ) if( length( $dn ) > 0 );
-    my @rdns = gosa_ldap_split_dn( $dn );
+    my @rdns = goto_ldap_split_dn( $dn );
     my $class = $entry->get_value( 'cn' );
     my $type = substr( $rdns[ 1 ], 3 );
 
@@ -501,7 +501,7 @@ sub fill_class_cache {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self    = GOsa::FAI handle
+# $self    = Argonaut::FAI handle
 # $release = Release version
 # $flags   = @see get_class_cache
 #
@@ -620,7 +620,7 @@ sub extend_class_cache {
 
             # Check disk
             if( $obj =~ /^FAIpartitionDisk$/i ) {
-              @rdns = gosa_ldap_split_dn( $entry->dn() );
+              @rdns = goto_ldap_split_dn( $entry->dn() );
               shift( @rdns );
               $dn_tail = join( ',', @rdns );
               my $cn = $entry->get_value( 'cn' );
@@ -643,7 +643,7 @@ sub extend_class_cache {
 
             # Check partition
             if( $obj =~ /^FAIpartitionEntry$/i ) {
-              my @rdns = gosa_ldap_split_dn( $entry->dn() );
+              my @rdns = goto_ldap_split_dn( $entry->dn() );
               shift @rdns;
               my $disk = shift @rdns;
               $dn_tail = join( ',', @rdns );
@@ -746,7 +746,7 @@ sub is_removed {
 #
 # Common init code for all dump_ functions
 #
-# $self         = GOsa::FAI handle
+# $self         = Argonaut::FAI handle
 # $release      = Release to dump
 # $classref     = 
 # $flags        =
@@ -809,7 +809,7 @@ sub init_dump_function {
 #
 # Dumps variables from class cache
 #
-# $self      = GOsa::FAI handle
+# $self      = Argonaut::FAI handle
 # $release   = Release string
 # $classref  = Arrayref to the requested FAIclass list (already expanded)
 # $flags     = @see get_class_cache, but defaults to 0;
@@ -863,7 +863,7 @@ sub dump_variables {
 #
 # Dumps package lists from class cache
 #
-# $self      = GOsa::FAI handle
+# $self      = Argonaut::FAI handle
 # $release   = Release string
 # $classref  = Arrayref to the requested FAIclass list (already expanded)
 # $flags     = @see get_class_cache, but defaults to 0;
@@ -917,7 +917,7 @@ sub dump_package_list {
 #
 # Dumps debconf information from class cache
 #
-# $self      = GOsa::FAI handle
+# $self      = Argonaut::FAI handle
 # $release   = Release string
 # $classref  = Arrayref to the requested FAIclass list (already expanded)
 # $flags     = @see get_class_cache, but defaults to 0;
@@ -968,7 +968,7 @@ sub dump_debconf_info {
 #
 # Dumps disk configurations from class cache
 #
-# $self      = GOsa::FAI handle
+# $self      = Argonaut::FAI handle
 # $release   = Release string
 # $classref  = Arrayref to the requested FAIclass list (already expanded)
 # $flags     = @see get_class_cache, but defaults to 0;
@@ -1111,7 +1111,7 @@ sub dump_disk_config {
             }
             elsif ($dl->get_value('FAIfsType') eq 'swap') {
               # Labels are limited to 15 chars
-              my $swaplabel = 'swap-' . gosa_gen_random_str( 10 );
+              my $swaplabel = 'swap-' . goto_gen_random_str( 10 );
               $line = sprintf( "%-7s %-12s %-12s %-10s ; mounttype=label label='%s'\n",
                 $dl->get_value('FAIpartitionType'),
                 $dl->get_value('FAImountPoint'),
@@ -1235,7 +1235,7 @@ sub write_fai_file {
   else {
     chmod( oct($mode), ${filename} )
       if( defined $mode && ($mode =~ /^0*[0-7]{1,4}$/) );
-    gosa_file_chown( ${filename}, $owner )
+    goto_file_chown( ${filename}, $owner )
       if( defined $owner && ($owner ne '') );
   }
 }
@@ -1245,7 +1245,7 @@ sub write_fai_file {
 #
 # Dumps scripts from class cache
 #
-# $self      = GOsa::FAI handle
+# $self      = Argonaut::FAI handle
 # $release   = Release string
 # $classref  = Arrayref to the requested FAIclass list (already expanded)
 # $flags     = @see get_class_cache, but defaults to 0;
@@ -1296,7 +1296,7 @@ sub dump_scripts {
 #
 # Dumps templates from LDAP
 #
-# $self      = GOsa::FAI handle
+# $self      = Argonaut::FAI handle
 # $release   = Release string
 # $classref  = Arrayref to the requested FAIclass list (already expanded)
 # $flags     = @see get_class_cache, but defaults to 0;
@@ -1356,7 +1356,7 @@ sub dump_templates {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self     = GOsa::FAI handle
+# $self     = Argonaut::FAI handle
 # $release  = Release version
 # $classref = Arrayref of classes to dump (will be expanded)
 #
@@ -1403,7 +1403,7 @@ sub dump_hooks {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self     = GOsa::FAI handle
+# $self     = Argonaut::FAI handle
 # $release  = Release version
 # $classref = Arrayref of classes to dump (will be expanded)
 # $hostname = Host to use in classlist expansion
@@ -1477,7 +1477,7 @@ sub dump_release {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self      = GOsa::FAI handle
+# $self      = Argonaut::FAI handle
 # $class_str = A space seperated string of classes or arrayref
 # $release   = Overwrite or set release provided by $class_str
 # $hostname  = Host to use in classlist expansion
@@ -1576,7 +1576,7 @@ sub resolve_classlist {
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #
-# $self      = GOsa::FAI handle
+# $self      = Argonaut::FAI handle
 # $class_str = A space seperated string of classes or arrayref
 # $hostname  = The non-FQDN hostname
 #

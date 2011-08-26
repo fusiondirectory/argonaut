@@ -1,8 +1,7 @@
 #!/bin/sh 
 
-# Read what LDAP and GOsa-SI provide
+# Read what LDAP and Argonaut provide
 [ -f /etc/sysconfig/argonaut ] && . /etc/sysconfig/argonaut
-#[ -f /var/run/gosa-si-client.opts ] && . /var/run/gosa-si-client.opts
 
 # Unify MAC address
 MAC=$(echo $MAC | tr 'a-f' 'A-F')

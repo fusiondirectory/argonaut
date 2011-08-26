@@ -158,7 +158,7 @@ my $ldap = $init_results->{ 'HANDLE' };
 my $base = $init_results->{ 'BASE' };
 
 # Get FAI object
-my $faiobj = GOsa::FAI->new( 'LDAP' => $ldap,
+my $faiobj = Argonaut::FAI->new( 'LDAP' => $ldap,
                              'base' => $base,
                              'dumpdir' => $dump_dir );
 

@@ -1,13 +1,19 @@
-This package was debianized by Cajus Pollmeier <cajus@debian.org>
-Tue,  3 Feb 2004 13:53:20 +0100.
+This package was debianized by Benoit Mortier <benoit.mortier@opensides.be> on
+Thu, 25 Aug 2011 19:08:00 +0100.
 
-It was downloaded from https://oss.gonicus.de/repositories/goto/trunk/
-
-Upstream author: Cajus Pollmeier <pollmeier@gonicus.de>
+It was downloaded from http://git.fusiondirectory.org/code/main/argonaut-agents.git/
 
 Copyright:
 
-This software is copyright (C) 2001-2010 Cajus Pollmeier, GONICUS GmbH.
+	Copyright (C) 2001-2010 Cajus Pollmeier, GONICUS GmbH.
+        Copyright (C) 2011 FusionDirectory project
+
+Upstream Authors:
+
+	Copyright (C) 2001-2010 Cajus Pollmeier <pollmeier@gonicus.de>
+        Copyright (C) 2011 Benoit Mortier <benoit.mortier@opensides.be>
+
+License:
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,4 +22,3 @@ the Free Software Foundation; either version 2 of the License, or
 
 On Debian systems, the complete text of the GNU General Public
 License can be found in the file `/usr/share/common-licenses/GPL-2'.
-

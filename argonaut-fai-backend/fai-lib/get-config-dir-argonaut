@@ -34,7 +34,7 @@ if [ "$LDAP_AVAILABLE" ]; then
 fi
 
 # Check if autosetup is needed at this point
-echo "* GOto configurator started"
+echo "* Argonaut configurator started"
 if ! terminal_activated $MAC; then
 
     # Cancel softupdate on non-activated systems
@@ -42,19 +42,19 @@ if ! terminal_activated $MAC; then
 
       # wait till we get activated - need to be pushed twice here...
       echo "goto-activation-start" >> $LOGDIR/fai.log
-      echo "* GOto waiting for activation..."
+      echo "* Argonaut waiting for activation..."
       while [ ! -f /var/run/gosa-si/gosa-si-client.activated ]; do sleep 1; done
 
-      # GOsa writes the GOto entry in three steps. To continue, we check
+      # Argonaut writes the GOto entry in three steps. To continue, we check
       # if XDRIVER is present.
       while ! terminal_load_hardware_profile $MAC &> /dev/null; do
-          cat "/etc/sysconfig/GOto" | grep -v 'XDRIVER="unknown"' | grep -q 'XDRIVER' && break
+          cat "/etc/sysconfig/argonaut" | grep -v 'XDRIVER="unknown"' | grep -q 'XDRIVER' && break
           sleep 5
       done
 
       # Activated!
       echo "goto-activation-stop" >> $LOGDIR/fai.log
-      echo "* GOto system activated"
+      echo "* Argonaut system activated"
 
       if terminal_reboot_needed $MAC; then
           faireboot
@@ -75,7 +75,7 @@ if [ 0 -ne $? ]; then
   task error 500 1 "$(< $LOGDIR/ldap2fai.log)\n\nPress enter to reboot." 15 60
 fi
 
-# Provide /etc/sysconfig/GOto
+# Provide /etc/sysconfig/argonaut
 terminal_load_hardware_profile $MAC
 
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

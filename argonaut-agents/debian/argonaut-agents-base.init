@@ -100,12 +100,12 @@ start(){
 
 	if [ -z "$IPADDRESS" ]; then
 	        # check if we have been configured before, then try the offline mode
-	        if [ ! -f /etc/sysconfig/GOto ]; then
+	        if [ ! -f /etc/sysconfig/Argonaut ]; then
 	                do_error_poweroff $"Error: Cannot detect an ip-address for this system!" 10 60
 	        fi
 	fi
 
-	# Load GOto and LDAP configuration
+	# Load Argonaut and LDAP configuration
 	. /etc/ldap/ldap-shell.conf
 	. /etc/argonaut/argonaut-agents.conf
 
@@ -134,10 +134,10 @@ start(){
 		echo "goto-activation-start" >> $LOGDIR/fai.log
 		while [ ! -f /var/run/gosa-si-client.activated ]; do sleep 0.5; done
 
-    # GOsa writes the GOto entry in three steps. To continue, we check
+    # FusionDirectory writes the GOto entry in three steps. To continue, we check
     # if XDRIVER is present.
     while ! terminal_load_hardware_profile $MAC &> /dev/null; do
-      cat "/etc/sysconfig/GOto" | grep -v 'XDRIVER="unknown"' | grep -q 'XDRIVER'
+      cat "/etc/sysconfig/argonaut" | grep -v 'XDRIVER="unknown"' | grep -q 'XDRIVER'
       sleep 0.5 
     done
     log_progress_msg "config"
@@ -183,14 +183,14 @@ start(){
 	fi
 
 	# Execute modules
-	for mod in /etc/goto/modules/*; do
+	for mod in /etc/argonaut/modules/*; do
 		echo $mod | grep -q \.dpkg && continue
 		log_progress_msg "$(basename $mod)"
 		[ -f "$mod" ] && . $mod 2> /dev/null
 	done
 
 	# Load modules
-	for module in $(sed -n 's/^MODULES="\([^"]*\)"/\1/gp' /etc/sysconfig/GOto); do
+	for module in $(sed -n 's/^MODULES="\([^"]*\)"/\1/gp' /etc/sysconfig/argonaut); do
 		modprobe $module > /dev/null
 	done
 
@@ -216,7 +216,7 @@ case "$1" in
 	log_end_msg 0
 	;;
 
-  *)	echo "Usage: /etc/init.d/goto-agents {start|stop|restart|force-reload}" >&2
+  *)	echo "Usage: /etc/init.d/argonaut-agents {start|stop|restart|force-reload}" >&2
 	exit 1;
 	;;
 esac
