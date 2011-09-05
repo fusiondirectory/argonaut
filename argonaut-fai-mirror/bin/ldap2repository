@@ -1,0 +1,319 @@
+#!/usr/bin/perl
+# $Id$
+#*********************************************************************
+#
+# (c) 2005,2006 Jan-Marek Glogowski <glogow@fbihome.de>
+# (c) 2007,2009 The GOsa project <gosa-devel@oss.gonicus.de>
+# (c) 2011 The FusionDirectory Project <contact@fusiondirectory.org>
+#*********************************************************************
+
+=head1 NAME
+
+ldap2repository - creating debian repositories cronjob for the FusionDirectory FAI plugin.
+
+=head1 SYNOPSIS
+
+ldap2repository [-hvnpejsg] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
+
+=head1 DESCRIPTION
+
+ldap2repository is a script to create the cronjob for the local.
+debian repositories needed by FusionDirectory FAI plugin.
+
+=over 14
+
+=item B<-c>        LDAP config file (default: /etc/ldap/ldap.conf)
+
+=item B<-d>        output dir (default: /etc/fusiondirectory/fai)
+
+=item B<-h>        display this help and exit
+
+=item B<-n>        skip cleanup for mirrors
+
+=item B<-p>        show progress in cronjob
+
+=item B<-v>        be verbose
+
+=item B<-i>        network interface (default: eth0)
+
+=item B<-j>        create a new /etc/cron.d/argonaut-mirror
+
+=item B<-r>        server root (default: /srv/www)
+
+=item B<-e>        ignore small errors
+
+=item B<-a>        processor architecture (default: i386)
+
+=item B<-P>        proxy (default: none)
+
+=item B<-s>        don't mirror source packages
+
+=item B<-g>        don't check gpg signature on release file
+
+=back
+
+=head1 BUGS 
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2005-2006 Jan-Marek Glogowski
+
+=item Copyright (C) 2007-2010 The GOsa project
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
+use strict;
+
+use lib "/usr/lib/argonaut";
+
+use Switch;
+use Net::LDAP;
+use MIME::Base64;
+use Getopt::Std;
+use File::Path;
+use File::Copy;
+use Argonaut::Common qw(:ldap :file :array);
+
+use vars qw/ %opt /;
+
+my $base;
+my $ldapuris;
+my $ldapdir = "/etc/ldap/ldap.conf";
+my $outdir = "/etc/fusiondirectory/fai";
+my $crond_dir= "/etc/cron.d";
+my $interface = "eth0";
+my $verbose = 0;
+my $newcrond = 0;
+my $opt_string = 'c:d:i:hnpejasg:P:r:v';
+my $hostname;
+my $srvdir = "/srv/www";
+my $progress = "";
+my $nocleanup = "";
+my $small_errors = "";
+my $arch = "i386";
+my $proxy = "";
+my $nosource ="";
+my $releasegpg = "";
+my $iptool = "/sbin/ifconfig";
+
+getopts( "$opt_string", \%opt ) or usage("Wrong parameters");
+usage("ldap2repository - creating debian repositories cronjob for the FusionDirectory FAI plugin.") if $opt{h};
+
+$verbose   = $opt{v} ? 1 : 0;
+$newcrond  = $opt{j} ? 1 : 0;
+$outdir    = $opt{d} ? $opt{d} : $outdir;
+$ldapdir   = $opt{c} ? $opt{c} : $ldapdir;
+$interface = $opt{i} ? $opt{i} : $interface;
+$nocleanup = $opt{n} ? "--nocleanup" : "";
+$srvdir    = $opt{r} ? $opt{r} : $srvdir;
+$progress  = $opt{p} ? "--progress" : "";
+$arch      = $opt{a} ? $opt{a} : $arch;
+$small_errors = $opt{e} ? "--ignore-small-errors" : "";
+$proxy	   = $opt{P} ? "--proxy=".$opt{P} : "";
+$nosource  = $opt{s} ? "--nosource" : "";
+$releasegpg = $opt{g} ? "--ignore-release-gpg" : "";
+
+# parse ldap config
+( $base, $ldapuris ) = goto_ldap_parse_config( $ldapdir );
+usage( "Couldn't find LDAP base in config!" ) if( ! defined $base );
+usage( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
+
+# initialise ldap
+my $ldap = Net::LDAP->new( $ldapuris ) or die "$@";
+my $mesg = $ldap->bind;
+
+# find mac address of the host running ldap2repository
+my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
+chomp( $mac );
+
+# create the outdir if it doesn't exist
+-d "$outdir" 
+  or mkpath "$outdir" 
+  or warn "WARNING: Can't create subdir $outdir: $!\n";
+
+# tell us if outdir is not a directory
+-d "$outdir" || usage("'$outdir' is not a directory.\n");
+
+#generate the cronjob
+generate_cronjob();
+
+# take down ldap session
+$mesg = $ldap->unbind;
+exit 0;
+
+sub usage
+{
+  (@_) && print STDERR "\n@_\n\n";
+
+  print STDERR << "EOF";
+usage: $0 [-hvnpejsg] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
+
+  -h    : this (help) message
+  -c    : LDAP config file (default: ${ldapdir})
+  -d    : output dir (default: ${outdir})
+  -i    : network interface (default: ${interface})
+  -j    : create a new cron.d/argonaut-mirror
+  -n    : skip cleanup for mirrors
+  -p    : show progress in cronjob
+  -r    : server root (default ${srvdir})
+  -v    : be verbose on generate
+  -P    : proxy (default: ${proxy})
+  -e    : ignore small errors
+  -a    : processor architecture (default: ${arch})
+  -s    : don't mirror source packages
+  -g    : don't check gpg signature on release file
+EOF
+	exit -1;
+}
+
+
+# search the fai repo(s) declared in FusionDirectory
+sub search_repo_server {
+  my ($cn) = @_;
+  my @attrs = ( 'FAIrepository' );
+  my ($sresult) = goto_ldap_rsearch( $ldap, $base, '',
+      "(&(objectClass=FAIrepositoryServer)(cn=${cn}))",
+      "one", "ou=servers,ou=systems", \@attrs );
+  return goto_ldap_is_single_result( $sresult, 1 );
+}
+
+sub generate_cronjob {
+  my ($mesg,$entry,$par_mesg,$par_entry,@entries);
+  my ($line,@deblines,@modsections,@rdns,%saw,$debline);
+
+  my $hostname = `hostname -f`;
+  $hostname = $1 if ( $hostname =~ m/([a-z0-9\.\-]+).*/g );
+
+  if( $verbose ) {
+    print "Generating sources.list and debmirror cronjob for server\n"
+      . "Host:   ${hostname}\n"
+      . "Base:   ${base}\n"
+      . "Outdir: ${outdir}\n\n";
+  }
+
+  open (SOURCES,">${outdir}/sources.list")
+    || die "Can't create ${outdir}/sources.list: $!\n";
+  open (CRON, ">${outdir}/mirror-update-cronjob")
+    || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
+
+  # generate new /etc/cron.d/argonaut-mirror if asked
+  # this option allows to add option neccessary
+  # to the got-fai-backend cron
+  if( $newcrond ) {
+    open (CROND, ">${crond_dir}/argonaut-mirror")
+      || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
+
+    print CROND "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
+    print CROND "\@reboot root  ldap2repository -n -p -e -i $interface -a $arch $proxy;  [ -f /etc/fusiondirectory/fai/mirror-update-cronjob ] && sh /etc/fusiondirectory/fai/mirror-update-cronjob\n";
+    print CROND "\@daily  root  ldap2repository -n -p -e -i $interface -a $arch $proxy;  [ -f /etc/fusiondirectory/fai/mirror-update-cronjob ] && sh /etc/fusiondirectory/fai/mirror-update-cronjob\n";
+
+    close (CROND);
+  }
+ 
+  # Write cron script
+  print CRON "#!/bin/sh\n";
+
+  $mesg = $ldap->search(
+      base => "$base",
+      filter => "(&(objectClass=FAIrepositoryServer)(macAddress=${mac}))",
+      attrs => [ 'FAIrepository', 'cn' ] );
+
+  $mesg->code && die $mesg->error;
+
+  @entries = $mesg->entries;
+  die "Server object doesn't contain software repositories\n" if( 0 == scalar @entries );
+
+  $entry = $entries[0];
+  my ($newbase) = $entry->dn() =~ m/.*ou=systems,(.*)/;
+  if( "$base" ne "$newbase" ) {
+    print( "Switching base: $newbase\n" ) if( $verbose );
+    $base = $newbase;
+  }
+  foreach my $repoline ($entry->get_value('FAIrepository')){
+    my (@items) = split('\|',${repoline});
+    my $uri = $items[0];
+    my ($dir) = $uri =~ m%.*://[^/]+/(.*)%;
+    my ($localuri) = $uri =~ s%://[^/]+%://localhost%;
+    my $parent_or_opts = $items[1];
+    my $dist = $items[2];
+    my $sections = $items[3];
+    my (@section_list) = split(',',$items[3]);
+
+    print SOURCES "deb $uri $dist @section_list\n";
+    print " +S  $dist ($sections) via $uri\n" if( $verbose );
+
+    if ("" eq "$parent_or_opts") {
+      print( "No parent for '$repoline'\n" );
+      next;
+    }
+
+    if (":" eq substr($parent_or_opts,0,1)) {
+        # No FusionDirectory internal mirror or too complicated: write as additional options
+        print CRON "debmirror ${releasegpg} ${nosource} ${small_errors} -a ${arch} --dist=${dist} --sections=${sections} $proxy " 
+          . substr($parent_or_opts,1) . "${proxy} ${srvdir}/${dist}\n";
+        print " +Cc ${dist} (${sections})\n" if( $verbose );
+    }
+    else {
+      # Check repository release
+      my (@rdns,$search_base);
+
+      @rdns = split(',',$base);
+
+      $par_entry = search_repo_server( "${parent_or_opts}" );
+      if( 0 == $par_entry ) {
+        print( "Couldn't find parent repository server for '$repoline'\n" );
+        next;
+      }
+
+      foreach my $par_repoline ($par_entry->get_value('FAIrepository')){
+        my (@par_items) = split('\|',${par_repoline});
+        my ($method,$host,$root);
+        if ($par_items[0] =~ m#([^:]+)://([^/]+)(.*)#) {
+          $method = $1;
+          $host = $2;
+          $root = $3;
+        }
+
+        my $par_dist = $par_items[2];
+        my @outline = ();
+        if ("$dist" eq "$par_dist") {
+          my (@par_section_list) = split(',', $items[3]);
+          foreach my $section (@par_section_list) {
+            if (goto_array_find_and_remove( \@section_list, ${section})) {
+              push( @outline, $section );
+              last if (0 == scalar @section_list);
+            }
+          }
+
+          if (0 != scalar @{outline}) {
+          	  print CRON "\ndebmirror ${progress} ${nocleanup} ${releasegpg} ${nosource} ${small_errors} -a ${arch} --dist=${dist} --section=" . join(",", @{outline}) 
+              . " --method=${method} --host=${host} --root=${root} $proxy ${srvdir}/${dir}\n";
+            print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose );
+          }
+          last if (0 == scalar @section_list);
+        }
+      }
+    }
+  }
+
+  close (SOURCES);
+  close (CRON);
+}
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
