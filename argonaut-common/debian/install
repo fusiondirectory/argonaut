@@ -2,6 +2,7 @@ lib/argonaut-support.lib       			usr/lib/argonaut
 Argonaut/Common.pm      			usr/share/perl5/Argonaut
 Argonaut/LDAP.pm        			usr/share/perl5/Argonaut
 Argonaut/Utils.pm       			usr/share/perl5/Argonaut
+Argonaut/Packages.pm				usr/share/perl5/Argonaut
 bin/fix_ldif                			usr/share/argonaut
 bin/ldap_get_object         			usr/share/argonaut
 locale/de/LC_MESSAGES/de-goto-common.mo		usr/share/locale/de/LC_MESSAGES/goto-common.mo
