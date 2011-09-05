@@ -1,0 +1,30 @@
+Source: argonaut-server
+Section: utils
+Priority: optional
+Maintainer: FusionDirectory packages maintainers group <fusiondirectory-packages@lists.fusiondirectory.org>
+Uploaders: Benoit Mortier <benoit.mortier@opensides.be>
+Build-Depends: debhelper (>= 7.0.50~)
+Standards-Version: 3.9.2
+Homepage: http://www.fusiondirectory.org/
+Vcs-Browser: http://git.fusiondirectory.org/code/
+DM-Upload-Allowed: yes
+
+Package: argonaut-server
+Architecture: all
+Depends: argonaut-common, libdatetime-perl, libnet-ldap-perl, libjson-perl (>= 2.07-1), libconfig-ini-simple-perl, libpoe-perl, 
+libpoe-component-server-json-rpc
+Description: argonaut json rpc server to manage deployment system
+ .
+
+Package: argonaut-client-management
+Architecture: all
+Depends: argonaut-common, libconfig-ini-simple-perl, libjson-perl (>= 2.07-1)
+Description: argonaut json rpc client to manage computers
+ .
+
+Package: argonaut-client-fai
+Architecture: all
+Depends: argonaut-common, libconfig-ini-simple-perl, libjson-perl (>= 2.07-1)
+Description: argonaut json rpc client to manage fai installations
+ .
+

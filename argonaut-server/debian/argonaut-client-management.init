@@ -1,0 +1,83 @@
+#!/bin/sh
+# Start/stop the argonaut client host management.
+#
+### BEGIN INIT INFO
+# Provides:          argonaut-client-management
+# Required-Start:    $network $syslog
+# Required-Stop:     $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Argonaut client hosts Management
+# Description:       Argonaut client communicate with server by json rpc.
+#                    Those clients get or send json-rpc messages following
+#                    the actions demanded
+### END INIT INFO
+
+# variables for the argonaut client.
+CLIENT="argonaut-client-management"
+DAEMON_CLIENT="/usr/sbin/${CLIENT}"
+RUN_DIRECTORY="/var/run/${CLIENT}"
+PIDFILE_CLIENT="$RUN_DIRECTORY/${CLIENT}.pid"
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin"
+
+# Load LSB support functions
+. /lib/lsb/init-functions
+
+#if [ ! -d "/var/run/goto-si" ]; then
+#	mkdir $RUN_DIRECTORY
+#fi
+
+start_client() {
+	start-stop-daemon --start --quiet --pidfile ${PIDFILE_CLIENT} --name ${CLIENT} --startas ${DAEMON_CLIENT}
+}
+
+stop_client() {
+	start-stop-daemon --stop --retry 5 --quiet --pidfile ${PIDFILE_CLIENT} --name ${CLIENT}
+}
+
+
+case "$1" in
+ start)  log_daemon_msg "Starting Argonaut Client"
+	if [ "$START_SERVER" = "1" -a -x ${DAEMON_CLIENT} ]; then
+		log_progress_msg "client"
+		start_client
+	fi
+		log_end_msg $?
+	;;
+stop)   log_daemon_msg "Stopping Argonaut Client"
+	if [ "$START_SERVER" = "1" -a -x ${DAEMON_CLIENT} ]; then
+		log_progress_msg "client"
+		stop_client
+	fi
+		log_end_msg $?
+;;
+reload|force-reload|restart) log_daemon_msg "Restarting Argonaut Client" 
+	if [ "$START_SERVER" = "1" -a -x ${DAEMON_CLIENT} ]; then
+		stop_client
+		start_client
+	fi
+	log_progress_msg "done"
+	log_end_msg $?
+;;
+status)
+	if [ "$START_SERVER" = "1" -a -x ${DAEMON_CLIENT} ]; then
+		status=0
+		pidofproc -p "${PIDFILE_CLIENT}" "${DAEMON_CLIENT}" >/dev/null || status="$?"
+		log_daemon_msg "Status of Argonaut" "${NAME}"
+		if [ "$status" = 0 ]; then
+			log_progress_msg "is running"
+			log_end_msg 0
+		else
+			log_progress_msg "is not running"
+			log_end_msg $status
+		fi
+	fi
+;;
+
+*)	log_action_msg "Usage: /etc/init.d/argonaut-client {start|stop|restart|reload|force-reload|status}"
+        exit 2
+        ;;
+esac
+exit 0
+

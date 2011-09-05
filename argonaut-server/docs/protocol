@@ -1,0 +1,82 @@
+JSON-RPC protocol : 
+
+=Protocol=
+The protocol used is JSON-RPC 1.0
+
+=Methods=
+The method "action" allows to do an action on a client.
+The method "get_entries_by_id" and "get_entries_by_mac" allows to get all the queued entries that concern a given list of ids/macs.
+The method "get_entries" allows to get all the queued entries.
+The method "echo" return what you give it, can be useful for testing server connection.
+The method "ping" allows you to know if a client is correctly running. (it actually test the echo method of the client)
+The method "remove_entries" allows you to cancel entries.
+The method "process_entries_now" allows you to launch a bunch of scheduled entries right away.
+    -> beware, right now, doing that on a periodic entry will launch it once and remove it from queue.
+
+=Action method=
+Action method takes 3 parameters :
+   - The action to be launch on the client
+   - The list of concerned mac addresses
+   - A hash containing:
+        timestamp -> the date and time we want the action to be launched, unix timestamp utc format. (epoch)
+        periodic -> X_units, where X is a number and units is in [seconds,minutes,hours,days,months]
+        args -> the argument you want to send to the action on the client. (can be an object or an array)
+        
+==Action==
+Action can be in : [trigger_action_reinstall, trigger_action_update, trigger_action_wake,
+                    trigger_action_reboot, trigger_action_memcheck, detect_hardware].
+Or it can be any action that is implemented on the client side. (for instance trigger_action_halt)
+        
+==Mac Addresses==
+You have to send a list, even if it is empty or have only one element.
+The Mac Addresses will be searched in the ldap each time the action is to be launched.
+        
+==Timestamp==
+If the hash does not contains timestamp entry, the action is launched right away.
+Same thing if the timestamp is in the past (but beware of periodicity behavior in this case).
+
+==Periodicity==
+If the hash does not contains periodic entry, the action is launched only once.
+Do not indicate "0_something" if you don't want periodicity, just put null or "".
+The task will be launched every X units if periodic entry is filled.
+Warning : If the timestamp is X*Y units in the past, the action will be launched Y times right away.
+
+==Examples==
+{
+    "method": "action",
+    "params": [
+                "job_trigger_action_halt",
+                ["00:11:22:33:44:55"],
+                {
+                    "timestamp":1313667842
+                }
+            ],
+    "id":1
+}
+->will call action "job_trigger_action_halt" on client "00:11:22:33:44:55" once at 1313667842 (which is 2011-08-18 11:44:02 UTC)
+
+{
+    "method": "action",
+    "params": [
+                "foo_bar",
+                ["00:11:22:33:44:55"],
+                {}
+            ],
+    "id":1
+}
+-> will call action "foo_bar" on client "00:11:22:33:44:55" immediatly
+
+{
+    "method": "action",
+    "params": [
+                "foobar",
+                ["00:11:22:33:44:55","00:11:22:33:44:56"],
+                {
+                    "timestamp":1313667842,
+                    "periodic":7_minutes,
+                    "args":[13,37]
+                }
+            ],
+    "id":1
+}
+-> will call action "foobar" every 7 minutes on clients "00:11:22:33:44:55" and "00:11:22:33:44:56" with parameter [13,37] (a table containing 2 numbers)

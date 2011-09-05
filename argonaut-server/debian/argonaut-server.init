@@ -1,0 +1,82 @@
+#!/bin/sh
+# Start/stop the argonaut server.
+#
+### BEGIN INIT INFO
+# Provides:          argonaut-server
+# Required-Start:    $network $syslog
+# Required-Stop:     $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Argonaut server
+# Description:       Argonaut server communication with client by json rpc.
+#                    Those client get or send json-rpc messages following
+#                    the actions demanded
+### END INIT INFO
+
+# variables for the argonaut server.
+SERVER="argonaut-server"
+DAEMON_SERVER="/usr/sbin/${SERVER}"
+RUN_DIRECTORY="/var/run/${SERVER}"
+PIDFILE_SERVER="$RUN_DIRECTORY/${SERVER}.pid"
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin"
+
+# Load LSB support functions
+. /lib/lsb/init-functions
+
+#if [ ! -d "/var/run/goto-si" ]; then
+#	mkdir $RUN_DIRECTORY
+#fi
+
+start_server() {
+	start-stop-daemon --start --quiet --pidfile ${PIDFILE_SERVER} --name ${SERVER} --startas ${DAEMON_SERVER}
+}
+
+stop_server() {
+	start-stop-daemon --stop --retry 5 --quiet --pidfile ${PIDFILE_SERVER} --name ${SERVER}
+}
+
+
+case "$1" in
+ start)  log_daemon_msg "Starting Argonaut Server"
+	if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
+		log_progress_msg "server"
+		start_server
+	fi
+		log_end_msg $?
+	;;
+stop)   log_daemon_msg "Stopping Argonaut Server"
+	if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
+		log_progress_msg "server"
+		stop_server
+	fi
+		log_end_msg $?
+;;
+reload|force-reload|restart) log_daemon_msg "Restarting Argonaut Server" 
+	if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
+		stop_server
+		start_server
+	fi
+	log_progress_msg "done"
+	log_end_msg $?
+;;
+status)
+	if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
+		status=0
+		pidofproc -p "${PIDFILE_SERVER}" "${DAEMON_SERVER}" >/dev/null || status="$?"
+		log_daemon_msg "Status of Argonaut" "${NAME}"
+		if [ "$status" = 0 ]; then
+			log_progress_msg "is running"
+			log_end_msg 0
+		else
+			log_progress_msg "is not running"
+			log_end_msg $status
+		fi
+	fi
+;;
+
+*)	log_action_msg "Usage: /etc/init.d/argonaut-server {start|stop|restart|reload|force-reload|status}"
+        exit 2
+        ;;
+esac
+exit 0

@@ -1,0 +1,49 @@
+
+DaemonEvent:
+trigger et schedule sont plus là en interne mais apparaissent encore dans le prototype (get_schedule_action et get_trigger_action, qui retournent la même chose)
+Fonction get_event_types :
+    Les deux tableaux SCHEDULED et TRIGGER sont remplis avec la même chose. utilité?
+    Le tableau 'QUEUED' fait la correspondance nom d'action, nom affichable.
+
+
+class_*Generic:
+/!\ mapAction et validAction doivent être refactorés, exterminés, supprimés.
+
+class_workstationservice.inc:
+lignes 588 et suivantes commentées : je ne comprends pas ce que c'est censé faire.
+
+gotomasses:
+      /* Show activation? */
+      if ($percent == "goto-activation"){
+        $status = "<img class='center' src='images/lists/off.png' alt=''>&nbsp;"._("Locked");
+
+        /* Show hardware detect? */
+      } elseif ($percent == "goto-hardware-detection") {
+        $status = "<img class='center' src='plugins/goto/images/hardware.png' alt=''>&nbsp;"._("Detection");
+
+        /* Real percent */
+      }
+
+Interface:
+Trouver pourquoi ça rame sa mère quand argonaute répond pas, corriger ça
+
+Le server argonaut comme le server argonaut client daemon ne respecte pas la norme JSON-RPC sur la fonction standard system.describe.
+
+argonaut-server:
+# si crash + dump:
+#charger les taches futures
+#charger les taches periodiques
+#rien
+# -> pas dans le fichier de conf, à mettre en option au lancement "--loaddump", "--loadperiodic"
+
+dans confdir.default.source :
+
+dans le sendmon on va mettre le argonaut-client-fai qui lui envoie les status au serveur argonaut
+
+dans le get-config-dir-argonaut a la place de start goto-si on va mettre argonaut-client-fai-get-id qui va recuperer l'id de la tache
+
+Get_packages:
+Anciennement la description du paquet passait en base64, je refait pareil. (mais est-ce pertinent?)
+
+Get_entries:
+les from to sont pas implémenté, en a-t-on besoin? est-ce par indice ou timestamp?

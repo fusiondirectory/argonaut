@@ -1,0 +1,78 @@
+#!/usr/bin/perl
+##########################################################################
+#  This code is part of FusionDirectory (http://www.fusiondirectory.org/)
+#  Copyright (C) 2011  FusionDirectory
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+############################################################################
+
+use strict;
+use warnings;
+use 5.010;
+
+use Argonaut::Packages;
+use Config::IniFiles;
+use File::Path;
+use MIME::Base64;
+
+my $iptool = "/sbin/ifconfig";
+my $configfile = "/etc/argonaut/argonaut.conf";
+my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+my $servdir                 =   $config->val( repository => "path"              ,"/srv/www/debian");
+my $interface               =   $config->val( server => "interface"             ,"eth0");
+
+my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
+chomp( $mac );
+
+sub cleanup_and_extract {
+    my $distribs = Argonaut::Packages::get_packages_info($mac,undef,["package","version","filename"]);
+
+    if (!keys(%{$distribs})) {
+        say "No packages on this server";
+    }
+
+    while (my ($distsection,$packages) = each(%{$distribs})) {
+        #~ $distsection =~ qr{(\w+/\w+)$} or die "$filedir : could not extract dist";
+        #~ my $dist = $1;
+        my $outdir = "$servdir/debconf.d/$distsection";
+        my $tmpdir = "/tmp";
+        mkpath($outdir);
+        mkpath($tmpdir);
+        
+        foreach my $package (@{$packages}) {
+            system( "dpkg -e '$servdir/".$package->{'FILENAME'}."' '$tmpdir/DEBIAN'" );
+
+            if( -f "$tmpdir/DEBIAN/templates" ) {
+
+                my $tmpl= ""; {
+                    local $/=undef;
+                    open(my $FILE, "$tmpdir/DEBIAN/templates");
+                    $tmpl = &encode_base64(<$FILE>);
+                    close($FILE);
+                }
+
+                open (FILE, ">$outdir/".$package->{'PACKAGE'}) or die "cannot open file";
+                #~ my $line = $package->{'PACKAGE'}.":".$package->{'VERSION'}.":".;
+                print FILE $tmpl;
+                close(FILE); 
+            }
+        }
+    }
+
+	return;
+}
+
+cleanup_and_extract();

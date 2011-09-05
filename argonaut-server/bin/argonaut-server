@@ -1,0 +1,656 @@
+#!/usr/bin/perl
+##########################################################################
+#  This code is part of FusionDirectory (http://www.fusiondirectory.org/)
+#  Copyright (C) 2011  FusionDirectory
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+############################################################################
+#  The wakeonlan part is taken from FusionInventory
+#  Copyright (C) 2011  FusionInventory
+#############################################################################
+
+use POE qw(Component::Schedule Component::Server::JSONRPC::Http);
+use DateTime;
+use DateTime::Set;
+use Data::Dumper;
+use Net::LDAP;
+use JSON::RPC::Client;
+use JSON;
+use Config::IniFiles;
+
+use Argonaut::Packages;
+
+use strict;
+use warnings;
+use 5.010;
+
+use constant ETH_P_ALL => 0x0003;
+use constant PF_PACKET => 17;
+use constant SOCK_PACKET => 10;
+
+use English qw(-no_match_vars);
+use Socket;
+
+my ($port,$ldap_url,$ldap_port,$ldap_base,$ldap_dn,$ldap_password,$client_port,$delete_finished_tasks,$interface,$packages_files);
+my $iptool = "/sbin/ifconfig";
+my $configfile = "/etc/argonaut/argonaut.conf";
+
+readConfig();
+
+=pod
+=item readConfig
+Read from the config file argonaut.conf the ldap informations
+No parameters needed
+=cut
+sub readConfig {
+    my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+    $port                   =   $config->val( network => "server_port"          ,8080);
+
+    $ldap_url               =   $config->val( ldap => "url"                     ,"localhost");
+    $ldap_port              =   $config->val( ldap => "port"                    ,"389");
+    $ldap_base              =   $config->val( ldap => "base"                    ,"");
+    $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+    $ldap_password          =   $config->val( ldap => "password"                ,"");
+
+    $client_port            =   $config->val( network => "client_port"          ,8081);
+    
+    $delete_finished_tasks  =   $config->val( server => "delete_finished_tasks" ,1);
+    $interface              =   $config->val( server => "interface"             ,"eth0");
+    
+    $packages_files         =   $config->val( server => "packages"              ,"/usr/src/packages/Packages");
+}
+
+=pod
+=item getIpFromMac
+Search in the ldap for the IP associated to a Mac address.
+Parameter : the mac address
+=cut
+sub getIpFromMac {
+	my ($mac) = @_;
+	
+	my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
+    
+    my $mesg;
+    if($ldap_dn ne "") {
+        $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
+    } else {
+        $mesg = $ldap->bind ;    # an anonymous bind
+    }
+
+	$mesg = $ldap->search( # perform a search
+						base   => $ldap_base,
+						filter => "macAddress=$mac",
+                        attrs => [ 'ipHostNumber' ]
+					  );
+
+	$mesg->code && die "Error while searching IP for mac address '$mac' :".$mesg->error;
+
+	if(scalar($mesg->entries)>1) {
+		die "Multiple IPs were found for the Mac address $mac!";
+	} elsif(scalar($mesg->entries)<1) {
+		die "No IPs were found for the Mac address $mac!";
+	}
+
+	my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
+
+	$mesg = $ldap->unbind;   # take down session
+	
+	return $ip;
+}
+
+=pod
+=item do_action
+Execute a JSON-RPC method on a client which the ip is given.
+Parameters : ip,action,params
+=cut
+sub do_action { # if ip pings, send the request
+	my ($ip,$action,$params) = @_;
+	
+	# this line is only needed when debugging stuff on localhost
+	#$ip = "localhost";
+	
+	my $client = new JSON::RPC::Client;
+	$client->version('1.0');
+
+	my $callobj = {
+	  method  => $action,
+	  params  => [$params],
+	};
+
+	my $res = $client->call("http://".$ip.":".$client_port, $callobj);
+
+	if($res) {
+	  if ($res->is_error) {
+		  die "Error : ", $res->error_message."\n";
+	  }
+	  else {
+		  print "Result : ".$res->result."\n";
+          return $res->result;
+	  }
+	}
+	else {
+	  die "Status : ".$client->status_line."\n";
+	}
+}
+
+=pod
+item handler_fai
+Put the right boot mode in the ldap and send the right thing to the client.
+Parameters : the targetted mac address, the action received, the args received for it (args are currently unused).
+=cut
+sub handler_fai {
+    my($target,$action,$args) = @_;
+    my $fai_state = {
+                "trigger_action_reinstall"  => "install",
+                "trigger_action_update"     => "softupdate",
+                "trigger_action_reboot"     => "localboot",
+                "trigger_action_wake"       => "localboot"
+                };
+    
+    my $need_reboot = ($action ne "trigger_action_wake");
+    
+	my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
+	
+    my $mesg;
+    if($ldap_dn ne "") {
+        $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
+    } else {
+        $mesg = $ldap->bind ;    # an anonymous bind
+    }
+
+    
+	$mesg = $ldap->search( # perform a search
+						base   => $ldap_base,
+						filter => "macAddress=$target"
+					  );
+
+	$mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
+
+	if(scalar($mesg->entries)>1) {
+		die "Multiple entries were found for the Mac address $target!";
+	} elsif(scalar($mesg->entries)<1) {
+		die "No entry were found for the Mac address $target!";
+	}
+
+	my $dn = ($mesg->entries)[0];
+	my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
+    
+	$mesg = $ldap->modify( # perform a search
+						$dn,
+                        replace => {
+                            "FAIstate" => $fai_state->{$action}
+                        }
+					  );
+
+	$mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
+
+	$mesg = $ldap->unbind;   # take down session
+    
+    eval { # try
+        if($need_reboot) {
+            my $res = do_action($ip,"trigger_action_reboot");
+        } else {
+            die "I don't handle wake on lan yet\n";
+        }
+    };
+    if ($@) { # catch
+        my $error = $@;
+        wakeOnLan($target);
+    };
+    return undef;
+}
+
+=pod
+=item wakeOnLan
+Send a wake on lan package to a mac address
+Parameter : the mac address
+inspired by WakeOnLan.pm file from FusionInventory
+=cut
+sub wakeOnLan {
+    my ($macaddress) = @_;
+
+    say "wake on lan";
+
+    #~ my $logger     = $self->{logger};
+
+    return unless defined $macaddress;
+
+    #~ if ($macaddress !~ /^$mac_address_pattern$/) {
+        #~ die "Invalid MacAddress $macaddress . Exiting...";
+    #~ }
+    $macaddress =~ s/://g;
+
+    ###  for LINUX ONLY ###
+    if ( eval { socket(SOCKET, PF_PACKET, SOCK_PACKET, getprotobyname('tcp')) or say $! and 0; }) {
+
+        setsockopt(SOCKET, SOL_SOCKET, SO_BROADCAST, 1)
+            or warn "Can't do setsockopt: $ERRNO\n";
+
+        open my $handle, '-|', '$iptool -a $interface'
+            or die "Can't run $iptool: $ERRNO";
+        while (my $line = <$handle>) {
+            next unless $line =~ /$interface \s+ Link \s \S+ \s+ HWaddr \s (\S+)/x;
+            my $netMac = $2;
+            say "Send magic packet to $macaddress directly on card driver";
+            $netMac =~ s/://g;
+
+            my $magic_packet =
+                (pack('H12', $macaddress)) .
+                (pack('H12', $netMac)) .
+                (pack('H4', "0842"));
+            $magic_packet .= chr(0xFF) x 6 . (pack('H12', $macaddress) x 16);
+            my $destination = pack("Sa14", 0, $interface);
+            send(SOCKET, $magic_packet, 0, $destination)
+                or warn "Couldn't send packet on $interface: $ERRNO\n";
+        }
+        close $handle;
+        # TODO : For FreeBSD, send to /dev/bpf ....
+    } else { # degraded wol by UDP
+        if ( eval { socket(SOCKET, PF_INET, SOCK_DGRAM, getprotobyname('udp')); }) {
+            my $magic_packet = 
+                chr(0xFF) x 6 .
+                (pack('H12', $macaddress) x 16);
+            my $sinbroadcast = sockaddr_in("9", inet_aton("255.255.255.255"));
+            say "Send magic packet to $macaddress in UDP mode (degraded wol)";
+            send(SOCKET, $magic_packet, 0, $sinbroadcast);
+        } else {
+            say "Impossible to send magic packet...";
+        }
+    }
+}
+
+sub convert_entry {
+    my ($entry,$id) = @_;
+    my $res = {};
+    $res->{$_} = $entry->{$_} for ('action','data','target','status','substatus','progress','error');
+    $res->{id} = $id;
+    return $res;
+}
+
+=pod
+=head2 POE Session
+=over
+=item _start
+=item echo
+=item ping
+Ping the jsonrpc daemon of a client.
+=item id_of_mac
+Used by clients to get the taskid associated to them
+=item set_task_substatus
+Used by clients to set the fai status
+=item set_error
+Used by clients to signal fai errors
+=item schedule
+Internal state used for scheduling
+=item add
+Internal state corresponding at external action method call.
+Launch the action or schedule it.
+=item get_entries_by_id
+Used by FD to get a bunch of entries by giving a bunch of ids
+=item get_entries_by_mac
+Used by FD to get a bunch of entries by giving a bunch of macs
+=item remove_entries
+Used by FD to remove entries by giving their ids
+=item process_entries
+Used by FD to ask the immediate launch of a bunch of actions by giving their ids
+=item action
+Internal state called by the scheduler to actually launch the action.
+It calls do_action.
+=item loadDump
+Unused right now
+=item sighup
+When sighup received, reload config. See readConfig above.
+(Also restart the server since its port might have changed)
+=item sigint
+When sigint received, write a json dump before quitting.
+=item _stop
+=back
+=cut
+POE::Session->create(
+    inline_states => {
+        _start => sub {
+            $_[KERNEL]->sig( INT => "sigint" );
+            $_[KERNEL]->sig( HUP => "sighup" );
+            $_[HEAP]{tasks} = {};
+            $_[HEAP]{id} = 0;
+            
+            $_[HEAP]{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
+                Port    => $port,
+                Handler => {
+                    'echo' => 'echo',
+                    'ping' => 'ping',
+                    'action' => 'add',
+                    'get_entries' => 'get_entries_by_id',
+                    'get_entries_by_id' => 'get_entries_by_id',
+                    'get_entries_by_mac' => 'get_entries_by_mac',
+                    'remove_entries' => 'remove_entries',
+                    'process_entries_now' => 'process_entries',
+                    'get_my_id' => 'id_of_mac',
+                    'set_task_substatus' => 'set_task_substatus',
+                    'set_error' => 'set_error',
+                    'get_packages' => 'get_packages'
+                },
+            );
+            $_[HEAP]{handlers} = {
+                "trigger_action_reinstall" => \&handler_fai,
+                "trigger_action_update" => \&handler_fai,
+                "trigger_action_wake" => \&handler_fai,
+                "trigger_action_reboot" => \&handler_fai
+            };
+            $_[HEAP]{scheduled_only} = [
+                "trigger_action_update",
+                "trigger_action_reinstall",
+                "trigger_action_memcheck",
+                "detect_hardware"
+                ];
+            #~ $_[KERNEL]->yield(add=>undef,undef,"job_trigger_action_halt",["00:11:22:33:44:55"],{timestamp=>1314107700});
+            say "argonaut launched";
+        },
+        echo => sub {
+            my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
+            print "echo\n";
+            $kernel->post( $jsonrpc => 'result' => $id, @params );
+        },
+        ping => sub {
+            my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
+            my ($mac) = @params;
+            print "ping\n";
+            my $ok = "OK";
+            eval { # try
+                my $res = do_action(getIpFromMac($mac),"echo",$ok);
+                $kernel->post( $jsonrpc => 'result' => $id, ($ok eq $res) );
+            };
+            if ($@) { # catch
+                say "Error occured : ".$@;
+                $kernel->post( $jsonrpc => 'error' => $id, $@);
+            };
+        },
+        id_of_mac => sub {
+            my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL,HEAP, ARG0..$#_ ];
+            my ($mac) = @params;
+                
+            say "searching taskid for $mac";
+                
+            while (my ($taskid,$entry) = each(%{$heap->{tasks}})) {
+                if(($entry->{target} eq $mac)&&($entry->{status}=="processing")) {
+                    $kernel->post( $jsonrpc => 'result' => $id, $taskid);
+                    last;
+                }
+            }
+            $kernel->post( $jsonrpc => 'error' => $id, "Mac were not found in queue");
+        },
+        set_task_substatus => sub {
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
+            my ($taskid,$substatus,$progress) = @params;
+            
+            if(!defined $heap->{tasks}->{$taskid}) {
+                $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
+            } else {
+                $heap->{tasks}->{$taskid}->{substatus} = $substatus;
+                $heap->{tasks}->{$taskid}->{progress} = $progress;
+                $kernel->post( $jsonrpc => 'result' => $id, "ok");
+            }
+        },
+        set_error => sub {
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
+            my ($taskid,$error) = @params;
+            
+            if(!defined $heap->{tasks}->{$taskid}) {
+                $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
+            } else {
+                $heap->{tasks}->{$taskid}->{status} = "error";
+                $heap->{tasks}->{$taskid}->{error} = $error;
+                $kernel->post( $jsonrpc => 'result' => $id, "ok");
+            }
+        },
+        schedule => sub {
+            my ($session,$heap,$date,$action,$target,$data) = @_[SESSION,HEAP,ARG0 .. $#_];
+            while (defined $heap->{tasks}->{$heap->{id}}) {
+                $heap->{id}++;
+                if ($heap->{id}>=2147483648) { # limit to 4 bytes
+                    $heap->{id} = 0;
+                }
+            }
+            $heap->{tasks}->{$heap->{id}} = {
+                    handle=>POE::Component::Schedule->add($session, action => $date, ($heap->{id},$action,$target,$data)),
+                    date=>$date,
+                    action=>$action,
+                    target=>$target,
+                    data=>$data,
+                    status=>"waiting",
+                    substatus=>"",
+                    progress=>0,
+                    error=>""
+                };
+        },
+        add => sub {
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
+            my ($action,$targets,$data) = @params;
+            
+            say $action;
+            if (grep {$_ eq $action} @{$heap->{scheduled_only}}) {
+                say "scheduled only";
+            } else {
+                say "fine";
+            }
+            
+            if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) && 
+                (grep {$_ eq $action} @{$heap->{scheduled_only}})) { 
+                # If the action is scheduled_only and there is no timestamp
+                # We schedule it for now
+                $data->{timestamp} = time();                    
+            }
+            
+            if(defined $data->{timestamp} && $data->{timestamp} ne "") {
+                $kernel->post( $jsonrpc => 'result' => $id, "OK" ); # asynchronous
+                
+                my $date = DateTime->from_epoch(epoch => $data->{timestamp});
+                if(defined $data->{periodic} && $data->{periodic} =~ /^(\d+)_(\w+)$/) {
+                    my $periodic_nb = $1;
+                    my $periodic_keyword = $2;
+                    foreach my $target (@{$targets}) {
+                        POE::Kernel->yield(schedule=>DateTime::Set->from_recurrence(
+                                after      => $date,
+                                recurrence => sub {
+                                    return $_[0]->add( $periodic_keyword => $periodic_nb )
+                                },
+                            ),$action,$target,$data);
+                    }
+                } else {
+                    foreach my $target (@{$targets}) {
+                        POE::Kernel->yield(schedule=>DateTime::Set->from_datetimes(dates => [ $date ]),
+                            $action,$target,$data);
+                    }
+                }
+            } else {
+                my $errors = "";
+                foreach my $target (@{$targets}) {
+                    $errors .= POE::Kernel->call($session=>action=>undef,$action,$target,$data); # synchronous call
+                }
+                if($errors ne "") {
+                    $kernel->post( $jsonrpc => 'error' => $id, $errors );
+                } else {
+                    $kernel->post( $jsonrpc => 'result' => $id, "OK" );
+                }
+            }
+            say "action $action scheduled";
+        },
+        get_entries_by_id => sub {
+            my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, ARG0..$#_ ];
+            my ($ids) = @params;
+            my $entries = [];
+            while (my ($id,$entry) = each(%{$heap->{tasks}})) {
+                if((!defined $ids) || (grep {$_ == $id} $ids)) {
+                    push @{$entries}, convert_entry($entry,$id);
+                }
+            }
+            #~ say Dumper($entries);
+            $kernel->post( $jsonrpc => 'result' => $id, $entries);
+        },
+        get_entries_by_mac => sub { # this has not been tested
+            my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, ARG0..$#_ ];
+            my ($macs) = @params;
+            my $entries = [];
+            while (my ($id,$entry) = each(%{$heap->{tasks}})) {
+                if((!defined $macs) || (grep {$_ eq $entry->{'target'}} $macs)) {
+                    push @{$entries}, convert_entry($entry,$id);
+                }
+            }
+            $kernel->post( $jsonrpc => 'result' => $id, $entries);
+        },
+        remove_entries => sub {
+            my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP,ARG0..$#_ ];
+            my ($ids) = @params;
+            
+            foreach my $id (@{$ids}) {
+                delete $heap->{tasks}->{$id} if defined $id;
+            }
+            
+            $kernel->post( $jsonrpc => 'result' => $id, "ok");
+        },
+        process_entries => sub {
+            my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP,ARG0..$#_ ];
+            my ($ids) = @params;
+            
+            my $errors = "";
+            foreach my $id (@{$ids}) {
+                if ((defined $id) && (defined $heap->{tasks}->{$id})) {
+                    delete $heap->{tasks}->{$id}->{handle};
+                    $kernel->yield(action => 
+                        $id,
+                        $heap->{tasks}->{$id}->{action},
+                        $heap->{tasks}->{$id}->{target},
+                        $heap->{tasks}->{$id}->{data});
+                } elsif (defined $id) {
+                    $errors.="$id unknown\n";
+                } else {
+                    $errors.="id undefined\n";
+                }
+            }
+            if ($errors ne "") {
+                $kernel->post( $jsonrpc => 'error' => $id, $errors);
+            } else {
+                $kernel->post( $jsonrpc => 'result' => $id, "ok");
+            }
+        },
+        action => sub {
+            my ($heap,$taskid,$action,$target,$data) = @_[HEAP,ARG0 .. $#_];
+            
+            my $errors = "";
+            
+            eval { # try
+                my $action_client = $action;
+                if(defined $heap->{handlers}->{$action}) {
+                    $action_client = $heap->{handlers}->{$action}->($target,$action,$data->{args});
+                }
+                if(defined $action_client) {
+                    my $ip = getIpFromMac($target);
+                    say localtime(time)." sending action $action to $ip";
+                    if(defined $data->{args}) {
+                        do_action($ip,$action_client,$data->{args});
+                    } else {
+                        do_action($ip,$action_client);
+                    }
+                }
+            };
+            if ($@) { # catch
+                say "Error occured : ".$@;
+                if(defined $taskid) {
+                    $heap->{tasks}->{$taskid}->{status} = "error";
+                    $heap->{tasks}->{$taskid}->{error} = $@;
+                }
+                return $@;
+            };
+            
+            if((defined $taskid) && !(defined $data->{periodic})) {
+                $heap->{tasks}->{$taskid}->{error} = "";
+                if(grep {$_ eq $action} @{$heap->{scheduled_only}}) {
+                    $heap->{tasks}->{$taskid}->{status} = "processing";
+                } else {
+                    $heap->{tasks}->{$taskid}->{status} = "processed";
+                    if($delete_finished_tasks) {
+                        delete $heap->{tasks}->{$taskid};
+                    }
+                }
+            }
+            return "";
+        },
+        get_packages => sub {
+            my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
+            my ($release,$attrs,$filters,$from,$to) = @params;
+            eval {
+                my $distributions = Argonaut::Packages::get_packages_info(undef,$release,$attrs,$filters,$from,$to);
+                $kernel->post( $jsonrpc => 'result' => $id, $distributions);
+            };
+            if($@) {
+                say $@."\n";
+                $kernel->post( $jsonrpc => 'error' => $id, $@);
+            }
+        },
+        loadDump => sub { # this function has not been tested
+            my ($kernel,$filename) = @_[KERNEL,ARG0..$#_];
+            
+            open (DUMP, $filename) or die "cannot open file";
+            while (<DUMP>) {
+                my $task = from_json($_);
+                if(($task->{status} eq "waiting") && ($task->{data}->{timestamp} > time)) {
+                    $kernel->yield(schedule=>$task->{date},$task->{action},$task->{target},$task->{data});
+                }
+            }
+            close(DUMP);
+        },
+        sighup => sub {
+            my ($kernel,$heap) = @_[KERNEL,HEAP];
+            say "reloading config…";
+            readConfig();
+            $kernel->signal($heap->{jsonserver},"KILL");
+            $heap->{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
+                Port    => $port,
+                Handler => {
+                    'action' => 'add',
+                    'get_entries' => 'get_entries',
+                    'remove_entries' => 'remove_entries',
+                    'process_entries_now' => 'process_entries'
+                },
+            );
+            say "done";
+            $kernel->sig_handled();
+        },
+        sigint => sub {
+            say "exiting…";
+            #here, do something with waiting tasks
+            if(scalar(keys(%{$_[HEAP]->{tasks}})) > 0) {
+                open (DUMP, ">dump_".time.".json") or die "cannot open file";
+                foreach my $task (values(%{$_[HEAP]->{tasks}})) {
+                    delete $task->{handle};
+                    print DUMP (to_json($task)."\n");
+                }
+                close(DUMP); 
+            }
+        },
+        sigchild => sub {
+            say "child process exiting…";
+            #~ delete $_[HEAP]->{bloquant};
+        },
+        _stop => sub {
+            print "_stop\n";
+        },
+    },
+);
+        
+POE::Kernel->run();
+
+exit 0;
