@@ -1,0 +1,25 @@
+This is the debian package for the POE-Component-Server-JSONRPC module.
+It was created by Benoit Mortier <benoit.mortier@opensides.be>.
+
+It was downloaded from http://search.cpan.org/dist/POE-Component-Server-JSONRPC/
+
+The upstream author is: 
+
+Daisuke Murase <typester@cpan.org>
+Côme BERNIGAUD <come.bernigaud@laposte.net>.
+
+
+This program is free software; you can redistribute
+it and/or modify it under the same terms as Perl itself.
+
+The full text of the license can be found in the
+LICENSE file included with this module.
+
+Perl is distributed under your choice of the GNU General Public License or
+the Artistic License.  On Debian GNU/Linux systems, the complete text of the
+GNU General Public License can be found in `/usr/share/common-licenses/GPL'
+and the Artistic Licence in `/usr/share/common-licenses/Artistic'.
+
+
+The Debian packaging is (C) 2011, Benoit Mortier <benoit.mortier@opensides.be> and
+is licensed under the same terms as the software itself (see above).

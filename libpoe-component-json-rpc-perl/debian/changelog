@@ -1,5 +1,0 @@
-libpoe-component-json-rpc-perl (0.2-1) unstable; urgency=low
-
-  * Initial release. (Closes: #XXXXXX)
-
- -- Benoit Mortier <benoit.mortier@opensides.be>  Thu, 25 Aug 2011 23:50:50 +0200

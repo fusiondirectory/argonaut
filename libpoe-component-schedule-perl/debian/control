@@ -1,0 +1,15 @@
+Source: libpoe-component-schedule-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 5), libmodule-build-perl, libdatetime-timezone-perl, libdatetime-perl, libdatetime-set-perl, libpoe-perl
+Build-Depends-Indep: perl (>= 5.6.10-12)
+Maintainer: Benoit Mortier <benoit.mortier@opensides.be>
+Standards-Version: 3.9.2
+Homepage: http://search.cpan.org/dist/POE-Component-Schedule/
+
+Package: libpoe-component-schedule-perl
+Architecture: all
+Depends: ${perl:Depends}, ${misc:Depends}, libdatetime-timezone-perl (>= 1.13), libdatetime-perl (>= 0.48), libdatetime-set-perl (>= 0.25), libpoe-perl (>= 1.287)
+Description: Schedule POE events using DateTime::Set iterators
+ Schedule POE events using DateTime::Set iterators
+ .

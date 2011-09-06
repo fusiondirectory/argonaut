@@ -1,6 +1,0 @@
-Package: libpoe-component-json-rpc-perl
-Architecture: all
-Depends: ${misc:Depends}
-Description:
- .
-

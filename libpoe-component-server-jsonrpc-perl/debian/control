@@ -1,0 +1,15 @@
+Source: libpoe-component-server-jsonrpc-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 5)
+Build-Depends-Indep: perl (>= 5.6.10-12)
+Maintainer: Benoit Mortier <benoit.mortier@opensides.be>
+Standards-Version: 3.9.2
+Homepage: http://search.cpan.org/dist/POE-Component-Server-JSONRPC/
+
+Package: libpoe-component-server-jsonrpc-perl
+Architecture: all
+Depends: ${perl:Depends}, ${misc:Depends}, libpoe-perl, libclass-accessor-perl, libjson-any-perl
+Description: POE tcp and http based JSON-RPC server
+ POE tcp and http based JSON-RPC server
+ .
