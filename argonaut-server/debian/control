@@ -11,8 +11,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-server
 Architecture: all
-Depends: argonaut-common, libdatetime-perl, libnet-ldap-perl, libjson-perl (>= 2.07-1), libconfig-ini-simple-perl, libpoe-perl, 
-libpoe-component-server-json-rpc
+Depends: argonaut-common, libdatetime-perl, libnet-ldap-perl, libjson-perl (>= 2.07-1), libconfig-ini-simple-perl, libpoe-perl, libpoe-component-schedule-perl, libpoe-component-server-json-rpc
 Description: argonaut json rpc server to manage deployment system
  .
 
