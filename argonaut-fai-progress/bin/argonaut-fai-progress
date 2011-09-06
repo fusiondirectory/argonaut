@@ -34,10 +34,6 @@ GTK backend instead of textual NEWT.
 =item B<FAI_METHOD>          Either 'install' or 'update' - this only controls
                              the displayed information
 
-=item B<GOSA_SI_SOCKET>      Path to a named pipe to write the current progress
-                             information. It can be used for faimond related
-                             processes to update the client installation progress
-                             in percent.
 =back 
 
 =head1 USAGE
@@ -62,11 +58,11 @@ FAI_PROGRESS_VT=$(openvt -v 2>&1 -- sh -c "
         setterm -blank 0 -powersave off -powerdown 0 ;
         echo -ne "\033%G" ;
         touch -f $FAI_LOG_PATH ;
-        /usr/lib/cdebconf/debconf /usr/bin/fai-progress ;
+        /usr/lib/cdebconf/debconf /usr/bin/argonaut-fai-progress ;
         reset")
 
 FAI_PROGRESS_VT=${FAI_PROGRESS_VT##* }
-echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/fai-progress-vt
+echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/argonaut-fai-progress-vt
 
 chvt ${FAI_PROGRESS_VT##/dev/tty}
 
@@ -116,19 +112,19 @@ setlocale(LC_MESSAGES, "");
 textdomain("argonaut-fai-progress");
 
 # Global variables
-my $percent= 0;
-my $last_percent= 0;
-my $template= "argonaut-fai-progress";
-my $update= 0;
-my $monitor_path= "/var/log/fai.log";
-my $gosa_si_path= "/var/run/gosa-si/gosa-si-client.socket";
+my $percent = 0;
+my $last_percent = 0;
+my $template = "argonaut-fai-progress";
+my $update = 0;
+my $monitor_path = "/var/log/fai.log";
+my $activation_file = "/tmp/argonaut/argonaut-progress";
 
-sub gosa_si_signal {
+sub argonaut_signal {
   my ($parm)= @_;
-	if (-w $gosa_si_path){
-		open( GOSA, ">>$gosa_si_path" );
-		print GOSA "$parm\n";
-		close(GOSA);
+	if (-w $activation_file){
+		open( ARGONAUT_PATH, ">>$activation_file" );
+		print ARGONAUT_PATH "$parm\n";
+		close(ARGONAUT_PATH);
 	}
 }
 
@@ -141,16 +137,14 @@ sub gosa_si_signal {
 if (defined $ENV{'FAI_LOG_PATH'}){
   $monitor_path= $ENV{'FAI_LOG_PATH'};
 }
-if (defined $ENV{'GOSA_SI_SOCKET'}){
-  $gosa_si_path= $ENV{'GOSA_SI_SOCKET'};
-}
+
 if (defined $ENV{'FAI_METHOD'} && $ENV{'FAI_METHOD'} eq 'update'){
   $update= 1;
 }
 
 # Sanity check
 if ( ! -r $monitor_path ) {
-	die ("fai-progress: fatal: cannot read '$monitor_path' - aborting");
+	die ("argonaut-fai-progress: fatal: cannot read '$monitor_path' - aborting");
 }
 
 # Setup tail
@@ -166,16 +160,16 @@ $current_locale =~ s/^(..).*$/$1/;
 set("debconf/language", "$current_locale");
 
 if ($update){
-  subst ("fai-progress/title", "i", gettext("FAI Update Progress"));
-  subst ("fai-progress/info", "i", gettext("Progress of update"));
+  subst ("argonaut-fai-progress/title", "i", gettext("FAI Update Progress"));
+  subst ("argonaut-fai-progress/info", "i", gettext("Update Progress"));
 } else {
-  subst ("fai-progress/title", "i", gettext("FAI Installation Progress"));
-  subst ("fai-progress/info", "i", gettext("Progress of installation"));
+  subst ("argonaut-fai-progress/title", "i", gettext("FAI Installation Progress"));
+  subst ("argonaut-fai-progress/info", "i", gettext("Installation progress"));
 }
-settitle("fai-progress/title");
-progress ("start", 0, 100, "fai-progress/info");
-subst ("fai-progress/step", "i", gettext("Initializing FAI"));
-progress("info", "fai-progress/step");
+settitle("argonaut-fai-progress/title");
+progress ("start", 0, 100, "argonaut-fai-progress/info");
+subst ("argonaut-fai-progress/step", "i", gettext("Initializing FAI"));
+progress("info", "argonaut-fai-progress/step");
 progress("set", $percent);
 
 # Lets roll
@@ -192,13 +186,13 @@ while (defined($line= $file->read)) {
 	if ($res->{'status'} != 0){
 		progress("stop");
 
-    # Errors detected here will not be 'cancel-able'
+    # Errors detected here will not be cancelable
     while (1) {
       capb();
       if (defined $res->{'action'}){
-        subst ("fai-progress/".$res->{'task'}, "i", $res->{'action'});
+        subst ("argonaut-fai-progress/".$res->{'task'}, "i", $res->{'action'});
       }
-      input("critical", "fai-progress/".$res->{'task'});
+      input("critical", "argonaut-fai-progress/".$res->{'task'});
       go();
     }
 
@@ -211,7 +205,7 @@ while (defined($line= $file->read)) {
 
     # Start hardware detection progress
     if (defined $res->{'task'} && $res->{'task'} eq "goto-hardware-detection-start"){
-		  $percent= progress("get");
+      $percent= progress("get");
       $template= "goto-hardware";
       progress("stop");
 
@@ -225,11 +219,11 @@ while (defined($line= $file->read)) {
 
     # Start activation progress
     if (defined $res->{'task'} && $res->{'task'} eq "goto-activation-start"){
-		  $percent= progress("get");
+      $percent= progress("get");
       $template= "goto-activation";
       progress("stop");
 
-      gosa_si_signal("GOTOACTIVATION");
+      argonaut_signal("GOTOACTIVATION");
 
       settitle("goto-activation/title");
       progress ("start", 0, 100, "goto-activation/info");
@@ -241,11 +235,11 @@ while (defined($line= $file->read)) {
 
     if (defined $res->{'task'} && ( $res->{'task'} eq "goto-hardware-detection-stop" || $res->{'task'} eq "goto-activation-stop" ) ){
       progress("stop");
-      $template= "fai-progress";
+      $template= "argonaut-fai-progress";
 
       # Restore installation progress bar
-      settitle("fai-progress/title");
-      progress ("start", 0, 100, "fai-progress/info");
+      settitle("argonaut-fai-progress/title");
+      progress ("start", 0, 100, "argonaut-fai-progress/info");
       progress("set", $percent);
     }
 
@@ -256,7 +250,7 @@ while (defined($line= $file->read)) {
       progress("set", $res->{'percent'});
       if ($last_percent != $res->{'percent'}){
         $last_percent= $res->{'percent'};
-        gosa_si_signal("PROGRESS ".$res->{'percent'});
+        argonaut_signal("PROGRESS ".$res->{'percent'});
       }
     }
   }

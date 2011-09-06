@@ -1,57 +1,58 @@
 Template: argonaut-fai-progress/title
 Type: title
-_Description: ${i}
+_description: ${i}
 
 Template: argonaut-fai-progress/info
 Type: text
-_Description: ${i}
+_description: ${i}
 
 Template: argonaut-fai-progress/step
 Type: text
-_Description: ${i}
+_description: ${i}
 
 Template: goto-hardware/title
 Type: title
-_Description: GOto - Hardware detection
+_description: GOto - Hardware detection
 
 Template: goto-hardware/info
 Type: text
-_Description: Progress of hardware detection
+_description: Progress of hardware detection
 
 Template: goto-hardware/step
 Type: text
-_Description: ${i}
+_description: ${i}
 
 Template: goto-activation/title
 Type: title
-_Description: GOto - System Activation
+_description: GOto - System Activation
 
 Template: goto-activation/info
 Type: text
-_Description: Waiting
+_description: Waiting
 
 Template: goto-activation/step
 Type: text
-_Description: ${i}
+_description: ${i}
 
 Template: argonaut-fai-progress/error-ip
 Type: error
-_Description: Error in network configuration
+_description: Error in network configuration
  The system could not determine a network address.
  .
  The installation cannot continue without this information.
 
 Template: argonaut-fai-progress/error-dns
 Type: error
-_Description: Error in network configuration
+_description: Error in network configuration
  The system could not determine a system name for ip ${i}.
  .
  The installation cannot continue without this information.
 
 Template: argonaut-fai-progress/error-fai
 Type: error
-_Description: FAI error
- The last installation failed. Please unlock this system after the error has been resolved.
+_description: FAI error
+ The last installation failed. Please unlock this system after the error
+ has been resolved.
  .
  Error code: ${i}
  .
@@ -59,15 +60,16 @@ _Description: FAI error
 
 Template: argonaut-fai-progress/error-gosa-si-no-server
 Type: error
-_Description: GOto error
+_description: GOto error
  Cannot register client. There is no activation server available.
  .
  Please inform your administrator.
 
 Template: argonaut-fai-progress/error-ldap
 Type: error
-_Description: LDAP error
- The last installation failed. Please unlock this system after the error has been resolved.
+_description: LDAP error
+ The last installation failed. Please unlock this system after the error
+ has been resolved.
  .
  Error code: ${i}
  .
@@ -75,7 +77,7 @@ _Description: LDAP error
 
 Template: argonaut-fai-progress/ldap2fai-error
 Type: error
-_Description: LDAP error
+_description: LDAP error
  Cannot retrieve information about this system.
  .
  ${i}
@@ -84,6 +86,5 @@ _Description: LDAP error
 
 Template: debconf/language
 Type: text
-_Description: Debconf language
-Default: en
-
+_description: Debconf language
+_Default: en

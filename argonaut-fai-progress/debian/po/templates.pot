@@ -7,8 +7,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: Source: fai-progress@packages.debian.org\n"
-"POT-Creation-Date: 2008-06-27 11:03+0200\n"
+"Report-Msgid-Bugs-To: argonaut-fai-progress@packages.debian.org\n"
+"POT-Creation-Date: 2011-09-06 12:18+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,140 +17,156 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #. Type: title
-#. Description
+#. description
 #. Type: text
-#. Description
+#. description
 #. Type: text
-#. Description
+#. description
 #. Type: text
-#. Description
+#. description
 #. Type: text
-#. Description
+#. description
 #. Type: error
-#. Description
-#: ../fai-progress.templates:1001 ../fai-progress.templates:2001
-#: ../fai-progress.templates:3001 ../fai-progress.templates:6001
-#: ../fai-progress.templates:9001 ../fai-progress.templates:15001
+#. description
+#: ../argonaut-fai-progress.templates:1001
+#: ../argonaut-fai-progress.templates:2001
+#: ../argonaut-fai-progress.templates:3001
+#: ../argonaut-fai-progress.templates:6001
+#: ../argonaut-fai-progress.templates:9001
+#: ../argonaut-fai-progress.templates:15001
 msgid "${i}"
 msgstr ""
 
 #. Type: title
-#. Description
-#: ../fai-progress.templates:4001
+#. description
+#: ../argonaut-fai-progress.templates:4001
 msgid "GOto - Hardware detection"
 msgstr ""
 
 #. Type: text
-#. Description
-#: ../fai-progress.templates:5001
+#. description
+#: ../argonaut-fai-progress.templates:5001
 msgid "Progress of hardware detection"
 msgstr ""
 
 #. Type: title
-#. Description
-#: ../fai-progress.templates:7001
+#. description
+#: ../argonaut-fai-progress.templates:7001
 msgid "GOto - System Activation"
 msgstr ""
 
 #. Type: text
-#. Description
-#: ../fai-progress.templates:8001
+#. description
+#: ../argonaut-fai-progress.templates:8001
 msgid "Waiting"
 msgstr ""
 
 #. Type: error
-#. Description
+#. description
 #. Type: error
-#. Description
-#: ../fai-progress.templates:10001 ../fai-progress.templates:11001
+#. description
+#: ../argonaut-fai-progress.templates:10001
+#: ../argonaut-fai-progress.templates:11001
 msgid "Error in network configuration"
 msgstr ""
 
 #. Type: error
-#. Description
-#: ../fai-progress.templates:10001
+#. description
+#: ../argonaut-fai-progress.templates:10001
 msgid "The system could not determine a network address."
 msgstr ""
 
 #. Type: error
-#. Description
+#. description
 #. Type: error
-#. Description
-#: ../fai-progress.templates:10001 ../fai-progress.templates:11001
+#. description
+#: ../argonaut-fai-progress.templates:10001
+#: ../argonaut-fai-progress.templates:11001
 msgid "The installation cannot continue without this information."
 msgstr ""
 
 #. Type: error
-#. Description
-#: ../fai-progress.templates:11001
+#. description
+#: ../argonaut-fai-progress.templates:11001
 msgid "The system could not determine a system name for ip ${i}."
 msgstr ""
 
 #. Type: error
-#. Description
-#: ../fai-progress.templates:12001
+#. description
+#: ../argonaut-fai-progress.templates:12001
 msgid "FAI error"
 msgstr ""
 
 #. Type: error
-#. Description
+#. description
 #. Type: error
-#. Description
-#: ../fai-progress.templates:12001 ../fai-progress.templates:14001
+#. description
+#: ../argonaut-fai-progress.templates:12001
+#: ../argonaut-fai-progress.templates:14001
 msgid ""
 "The last installation failed. Please unlock this system after the error has "
 "been resolved."
 msgstr ""
 
 #. Type: error
-#. Description
+#. description
 #. Type: error
-#. Description
-#: ../fai-progress.templates:12001 ../fai-progress.templates:14001
+#. description
+#: ../argonaut-fai-progress.templates:12001
+#: ../argonaut-fai-progress.templates:14001
 msgid "Error code: ${i}"
 msgstr ""
 
 #. Type: error
-#. Description
+#. description
 #. Type: error
-#. Description
+#. description
 #. Type: error
-#. Description
+#. description
 #. Type: error
-#. Description
-#: ../fai-progress.templates:12001 ../fai-progress.templates:13001
-#: ../fai-progress.templates:14001 ../fai-progress.templates:15001
+#. description
+#: ../argonaut-fai-progress.templates:12001
+#: ../argonaut-fai-progress.templates:13001
+#: ../argonaut-fai-progress.templates:14001
+#: ../argonaut-fai-progress.templates:15001
 msgid "Please inform your administrator."
 msgstr ""
 
 #. Type: error
-#. Description
-#: ../fai-progress.templates:13001
+#. description
+#: ../argonaut-fai-progress.templates:13001
 msgid "GOto error"
 msgstr ""
 
 #. Type: error
-#. Description
-#: ../fai-progress.templates:13001
+#. description
+#: ../argonaut-fai-progress.templates:13001
 msgid "Cannot register client. There is no activation server available."
 msgstr ""
 
 #. Type: error
-#. Description
+#. description
 #. Type: error
-#. Description
-#: ../fai-progress.templates:14001 ../fai-progress.templates:15001
+#. description
+#: ../argonaut-fai-progress.templates:14001
+#: ../argonaut-fai-progress.templates:15001
 msgid "LDAP error"
 msgstr ""
 
 #. Type: error
-#. Description
-#: ../fai-progress.templates:15001
+#. description
+#: ../argonaut-fai-progress.templates:15001
 msgid "Cannot retrieve information about this system."
 msgstr ""
 
 #. Type: text
-#. Description
-#: ../fai-progress.templates:16001
+#. description
+#: ../argonaut-fai-progress.templates:16001
 msgid "Debconf language"
+msgstr ""
+
+#. Type: text
+#. Default
+#: ../argonaut-fai-progress.templates:16002
+msgid "en"
 msgstr ""

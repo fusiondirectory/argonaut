@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: FusionDirectory Packagers <fusiondirectory-packages@lists.fusiondirectory.org>
 Uploaders: Benoit Mortier <benoit.mortier@opensides.be>
 Standards-Version: 3.9.2
-Build-Depends: debhelper (>= 7.0.50~), gettext
+Build-Depends: debhelper (>= 7.0.50~)
 Homepage: https://forge.fusiondirectory.org/projects/argonaut-agents
 Vcs-Browser: http://git.fusiondirectory.org/code/main/argonaut-agents.git
 Vcs-Git: http://git.fusiondirectory.org/main/argonaut-agents.git
@@ -12,8 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-fai-backend
 Architecture: all
-Depends: ${misc:Depends}, argonaut-common (>= 1.0-1), argonaut-fai (>= 1.0.1), fai-client (>= 3.2.8), libnet-ldap-perl, console-tools, debootstrap
-Recommends: netcat
+Depends: ${misc:Depends}, argonaut-common (>= 1.0-1), argonaut-fai (>= 1.0.1), argonaut-client-fai (>= 1.0.1), fai-client (>= 3.2.8), libnet-ldap-perl
 Description: Scripts to Argonaut with FAI
- Ensemble of programs, script and FAI hooks to Integrate
- Argonaut in an FAI nfs chroot
+ Ensemble of programs, script and nfsroot FAI hooks to Integrate
+ Argonaut into FAI

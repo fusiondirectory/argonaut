@@ -1,0 +1,45 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2011-09-06 15:00+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: argonaut-fai-progress:163
+msgid "FAI Update Progress"
+msgstr ""
+
+#: argonaut-fai-progress:164
+msgid "Progress of update"
+msgstr ""
+
+#: argonaut-fai-progress:166
+msgid "FAI Installation Progress"
+msgstr ""
+
+#: argonaut-fai-progress:167
+msgid "Progress of installation"
+msgstr ""
+
+#: argonaut-fai-progress:171
+msgid "Initializing FAI"
+msgstr ""
+
+#: argonaut-fai-progress:214
+msgid "Hardware detection started"
+msgstr ""
+
+#: argonaut-fai-progress:230
+msgid "System is locked. Waiting for activation..."
+msgstr ""
