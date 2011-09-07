@@ -27,29 +27,47 @@ use strict;
 use warnings;
 use 5.010;
 
+=item trigger_action_halt
+shutdown the computer
+=cut
+
 sub trigger_action_halt : Public {
 	my ($s, $args) = @_;
-    print "shutdown ".Dumper($args)."\n";
+    #~ print "shutdown ".Dumper($args)."\n";
+    system("sleep 5 && halt &");
     return "shuting down";
 }
 
+=item trigger_action_reboot
+reboot the computer
+=cut
+
 sub trigger_action_reboot : Public {
 	my ($s, $args) = @_;
-    say "reboot";
+    #~ say "reboot";
+    system("sleep 5 && reboot &");
     return "rebooting";
 }
 
+=item echo
+return the parameters passed to it
+=cut
+
 sub echo : Public {
 	my ($s, $args) = @_;
-    print "echo ".Dumper($args)."\n";
+    #~ print "echo ".Dumper($args)."\n";
     return $args;
 }
 
 package
     Argonaut::ClientDaemon::system;
 
+
+=item describe
+should be the answer of the system.describe standard JSONRPC call. It seems broken.
+=cut
 sub describe {
-    say "system.describe";
+    #~ say "system.describe";
     return {
         sdversion => "1.0",
         name      => 'Argonaut::ClientDaemon',

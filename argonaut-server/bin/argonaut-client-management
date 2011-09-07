@@ -25,6 +25,10 @@ use strict;
 use warnings;
 use 5.010;
   
+=pod
+This just launch a JSONRPC server with ClientDaemon.pm methods.
+=cut
+  
 my $configfile = "/etc/argonaut/argonaut.conf";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);

@@ -36,6 +36,11 @@ my $file                            =   $config->val( client => "file"          
 
 my $taskid;
 
+=pod
+This program is supposed to read on stdin the sendmon fai output, extract useful information and send them to argonaut-server.
+It has never been tested.
+=cut
+
 open (ID, "<$file") or die "cannot open $file";
     $taskid = <ID>;
 close(ID);

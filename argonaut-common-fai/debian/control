@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-common-fai
 Architecture: all
-Depends: ${misc:Depends}, ${perl:Depends}, libnet-ldap-perl, libapt-pkg-perl, liburi-perl
+Depends: ${misc:Depends}, ${perl:Depends}, argonaut-common (>= 1.0-1), libnet-ldap-perl, libapt-pkg-perl, liburi-perl
 Description: Argonaut FAI libraries
  This package contains some FAI perl libraries.
  Currently the focus is based on FusionDirectory / FAI management.

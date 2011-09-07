@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-fai-backend
 Architecture: all
-Depends: ${misc:Depends}, argonaut-common (>= 1.0-1), argonaut-fai (>= 1.0.1), argonaut-client-fai (>= 1.0.1), fai-client (>= 3.2.8), libnet-ldap-perl
+Depends: ${misc:Depends}, argonaut-common (>= 1.0-1), argonaut-client-fai (>= 1.0-1), fai-client (>= 3.2.8), fai-server (>=3.2.8), libnet-ldap-perl
 Description: Scripts to Argonaut with FAI
  Ensemble of programs, script and nfsroot FAI hooks to Integrate
  Argonaut into FAI

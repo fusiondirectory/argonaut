@@ -25,6 +25,11 @@ use 5.010;
 use JSON::RPC::Client;
 use Config::IniFiles;
 
+=pod
+This program ask the argonaut-server for the assigned taskid for the fai installation.
+It store the info into the file specified in the config file.
+=cut
+
 my $iptool = "ifconfig";
 my $configfile = "/etc/argonaut/argonaut.conf"
 

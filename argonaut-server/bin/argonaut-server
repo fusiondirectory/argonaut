@@ -29,8 +29,11 @@ use Net::LDAP;
 use JSON::RPC::Client;
 use JSON;
 use Config::IniFiles;
+use File::Path;
 
 use Argonaut::Packages;
+
+use Log::Handler;
 
 use strict;
 use warnings;
@@ -43,11 +46,21 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($port,$ldap_url,$ldap_port,$ldap_base,$ldap_dn,$ldap_password,$client_port,$delete_finished_tasks,$interface,$packages_files);
+my ($port,$ldap_url,$ldap_port,$ldap_base,$ldap_dn,$ldap_password,$client_port,$delete_finished_tasks,$interface,$packages_files,$logdir);
 my $iptool = "/sbin/ifconfig";
 my $configfile = "/etc/argonaut/argonaut.conf";
 
 readConfig();
+
+my $log = Log::Handler->new();
+$log->add(
+    file => {
+        filename => "$logdir/argonaut-server.log",
+        maxlevel => "debug",
+        minlevel => "emergency"
+    }
+);
+
 
 =pod
 =item readConfig
@@ -71,6 +84,9 @@ sub readConfig {
     $interface              =   $config->val( server => "interface"             ,"eth0");
     
     $packages_files         =   $config->val( server => "packages"              ,"/usr/src/packages/Packages");
+    
+    $logdir                 =   $config->val( log => "dir"                      ,"/var/log/argonaut/");
+    mkpath($logdir) or die "Could not create logdir";
 }
 
 =pod
@@ -137,7 +153,7 @@ sub do_action { # if ip pings, send the request
 		  die "Error : ", $res->error_message."\n";
 	  }
 	  else {
-		  print "Result : ".$res->result."\n";
+		  $log->info("Result : ".$res->result);
           return $res->result;
 	  }
 	}
@@ -222,7 +238,7 @@ inspired by WakeOnLan.pm file from FusionInventory
 sub wakeOnLan {
     my ($macaddress) = @_;
 
-    say "wake on lan";
+    $log->info("wake on lan");
 
     #~ my $logger     = $self->{logger};
 
@@ -234,7 +250,7 @@ sub wakeOnLan {
     $macaddress =~ s/://g;
 
     ###  for LINUX ONLY ###
-    if ( eval { socket(SOCKET, PF_PACKET, SOCK_PACKET, getprotobyname('tcp')) or say $! and 0; }) {
+    if ( eval { socket(SOCKET, PF_PACKET, SOCK_PACKET, getprotobyname('tcp')) or $log->info($!) and 0; }) {
 
         setsockopt(SOCKET, SOL_SOCKET, SO_BROADCAST, 1)
             or warn "Can't do setsockopt: $ERRNO\n";
@@ -244,7 +260,7 @@ sub wakeOnLan {
         while (my $line = <$handle>) {
             next unless $line =~ /$interface \s+ Link \s \S+ \s+ HWaddr \s (\S+)/x;
             my $netMac = $2;
-            say "Send magic packet to $macaddress directly on card driver";
+            $log->info("Send magic packet to $macaddress directly on card driver");
             $netMac =~ s/://g;
 
             my $magic_packet =
@@ -264,10 +280,10 @@ sub wakeOnLan {
                 chr(0xFF) x 6 .
                 (pack('H12', $macaddress) x 16);
             my $sinbroadcast = sockaddr_in("9", inet_aton("255.255.255.255"));
-            say "Send magic packet to $macaddress in UDP mode (degraded wol)";
+            $log->info("Send magic packet to $macaddress in UDP mode (degraded wol)");
             send(SOCKET, $magic_packet, 0, $sinbroadcast);
         } else {
-            say "Impossible to send magic packet...";
+            $log->error("Impossible to send magic packet...");
         }
     }
 }
@@ -323,6 +339,8 @@ POE::Session->create(
     inline_states => {
         _start => sub {
             $_[KERNEL]->sig( INT => "sigint" );
+            $_[KERNEL]->sig( TERM => "sigint" );
+            $_[KERNEL]->sig( KILL => "sigint" );
             $_[KERNEL]->sig( HUP => "sighup" );
             $_[HEAP]{tasks} = {};
             $_[HEAP]{id} = 0;
@@ -357,24 +375,24 @@ POE::Session->create(
                 "detect_hardware"
                 ];
             #~ $_[KERNEL]->yield(add=>undef,undef,"job_trigger_action_halt",["00:11:22:33:44:55"],{timestamp=>1314107700});
-            say "argonaut launched";
+            $log->notice("argonaut launched");
         },
         echo => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
-            print "echo\n";
+            $log->info("echo");
             $kernel->post( $jsonrpc => 'result' => $id, @params );
         },
         ping => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
             my ($mac) = @params;
-            print "ping\n";
+            $log->info("ping");
             my $ok = "OK";
             eval { # try
                 my $res = do_action(getIpFromMac($mac),"echo",$ok);
                 $kernel->post( $jsonrpc => 'result' => $id, ($ok eq $res) );
             };
             if ($@) { # catch
-                say "Error occured : ".$@;
+                $log->notice("Error occured : ".$@);
                 $kernel->post( $jsonrpc => 'error' => $id, $@);
             };
         },
@@ -382,7 +400,7 @@ POE::Session->create(
             my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL,HEAP, ARG0..$#_ ];
             my ($mac) = @params;
                 
-            say "searching taskid for $mac";
+            $log->info("searching taskid for $mac");
                 
             while (my ($taskid,$entry) = each(%{$heap->{tasks}})) {
                 if(($entry->{target} eq $mac)&&($entry->{status}=="processing")) {
@@ -440,12 +458,7 @@ POE::Session->create(
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($action,$targets,$data) = @params;
             
-            say $action;
-            if (grep {$_ eq $action} @{$heap->{scheduled_only}}) {
-                say "scheduled only";
-            } else {
-                say "fine";
-            }
+            $log->info("adding action $action");
             
             if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) && 
                 (grep {$_ eq $action} @{$heap->{scheduled_only}})) { 
@@ -486,7 +499,7 @@ POE::Session->create(
                     $kernel->post( $jsonrpc => 'result' => $id, "OK" );
                 }
             }
-            say "action $action scheduled";
+            $log->info("action $action scheduled");
         },
         get_entries_by_id => sub {
             my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, ARG0..$#_ ];
@@ -558,7 +571,7 @@ POE::Session->create(
                 }
                 if(defined $action_client) {
                     my $ip = getIpFromMac($target);
-                    say localtime(time)." sending action $action to $ip";
+                    $log->info("sending action $action to $ip");
                     if(defined $data->{args}) {
                         do_action($ip,$action_client,$data->{args});
                     } else {
@@ -567,7 +580,7 @@ POE::Session->create(
                 }
             };
             if ($@) { # catch
-                say "Error occured : ".$@;
+                $log->warning("Error occured : ".$@);
                 if(defined $taskid) {
                     $heap->{tasks}->{$taskid}->{status} = "error";
                     $heap->{tasks}->{$taskid}->{error} = $@;
@@ -596,7 +609,7 @@ POE::Session->create(
                 $kernel->post( $jsonrpc => 'result' => $id, $distributions);
             };
             if($@) {
-                say $@."\n";
+                $log->error($@);
                 $kernel->post( $jsonrpc => 'error' => $id, $@);
             }
         },
@@ -614,7 +627,7 @@ POE::Session->create(
         },
         sighup => sub {
             my ($kernel,$heap) = @_[KERNEL,HEAP];
-            say "reloading config…";
+            $log->notice("reloading config…");
             readConfig();
             $kernel->signal($heap->{jsonserver},"KILL");
             $heap->{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
@@ -626,11 +639,10 @@ POE::Session->create(
                     'process_entries_now' => 'process_entries'
                 },
             );
-            say "done";
             $kernel->sig_handled();
         },
         sigint => sub {
-            say "exiting…";
+            $log->notice("exiting because of sigint…");
             #here, do something with waiting tasks
             if(scalar(keys(%{$_[HEAP]->{tasks}})) > 0) {
                 open (DUMP, ">dump_".time.".json") or die "cannot open file";
@@ -642,11 +654,11 @@ POE::Session->create(
             }
         },
         sigchild => sub {
-            say "child process exiting…";
+            $log->notice("child process exiting…");
             #~ delete $_[HEAP]->{bloquant};
         },
         _stop => sub {
-            print "_stop\n";
+            $log->notice("_stop");
         },
     },
 );
