@@ -1,6 +1,4 @@
 bin/argonaut-fai-progress		usr/bin
-locale/de/LC_MESSAGES/fai-progress.mo	usr/share/locale/de/LC_MESSAGES
-locale/fr/LC_MESSAGES/fai-progress.mo   usr/share/locale/fr/LC_MESSAGES
 pic/logo_debian.png			usr/share/graphics
 pic/warning_icon.png			usr/share/graphics
 pic/note_icon.png			usr/share/graphics
