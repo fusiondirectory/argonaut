@@ -18,13 +18,6 @@ my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -noc
 
 my $arch =   $config->val( repository => "arch"                ,"i386");
 
-=pod
-=item get_packages_info
-Get packages list with all requested attrs.
-Uses the Packages file from the server for that.
-If no mac is provided, all servers (for the specified release) in the ldap are checked.
-
-=cut
 sub get_packages_info {
     my ($mac,$release,$attrs,$filters,$from,$to) = @_;
     
@@ -213,11 +206,6 @@ sub get_packages_info {
     return $distributions;
 }
 
-
-=item cleanup_and_extract
-Extract templates from packages.
-
-=cut
 sub cleanup_and_extract {
     my ($servdir,$distribs) = @_;
 
@@ -257,3 +245,88 @@ sub cleanup_and_extract {
 }
 
 1;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+Argonaut::Package - Manage debian mirrors packages with all attributes
+
+=head1 SYNOPSIS
+
+use Argonaut::Package;
+
+  my $distributions = Argonaut::Packages::get_packages_info($mac,$release,$attrs,$filters,$from,$to);
+
+=head1 Function C<get_packages_info>
+
+=head2 Syntax
+
+  my $distributions = Argonaut::Packages::get_packages_info($mac,$release,$attrs,$filters,$from,$to);
+
+=head2 Arguments
+
+C<$mac> is the mirror server mac address.
+
+C<$release> is the debian release.
+
+C<$attrs> is the ldap attributes.
+
+C<$filters> is the ldap filter.
+
+C<$from>.
+
+C<$to>.
+
+
+=head2 Return value
+
+=head2 Description
+
+C<get_packages_info> Uses the Packages file from the server mirror.
+If no mac is provided, all servers (for the specified release) in the ldap are checked.
+
+=head1 Function C<cleanup_and_extract>
+
+=head2 Syntax
+
+  Argonaut::Packages::cleanup_and_extract($serverdir, $distribution);
+
+=head2 Arguments
+
+C<$serverdir>.
+
+C<$distribution>.
+
+=head2 Return value
+
+nothing
+
+=head2 Description
+
+C<cleanup_and_extract> Uses the Packages file from the server mirror and decompress debconf templates
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
