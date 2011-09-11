@@ -54,13 +54,6 @@ my $scr_step= 0.0;
 my $task= TG_NONE;
 my $action= gettext("Initializing FAI");
 
-#===  FUNCTION  ================================================================
-#         NAME: process_input
-#   PARAMETERS: received line of input
-#      RETURNS: true if stream wants us to finish
-#  DESCRIPTION: parses information from the lines and sets the progress
-#               respectively
-#===============================================================================
 sub process_input($)
 {
   my %result;
@@ -222,3 +215,59 @@ sub process_input($)
 }
 
 1;
+
+__END__
+
+
+=pod
+
+=head1 NAME
+
+Argonaut::Utils - Calculate the progress bar for argonaut-fai-progress
+
+=head1 SYNOPSIS
+
+use Argonaut::Utils;
+
+  $result = process_input($line);
+
+=head1 Function C<process_input>
+
+=head2 Syntax
+
+  $result = process_input($line);
+
+=head2 Arguments
+
+C<$line> input line we get
+
+=head2 Return value
+
+ true if stream wants us to finish
+
+=head2 Description
+
+C<process_input> parses information from the lines and sets the progress respectively
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
