@@ -9,7 +9,7 @@
 
 =head1 NAME
 
-ldap2repository - creating debian repositories cronjob for the FusionDirectory FAI plugin.
+ldap2repository - creating debian repositories cronjob for the Argonaut deployment system.
 
 =head1 SYNOPSIS
 
@@ -17,14 +17,13 @@ ldap2repository [-hvnpejsg] [-c config] [-d outdir] [-r srvroot] [-i interface] 
 
 =head1 DESCRIPTION
 
-ldap2repository is a script to create the cronjob for the local.
-debian repositories needed by FusionDirectory FAI plugin.
+ldap2repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
 
 =over 14
 
 =item B<-c>        LDAP config file (default: /etc/ldap/ldap.conf)
 
-=item B<-d>        output dir (default: /etc/fusiondirectory/fai)
+=item B<-d>        output dir (default: /etc/argonaut/fai)
 
 =item B<-h>        display this help and exit
 
@@ -92,15 +91,13 @@ use Argonaut::Common qw(:ldap :file :array);
 
 use vars qw/ %opt /;
 
-my $base;
-my $ldapuris;
-my $ldapdir = "/etc/ldap/ldap.conf";
-my $outdir = "/etc/fusiondirectory/fai";
+my $ldapconf = "/etc/ldap/ldap.conf";
+my $outdir = "/etc/argonaut/fai";
 my $crond_dir= "/etc/cron.d";
 my $interface = "eth0";
 my $verbose = 0;
 my $newcrond = 0;
-my $opt_string = 'c:d:i:hnpejasg:P:r:v';
+my $opt_string = 'hvnpejsgc:d:r:i:a:P';
 my $hostname;
 my $srvdir = "/srv/www";
 my $progress = "";
@@ -111,14 +108,15 @@ my $proxy = "";
 my $nosource ="";
 my $releasegpg = "";
 my $iptool = "/sbin/ifconfig";
+my $result;
 
 getopts( "$opt_string", \%opt ) or usage("Wrong parameters");
-usage("ldap2repository - creating debian repositories cronjob for the FusionDirectory FAI plugin.") if $opt{h};
+usage("ldap2repository - creating debian repositories cronjob for the Argonaut deployment system.") if $opt{h};
 
 $verbose   = $opt{v} ? 1 : 0;
 $newcrond  = $opt{j} ? 1 : 0;
 $outdir    = $opt{d} ? $opt{d} : $outdir;
-$ldapdir   = $opt{c} ? $opt{c} : $ldapdir;
+$ldapconf   = $opt{c} ? $opt{c} : $ldapconf;
 $interface = $opt{i} ? $opt{i} : $interface;
 $nocleanup = $opt{n} ? "--nocleanup" : "";
 $srvdir    = $opt{r} ? $opt{r} : $srvdir;
@@ -129,14 +127,13 @@ $proxy	   = $opt{P} ? "--proxy=".$opt{P} : "";
 $nosource  = $opt{s} ? "--nosource" : "";
 $releasegpg = $opt{g} ? "--ignore-release-gpg" : "";
 
-# parse ldap config
-( $base, $ldapuris ) = goto_ldap_parse_config( $ldapdir );
-usage( "Couldn't find LDAP base in config!" ) if( ! defined $base );
-usage( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
+my $ldapinfo = goto_ldap_init($ldapconf);
 
-# initialise ldap
-my $ldap = Net::LDAP->new( $ldapuris ) or die "$@";
-my $mesg = $ldap->bind;
+my $base = $ldapinfo->{BASE};
+
+my $ldapuris = $ldapinfo->{URIS};
+
+my $handle = $ldapinfo->{HANDLE};
 
 # find mac address of the host running ldap2repository
 my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
@@ -154,7 +151,7 @@ chomp( $mac );
 generate_cronjob();
 
 # take down ldap session
-$mesg = $ldap->unbind;
+$handle->unbind;
 exit 0;
 
 sub usage
@@ -165,7 +162,7 @@ sub usage
 usage: $0 [-hvnpejsg] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
 
   -h    : this (help) message
-  -c    : LDAP config file (default: ${ldapdir})
+  -c    : LDAP config file (default: ${ldapconf})
   -d    : output dir (default: ${outdir})
   -i    : network interface (default: ${interface})
   -j    : create a new cron.d/argonaut-mirror
@@ -180,17 +177,6 @@ usage: $0 [-hvnpejsg] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a ar
   -g    : don't check gpg signature on release file
 EOF
 	exit -1;
-}
-
-
-# search the fai repo(s) declared in FusionDirectory
-sub search_repo_server {
-  my ($cn) = @_;
-  my @attrs = ( 'FAIrepository' );
-  my ($sresult) = goto_ldap_rsearch( $ldap, $base, '',
-      "(&(objectClass=FAIrepositoryServer)(cn=${cn}))",
-      "one", "ou=servers,ou=systems", \@attrs );
-  return goto_ldap_is_single_result( $sresult, 1 );
 }
 
 sub generate_cronjob {
@@ -220,8 +206,10 @@ sub generate_cronjob {
       || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
 
     print CROND "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
-    print CROND "\@reboot root  ldap2repository -n -p -e -i $interface -a $arch $proxy;  [ -f /etc/fusiondirectory/fai/mirror-update-cronjob ] && sh /etc/fusiondirectory/fai/mirror-update-cronjob\n";
-    print CROND "\@daily  root  ldap2repository -n -p -e -i $interface -a $arch $proxy;  [ -f /etc/fusiondirectory/fai/mirror-update-cronjob ] && sh /etc/fusiondirectory/fai/mirror-update-cronjob\n";
+    print CROND "\@reboot root  ldap2repository $nocleanup $progress $small_errors -i $interface -a $arch $proxy;  [ -f $outdir/mirror-update-cronjob ] && sh 
+$outdir/mirror-update-cronjob\n";
+    print CROND "\@daily  root  ldap2repository $nocleanup $progress $small_errors -i $interface -a $arch $proxy;  [ -f $outdir/mirror-update-cronjob ] && sh 
+$outdir/mirror-update-cronjob\n";
 
     close (CROND);
   }
@@ -229,15 +217,13 @@ sub generate_cronjob {
   # Write cron script
   print CRON "#!/bin/sh\n";
 
-  $mesg = $ldap->search(
-      base => "$base",
-      filter => "(&(objectClass=FAIrepositoryServer)(macAddress=${mac}))",
-      attrs => [ 'FAIrepository', 'cn' ] );
+  my $reposerver = goto_search_repo_server($handle, $base, $mac);
+  if( 0 == $reposerver ) {
+      print( "Server object doesn't contain software repositories\n" );
+      die;
+  }
 
-  $mesg->code && die $mesg->error;
-
-  @entries = $mesg->entries;
-  die "Server object doesn't contain software repositories\n" if( 0 == scalar @entries );
+  @entries = $reposerver->entries;
 
   $entry = $entries[0];
   my ($newbase) = $entry->dn() =~ m/.*ou=systems,(.*)/;
@@ -275,7 +261,7 @@ sub generate_cronjob {
 
       @rdns = split(',',$base);
 
-      $par_entry = search_repo_server( "${parent_or_opts}" );
+      $par_entry = goto_search_parent_repo_server( $handle, $base, "${parent_or_opts}" );
       if( 0 == $par_entry ) {
         print( "Couldn't find parent repository server for '$repoline'\n" );
         next;
