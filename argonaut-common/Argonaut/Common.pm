@@ -41,6 +41,8 @@ BEGIN
       &goto_ldap_is_single_result
       &goto_ldap_split_dn
       &goto_ldap_init
+      &goto_search_repo_server
+      &goto_search_parent_repo_server
     )],
     'file' => [qw(
       &goto_file_write
@@ -78,6 +80,7 @@ BEGIN
 #  'HANDLE'  => Net::LDAP handle
 #  'BINDDN'  => Bind DN from config or prompt
 #  'BINDPWD' => Bind password from prompt
+#  'BINDMSG' => Bind result messages
 #  'CFGFILE' => Config file used
 #
 # These values are just filled, if they weren't provided,
@@ -142,7 +145,10 @@ sub goto_ldap_init {
     }
     else { $mesg = $ldap->bind( $binddn ); }
   }
-  else { $mesg = $ldap->bind(); } # Anonymous bind
+  else {
+         $mesg = $ldap->bind();
+         $results{ 'BINDMSG' } = $mesg;
+       } # Anonymous bind
 
   return( "LDAP bind error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
     if( 0 != $mesg->code );
@@ -328,6 +334,29 @@ config_open:
   }
 
   return( $ldap_base, \@ldap_uris, $ldap_bind_dn, $ldap_config );
+}
+#----------------------------------------------------------------------------
+# search the parent(s) fai repo(s) declared in FusionDirectory
+sub goto_search_parent_repo_server {
+  my ($handle,$base,$cn) = @_;
+  my @attrs = ( 'FAIrepository' );
+  my ($sresult) = goto_ldap_rsearch( $handle, $base, '',
+      "(&(objectClass=FAIrepositoryServer)(cn=${cn}))",
+      "one", "ou=servers,ou=systems", \@attrs );
+  return goto_ldap_is_single_result( $sresult, 1 );
+}
+
+#----------------------------------------------------------------------------
+# search if there is a fai repo for the server mac address
+
+sub goto_search_repo_server {
+  my ($handle,$base,$mac) = @_;
+  my @attrs = ( 'FAIrepository', 'cn' );
+  my $sresult = $handle->search(
+      base => "$base",
+      filter => "(&(objectClass=FAIrepositoryServer)(macAddress=${mac}))",
+      attrs => \@attrs );
+  return ( $sresult ); 
 }
 
 #------------------------------------------------------------------------------
@@ -666,7 +695,8 @@ sub goto_get_pid_lock {
   }
 
   # Try to open PID file
-  if (!sysopen($LOCK_FILE, $pidfile, O_WRONLY|O_CREAT|O_EXCL, 0644)) {
+#  if (!sysopen($LOCK_FILE, $pidfile, O_WRONLY|O_CREAT|O_EXCL, 0644)) {
+  if (!sysopen($LOCK_FILE, $pidfile,0644)) {
     my $msg = "Couldn't obtain lockfile '$pidfile': ";
 
     if (open($LOCK_FILE, '<', $pidfile)
