@@ -695,7 +695,6 @@ sub goto_get_pid_lock {
   }
 
   # Try to open PID file
-#  if (!sysopen($LOCK_FILE, $pidfile, O_WRONLY|O_CREAT|O_EXCL, 0644)) {
   if (!sysopen($LOCK_FILE, $pidfile,0644)) {
     my $msg = "Couldn't obtain lockfile '$pidfile': ";
 
