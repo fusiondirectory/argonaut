@@ -86,7 +86,7 @@ sub readConfig {
     $packages_files         =   $config->val( server => "packages"              ,"/usr/src/packages/Packages");
     
     $logdir                 =   $config->val( log => "dir"                      ,"/var/log/argonaut/");
-    mkpath($logdir) or die "Could not create logdir";
+    mkpath($logdir,0) or die "Could not create logdir $logdir";
 }
 
 =pod
@@ -490,13 +490,16 @@ POE::Session->create(
                 }
             } else {
                 my $errors = "";
+                my @results;
                 foreach my $target (@{$targets}) {
-                    $errors .= POE::Kernel->call($session=>action=>undef,$action,$target,$data); # synchronous call
+                    my ($result,$error) = POE::Kernel->call($session=>action=>undef,$action,$target,$data); # synchronous call
+                    $errors.=$error;
+                    push @results,$result;
                 }
                 if($errors ne "") {
                     $kernel->post( $jsonrpc => 'error' => $id, $errors );
                 } else {
-                    $kernel->post( $jsonrpc => 'result' => $id, "OK" );
+                    $kernel->post( $jsonrpc => 'result' => $id, \@results );
                 }
             }
             $log->info("action $action scheduled");
@@ -563,6 +566,7 @@ POE::Session->create(
             my ($heap,$taskid,$action,$target,$data) = @_[HEAP,ARG0 .. $#_];
             
             my $errors = "";
+            my $res = 0;
             
             eval { # try
                 my $action_client = $action;
@@ -573,9 +577,9 @@ POE::Session->create(
                     my $ip = getIpFromMac($target);
                     $log->info("sending action $action to $ip");
                     if(defined $data->{args}) {
-                        do_action($ip,$action_client,$data->{args});
+                        $res = do_action($ip,$action_client,$data->{args});
                     } else {
-                        do_action($ip,$action_client);
+                        $res = do_action($ip,$action_client);
                     }
                 }
             };
@@ -585,7 +589,7 @@ POE::Session->create(
                     $heap->{tasks}->{$taskid}->{status} = "error";
                     $heap->{tasks}->{$taskid}->{error} = $@;
                 }
-                return $@;
+                return (0,$@);
             };
             
             if((defined $taskid) && !(defined $data->{periodic})) {
@@ -599,7 +603,7 @@ POE::Session->create(
                     }
                 }
             }
-            return "";
+            return ($res,"");
         },
         get_packages => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
@@ -632,11 +636,19 @@ POE::Session->create(
             $kernel->signal($heap->{jsonserver},"KILL");
             $heap->{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
                 Port    => $port,
-                Handler => {
+                Handler => { # FIXME this hash should not be duplicated
+                    'echo' => 'echo',
+                    'ping' => 'ping',
                     'action' => 'add',
-                    'get_entries' => 'get_entries',
+                    'get_entries' => 'get_entries_by_id',
+                    'get_entries_by_id' => 'get_entries_by_id',
+                    'get_entries_by_mac' => 'get_entries_by_mac',
                     'remove_entries' => 'remove_entries',
-                    'process_entries_now' => 'process_entries'
+                    'process_entries_now' => 'process_entries',
+                    'get_my_id' => 'id_of_mac',
+                    'set_task_substatus' => 'set_task_substatus',
+                    'set_error' => 'set_error',
+                    'get_packages' => 'get_packages'
                 },
             );
             $kernel->sig_handled();

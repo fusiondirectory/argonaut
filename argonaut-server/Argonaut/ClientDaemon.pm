@@ -27,6 +27,10 @@ use strict;
 use warnings;
 use 5.010;
 
+my $configfile = "/etc/argonaut/argonaut.conf";
+
+my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
 =item trigger_action_halt
 shutdown the computer
 =cut
@@ -47,6 +51,19 @@ sub trigger_action_reboot : Public {
     #~ say "reboot";
     system("sleep 5 && reboot &");
     return "rebooting";
+}
+
+=item manage_service
+execute an action on a service
+=cut
+
+sub manage_service : Public {
+	my ($s, $args) = @_;
+    my ($service,$action) = @{$args};
+    my $folder = $config->val (services=>"folder","/etc/init.d");
+    my $exec = $config->val (services=>$service,$service);
+    say "$folder/$exec $action";
+    return 1;
 }
 
 =item echo
