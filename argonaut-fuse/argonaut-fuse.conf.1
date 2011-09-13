@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "ARGONAUT-FUSE.CONF 1"
-.TH ARGONAUT-FUSE.CONF 1 "2011-08-23" "Argonaut 1.0" "Argonaut Documentation"
+.TH ARGONAUT-FUSE.CONF 1 "2011-09-13" "Argonaut 1.0" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -134,8 +134,7 @@ argonaut\-fuse.conf \- Configuration file for FUSE/TFTP supplicant targeted to w
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 The argonaut\-fuse.conf file defines all parameter arogonaut-fuse needs for running. It is normally located in the /etc/argonaut\-fuse directory and 
-is 
-generated automatically by the \fIargonaut\-fuse\fR\|(1) program during installation.
+is generated automatically by the \fIargonaut\-fuse\fR\|(1) program during installation.
 .SH "DIRECTIVES"
 .IX Header "DIRECTIVES"
 .SS "[General]"
@@ -143,8 +142,8 @@ generated automatically by the \fIargonaut\-fuse\fR\|(1) program during installa
 .IP "dflt_init = install" 4
 .IX Item "dflt_init = install"
 Defines the default argonaut-fuse initialisation mode.
-.IP "logfile = /var/log/fts.log" 4
-.IX Item "logfile = /var/log/fts.log"
+.IP "logfile = /var/log/argonaut/argonaut\-fuse.log" 4
+.IX Item "logfile = /var/log/argonaut/argonaut-fuse.log"
 Define the location of the logfile.
 .IP "pid-file = /var/run/argonaut\-fuse.pid" 4
 .IX Item "pid-file = /var/run/argonaut-fuse.pid"

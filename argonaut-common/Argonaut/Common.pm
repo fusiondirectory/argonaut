@@ -96,12 +96,12 @@ sub goto_ldap_init {
   %results = ( 'BASE' => $base, 'URIS' => $ldapuris, 'BINDDN' => $binddn );
   $results{ 'CFGFILE' } = $file if( $file ne $ldap_conf );
 
-  return( "Couldn't find LDAP base in config!" ) if( ! defined $base );
-  return( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
+  die( "Couldn't find LDAP base in config!" ) if( ! defined $base );
+  die( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
 
   # Create handle
   my $ldap = Net::LDAP->new( $ldapuris ) ||
-    return( sprintf( "LDAP 'new' error: %s (%i)", $@, __LINE__ ) );
+    die( sprintf( "LDAP 'new' error: %s (%i)", $@, __LINE__ ) );
   $results{ 'HANDLE' } = $ldap;
 
   # Prompt for DN
@@ -150,7 +150,7 @@ sub goto_ldap_init {
          $results{ 'BINDMSG' } = $mesg;
        } # Anonymous bind
 
-  return( "LDAP bind error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
+  die( "LDAP bind error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
     if( 0 != $mesg->code );
 
   return \%results;

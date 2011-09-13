@@ -149,10 +149,16 @@ if( ! $dry_run ) {
     || usage("'$dump_dir' is not a directory.\n");
 }
 
+my $init_results;
+
 # initialize ldap
-my $init_results =
-  goto_ldap_init( $ldap_conf, 0, $bind_dn, $prompt_pwd, $bind_pwd );
-do_exit( 3, $init_results ) if( 'HASH' ne ref( $init_results ) );
+eval { #try
+    $init_results =
+      goto_ldap_init( $ldap_conf, 0, $bind_dn, $prompt_pwd, $bind_pwd );
+};
+if($@) { #catch
+    do_exit( 3, $@ );
+};
 
 my $ldap = $init_results->{ 'HANDLE' };
 my $base = $init_results->{ 'BASE' };

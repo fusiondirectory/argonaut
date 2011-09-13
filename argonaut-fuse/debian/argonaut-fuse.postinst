@@ -7,14 +7,9 @@ case "$1" in
 
 	. /usr/share/debconf/confmodule
 	db_version 2.0
-	db_get "fts/tftppath"
+	db_get "argonaut-fuse/tftppath"
 	tftppath="$RET"
 	
-	# Create user
-	if ! getent passwd | grep -q "tftpd"
-	then
-		adduser --group --system tftpd
-	fi
 
 	### Create pxelinux.cfg path
 	[ ! -d "$tftppath/pxelinux.cfg" ] && mkdir -p "$tftppath/pxelinux.cfg"

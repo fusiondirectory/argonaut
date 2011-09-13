@@ -94,8 +94,8 @@ BEGIN {
 }
 END {}
 
-my $modules_path= "/usr/lib/argonaut-fuse/modules";
-use lib "/usr/lib/argonaut-fuse/modules";
+my $modules_path= "/usr/lib/argonaut/modules";
+use lib "/usr/lib/argonaut/modules";
 
 use POSIX;
 use FindBin;
@@ -157,7 +157,7 @@ our( $dflt_init );
 our %cfg_defaults = (
   'General' => {
     'pidfile'   => [ \$pidfile,   '/var/run/argonaut-fuse.pid' ],
-    'logfile'   => [ \$logfile,   '/var/log/argonaut-fuse.log' ],
+    'logfile'   => [ \$logfile,   '/var/log/argonaut/argonaut-fuse.log' ],
     'loglevel'  => [ \$loglevel,  5 ],
     'dflt_init' => [ \$dflt_init, 'install' ], # 'install', 'fallback';;
   },

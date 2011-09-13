@@ -127,7 +127,14 @@ $proxy	   = $opt{P} ? "--proxy=".$opt{P} : "";
 $nosource  = $opt{s} ? "--nosource" : "";
 $releasegpg = $opt{g} ? "--ignore-release-gpg" : "";
 
-my $ldapinfo = goto_ldap_init($ldapconf);
+my $ldapinfo;
+
+eval { #try
+    $ldapinfo = goto_ldap_init($ldapconf);
+};
+if($@) { #catch (just in case we want later to treat errors)
+    die $@;
+};
 
 my $base = $ldapinfo->{BASE};
 

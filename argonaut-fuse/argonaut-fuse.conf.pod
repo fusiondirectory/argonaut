@@ -7,8 +7,7 @@ argonaut-fuse.conf - Configuration file for FUSE/TFTP supplicant targeted to wor
 =head1 DESCRIPTION
 
 The argonaut-fuse.conf file defines all parameter arogonaut-fuse needs for running. It is normally located in the /etc/argonaut-fuse directory and 
-is 
-generated automatically by the argonaut-fuse(1) program during installation. 
+is generated automatically by the argonaut-fuse(1) program during installation. 
 
 =head1 DIRECTIVES
 
@@ -21,7 +20,7 @@ generated automatically by the argonaut-fuse(1) program during installation.
 
 Defines the default argonaut-fuse initialisation mode.
 
-=item logfile = /var/log/fts.log
+=item logfile = /var/log/argonaut/argonaut-fuse.log
 
 Define the location of the logfile.
 

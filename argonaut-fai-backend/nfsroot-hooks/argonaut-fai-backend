@@ -33,7 +33,7 @@ version=$(echo $NFSROOT/boot/vmlinuz-* | sort -n | head -n1 | cut -d- -f2-)
 # Copy as default kernel
 if [ -f "$NFSROOT/boot/vmlinuz-$version" ]; then
 	msg "installing vmlinuz-install"
-        cp "$NFSROOT/boot/vmlinuz-$version" "$TFTPROOT/vmlinuz-install"
+        ln -s "$NFSROOT/boot/vmlinuz-$version" "$TFTPROOT/vmlinuz-install"
 else
         msg "ERROR: cannot find kernel to use as vmlinuz-install!!!"
 fi
@@ -41,6 +41,6 @@ fi
 # Copy initrd if present
 if [ -f "$NFSROOT/boot/initrd.img-$version" ]; then
 	msg "installing initrd.img-install"
-	cp "$NFSROOT/boot/initrd.img-$version" "$TFTPROOT/initrd.img-install"
+	ln -s "$NFSROOT/boot/initrd.img-$version" "$TFTPROOT/initrd.img-install"
 fi
 

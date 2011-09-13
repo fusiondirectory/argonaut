@@ -23,7 +23,7 @@ Description: Modular TFTP/Fuse supplicant
 
 Package: argonaut-fuse-fai-ldap
 Architecture: all
-Depends: ${misc:Depends}, libnet-ldap-perl, fts
+Depends: ${misc:Depends}, libnet-ldap-perl, argonaut-fuse
 Description: LDAP FAI module for the TFTP/Fuse supplicant
  FAI module for argonaut-fuse which is using the LDAP backend in conjunction
  with FusionDirectory and Argonaut to generate client configurations.
