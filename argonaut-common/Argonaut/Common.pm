@@ -23,6 +23,7 @@ use strict;
 use Net::LDAP;
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
+use Data::Dumper;
 
 BEGIN
 {
@@ -92,16 +93,15 @@ sub goto_ldap_init {
   my %results;
 
   # Parse ldap config
-  my ($base,$ldapuris,$binddn,$file) = goto_ldap_parse_config( $ldap_conf );
-  %results = ( 'BASE' => $base, 'URIS' => $ldapuris, 'BINDDN' => $binddn );
-  $results{ 'CFGFILE' } = $file if( $file ne $ldap_conf );
+  my ($base,$ldapuris) = goto_ldap_parse_config( $ldap_conf );
+  %results = ( 'BASE' => $base, 'URIS' => $ldapuris);
 
   die( "Couldn't find LDAP base in config!" ) if( ! defined $base );
   die( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
 
   # Create handle
   my $ldap = Net::LDAP->new( $ldapuris ) ||
-    die( sprintf( "LDAP 'new' error: %s (%i)", $@, __LINE__ ) );
+    die( "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'" );
   $results{ 'HANDLE' } = $ldap;
 
   # Prompt for DN
@@ -117,9 +117,9 @@ sub goto_ldap_init {
   my $mesg;
   if( defined $bind_dn ) {
     if( defined $bind_pwd ) {
-      $mesg = $ldap->bind( $binddn, password => $bind_pwd );
+      $mesg = $ldap->bind( $bind_dn, password => $bind_pwd );
     }
-    elsif( defined $prompt_pwd ) {
+    elsif( defined $prompt_pwd && $prompt_pwd) {
       # Prompt for password
 
       $| = 1;
@@ -141,9 +141,9 @@ sub goto_ldap_init {
 
       $results{ 'BINDPWD' } = $bind_pwd;
 
-      $mesg = $ldap->bind( $binddn, password => $bind_pwd );
+      $mesg = $ldap->bind( $bind_dn, password => $bind_pwd );
     }
-    else { $mesg = $ldap->bind( $binddn ); }
+    else { $mesg = $ldap->bind( $bind_dn ); }
   }
   else {
          $mesg = $ldap->bind();
@@ -189,7 +189,7 @@ sub goto_ldap_parse_config
           my $ldap_server = $3 ? $1 : $2.'localhost';
           $ldap_server =~ s/\/\/127\.0\.0\.1/\/\/localhost/;
           push @ldap_uris, $ldap_server 
-            if ( $1 && ! grep { $_ =~ /^$ldap_server$/ } @ldap_uris );
+            if ( ! grep { $_ =~ /^$ldap_server$/ } @ldap_uris );
         }
       }
       next;
@@ -695,6 +695,7 @@ sub goto_get_pid_lock {
   }
 
   # Try to open PID file
+#  if (!sysopen($LOCK_FILE, $pidfile, O_WRONLY|O_CREAT|O_EXCL, 0644)) {
   if (!sysopen($LOCK_FILE, $pidfile,0644)) {
     my $msg = "Couldn't obtain lockfile '$pidfile': ";
 

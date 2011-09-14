@@ -13,8 +13,9 @@ trap '' INT
 # Short-Description: get $FAI from an ldap server.
 ### END SUBROUTINE INFO
 
+
 # Get task id from argonaut-server
-argonaut-client-fai-getid
+MAC=`argonaut-client-fai-getid`
 if [ 0 -ne $? ]; then
   task error 500 1 "$(< $LOGDIR/argonaut-client.log)\n\nPress enter to reboot." 15 60
 fi
@@ -43,7 +44,6 @@ if ! terminal_activated $MAC; then
       # wait till we get activated - need to be pushed twice here...
       echo "goto-activation-start" >> $LOGDIR/fai.log
       echo "* Argonaut waiting for activation..."
-      while [ ! -f /var/run/gosa-si/gosa-si-client.activated ]; do sleep 1; done
 
       # Argonaut writes the GOto entry in three steps. To continue, we check
       # if XDRIVER is present.
@@ -56,10 +56,10 @@ if ! terminal_activated $MAC; then
       echo "goto-activation-stop" >> $LOGDIR/fai.log
       echo "* Argonaut system activated"
 
-      if terminal_reboot_needed $MAC; then
-          faireboot
-          while true; do sleep 1; done
-      fi
+      #if terminal_reboot_needed $MAC; then
+      #    faireboot
+      #    while true; do sleep 1; done
+      #fi
 
     fi
 

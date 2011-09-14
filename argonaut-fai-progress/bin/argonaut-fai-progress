@@ -66,9 +66,6 @@ echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/argonaut-fai-progress-vt
 
 chvt ${FAI_PROGRESS_VT##/dev/tty}
 
-
-=back
-
 =head1 PRESUMPTION
 
 In order to display the installation progress correctly, you have to set the MAXPACKAGES FAI variable to a large value - i.e. 10000.

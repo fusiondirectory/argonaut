@@ -31,6 +31,7 @@ use JSON;
 use Config::IniFiles;
 use File::Path;
 
+use Argonaut::Common;
 use Argonaut::Packages;
 
 use Log::Handler;
@@ -46,9 +47,11 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($port,$ldap_url,$ldap_port,$ldap_base,$ldap_dn,$ldap_password,$client_port,$delete_finished_tasks,$interface,$packages_files,$logdir);
+#,$ldap_url,$ldap_port,$ldap_base
+my ($port,$ldap_dn,$ldap_password,$client_port,$delete_finished_tasks,$interface,$packages_files,$logdir);
 my $iptool = "/sbin/ifconfig";
 my $configfile = "/etc/argonaut/argonaut.conf";
+my $ldap_configfile = "/etc/ldap/ldap.conf";
 
 readConfig();
 
@@ -72,11 +75,11 @@ sub readConfig {
 
     $port                   =   $config->val( network => "server_port"          ,8080);
 
-    $ldap_url               =   $config->val( ldap => "url"                     ,"localhost");
-    $ldap_port              =   $config->val( ldap => "port"                    ,"389");
-    $ldap_base              =   $config->val( ldap => "base"                    ,"");
-    $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-    $ldap_password          =   $config->val( ldap => "password"                ,"");
+    #~ $ldap_url               =   $config->val( ldap => "url"                     ,"localhost");
+    #~ $ldap_port              =   $config->val( ldap => "port"                    ,"389");
+    #~ $ldap_base              =   $config->val( ldap => "base"                    ,undef);
+    $ldap_dn                =   $config->val( ldap => "dn"                      ,undef);
+    $ldap_password          =   $config->val( ldap => "password"                ,undef);
 
     $client_port            =   $config->val( network => "client_port"          ,8081);
     
@@ -86,7 +89,15 @@ sub readConfig {
     $packages_files         =   $config->val( server => "packages"              ,"/usr/src/packages/Packages");
     
     $logdir                 =   $config->val( log => "dir"                      ,"/var/log/argonaut/");
-    mkpath($logdir,0) or die "Could not create logdir $logdir";
+    mkpath($logdir,0);# or die "Could not create logdir $logdir";
+}
+
+=item bind_ldap
+Connect to ldap and return handle.
+=cut
+sub bind_ldap {
+    my $ldapinfos = Argonaut::Common::goto_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+    return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 }
 
 =pod
@@ -97,16 +108,9 @@ Parameter : the mac address
 sub getIpFromMac {
 	my ($mac) = @_;
 	
-	my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
-    
-    my $mesg;
-    if($ldap_dn ne "") {
-        $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
-    } else {
-        $mesg = $ldap->bind ;    # an anonymous bind
-    }
-
-	$mesg = $ldap->search( # perform a search
+    my ($ldap,$ldap_base) = bind_ldap();
+      
+	my $mesg = $ldap->search( # perform a search
 						base   => $ldap_base,
 						filter => "macAddress=$mac",
                         attrs => [ 'ipHostNumber' ]
@@ -178,17 +182,18 @@ sub handler_fai {
     
     my $need_reboot = ($action ne "trigger_action_wake");
     
-	my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
+	#~ my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
+    my ($ldap,$ldap_base) = bind_ldap();
 	
-    my $mesg;
-    if($ldap_dn ne "") {
-        $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
-    } else {
-        $mesg = $ldap->bind ;    # an anonymous bind
-    }
+    #~ my $mesg;
+    #~ if($ldap_dn ne "") {
+        #~ $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
+    #~ } else {
+        #~ $mesg = $ldap->bind ;    # an anonymous bind
+    #~ }
 
     
-	$mesg = $ldap->search( # perform a search
+	my $mesg = $ldap->search( # perform a search
 						base   => $ldap_base,
 						filter => "macAddress=$target"
 					  );
@@ -204,7 +209,7 @@ sub handler_fai {
 	my $dn = ($mesg->entries)[0];
 	my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
     
-	$mesg = $ldap->modify( # perform a search
+	$mesg = $ldap->modify(
 						$dn,
                         replace => {
                             "FAIstate" => $fai_state->{$action}
@@ -218,15 +223,17 @@ sub handler_fai {
     eval { # try
         if($need_reboot) {
             my $res = do_action($ip,"trigger_action_reboot");
+            return "rebooting";
         } else {
-            die "I don't handle wake on lan yet\n";
+            wakeOnLan($target);
+            return "wake on lan";
         }
     };
     if ($@) { # catch
-        my $error = $@;
+        $log->notice("Got $@ while trying to reboot, trying wake on lan");
         wakeOnLan($target);
+        return "wake on lan";
     };
-    return undef;
 }
 
 =pod
@@ -255,11 +262,11 @@ sub wakeOnLan {
         setsockopt(SOCKET, SOL_SOCKET, SO_BROADCAST, 1)
             or warn "Can't do setsockopt: $ERRNO\n";
 
-        open my $handle, '-|', '$iptool -a $interface'
+        open my $handle, '-|', "$iptool -a $interface"
             or die "Can't run $iptool: $ERRNO";
         while (my $line = <$handle>) {
             next unless $line =~ /$interface \s+ Link \s \S+ \s+ HWaddr \s (\S+)/x;
-            my $netMac = $2;
+            my $netMac = $1;
             $log->info("Send magic packet to $macaddress directly on card driver");
             $netMac =~ s/://g;
 
@@ -379,13 +386,13 @@ POE::Session->create(
         },
         echo => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
-            $log->info("echo");
+            $log->info("echo (usually means server has been pinged)");
             $kernel->post( $jsonrpc => 'result' => $id, @params );
         },
         ping => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
             my ($mac) = @params;
-            $log->info("ping");
+            $log->info("ping $mac");
             my $ok = "OK";
             eval { # try
                 my $res = do_action(getIpFromMac($mac),"echo",$ok);
@@ -403,9 +410,10 @@ POE::Session->create(
             $log->info("searching taskid for $mac");
                 
             while (my ($taskid,$entry) = each(%{$heap->{tasks}})) {
-                if(($entry->{target} eq $mac)&&($entry->{status}=="processing")) {
+                if(($entry->{target} eq $mac)&&($entry->{status} eq "processing")) {
+                    $heap->{tasks}->{$taskid}->{substatus} = "";
                     $kernel->post( $jsonrpc => 'result' => $id, $taskid);
-                    last;
+                    return;
                 }
             }
             $kernel->post( $jsonrpc => 'error' => $id, "Mac were not found in queue");
@@ -413,6 +421,8 @@ POE::Session->create(
         set_task_substatus => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($taskid,$substatus,$progress) = @params;
+            
+            $log->info("setting task $taskid substatus to $progress,$substatus");
             
             if(!defined $heap->{tasks}->{$taskid}) {
                 $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
@@ -425,6 +435,8 @@ POE::Session->create(
         set_error => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($taskid,$error) = @params;
+            
+            $log->info("setting task $taskid error to $error");
             
             if(!defined $heap->{tasks}->{$taskid}) {
                 $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
@@ -488,6 +500,7 @@ POE::Session->create(
                             $action,$target,$data);
                     }
                 }
+                $log->info("action $action scheduled");
             } else {
                 my $errors = "";
                 my @results;
@@ -502,7 +515,6 @@ POE::Session->create(
                     $kernel->post( $jsonrpc => 'result' => $id, \@results );
                 }
             }
-            $log->info("action $action scheduled");
         },
         get_entries_by_id => sub {
             my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, ARG0..$#_ ];
@@ -571,7 +583,11 @@ POE::Session->create(
             eval { # try
                 my $action_client = $action;
                 if(defined $heap->{handlers}->{$action}) {
-                    $action_client = $heap->{handlers}->{$action}->($target,$action,$data->{args});
+                    $action_client = undef;
+                    my $substatus = $heap->{handlers}->{$action}->($target,$action,$data->{args});
+                    if(defined $taskid) {
+                        $heap->{tasks}->{$taskid}->{substatus} = $substatus;
+                    }
                 }
                 if(defined $action_client) {
                     my $ip = getIpFromMac($target);
@@ -608,6 +624,9 @@ POE::Session->create(
         get_packages => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
             my ($release,$attrs,$filters,$from,$to) = @params;
+            
+            $log->info("get_packages($release,$attrs,$filters,$from,$to)");
+            
             eval {
                 my $distributions = Argonaut::Packages::get_packages_info(undef,$release,$attrs,$filters,$from,$to);
                 $kernel->post( $jsonrpc => 'result' => $id, $distributions);

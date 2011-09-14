@@ -31,9 +31,8 @@ It store the info into the file specified in the config file.
 =cut
 
 my $iptool = "ifconfig";
-my $configfile = "/etc/argonaut/argonaut.conf"
+my $configfile = "/etc/argonaut/argonaut.conf";
 
-my $myMac = chomp(`LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`);
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
 my $server_port                     =   $config->val( network => "server_port"        ,8080);
@@ -41,6 +40,9 @@ my $server_ip                       =   $config->val( network => "server_ip"    
 
 my $file                            =   $config->val( client => "file"                ,"/tmp/argonaut");
 my $interface                       =   $config->val( client => "interface"           ,"eth0");
+
+my $myMac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
+chomp ($myMac);
 
 my $client = new JSON::RPC::Client;
 $client->version('1.0');
@@ -59,3 +61,5 @@ if(!$taskid || $taskid->is_error) {
 open (ID, ">$file") or die "cannot write in $file";
 print ID $taskid;
 close(ID);
+
+print $myMac;

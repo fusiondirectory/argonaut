@@ -17,25 +17,15 @@ my $configfile = "/etc/argonaut/argonaut.conf";
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
 my $arch =   $config->val( repository => "arch"                ,"i386");
+my $packages_folder =   $config->val( repository => "packages_folder"                ,"/tmp/Packages");
 
-sub get_packages_info {
-    my ($mac,$release,$attrs,$filters,$from,$to) = @_;
-    
-    if((defined $from) && ($from < 0)) {
-        undef $from;
-    }
-    if((defined $to) && ($to < 0)) {
-        undef $to;
-    }
-    my @filters_temp = grep { $_ ne '' } @{$filters};
-    if(@filters_temp) {
-        $filters = \@filters_temp;
-    } else {
-        undef $filters;
-    }
-    
-    push @{$attrs},'PACKAGE' if (not (grep {uc($_) eq 'PACKAGE'} @{$attrs}));
-    #~ push @{$attrs},'VERSION' if (not (grep {uc($_) eq 'VERSION'} @{$attrs}));
+=pod
+=item get_repolines
+Get repolines from ldap
+
+=cut
+sub get_repolines {
+    my ($mac) = @_;
     
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
     my $ldap_url               =   $config->val( ldap => "url"                     ,"localhost");
@@ -66,33 +56,61 @@ sub get_packages_info {
     }
     
     $mesg->code && die "Error while searching repositories :".$mesg->error;
+ 
+    return $mesg->entries;
+}
+
+
+=item get_packages_info
+Get packages list with all requested attrs.
+Uses the Packages file from the server for that.
+If no mac is provided, all servers (for the specified release) in the ldap are checked.
+
+=cut
+sub get_packages_info {
+    my ($mac,$release,$attrs,$filters,$from,$to) = @_;
+    
+    if((defined $from) && ($from < 0)) {
+        undef $from;
+    }
+    if((defined $to) && ($to < 0)) {
+        undef $to;
+    }
+    my @filters_temp = grep { $_ ne '' } @{$filters};
+    if(@filters_temp) {
+        $filters = \@filters_temp;
+    } else {
+        undef $filters;
+    }
+    
+    push @{$attrs},'PACKAGE' if (not (grep {uc($_) eq 'PACKAGE'} @{$attrs}));
+    #~ push @{$attrs},'VERSION' if (not (grep {uc($_) eq 'VERSION'} @{$attrs}));
+    
+    my @repos = get_repolines($mac);
 
     my $package_indice = 0;
     my $distributions = {};
     my $deb_filepath = "/tmp/argonaut-packages-tmp";
     mkpath($deb_filepath);
-    foreach my $repo ($mesg->entries) {
+    foreach my $repo (@repos) {
         my $repoline = $repo->get_value('FAIrepository');
-        #~ say "repoline : $repoline";
+        
         my (@items) = split('\|',$repoline);
-        my $uri = $items[0];
+        my ($uri,$parent_or_opts,$dist) = @items;
         my ($dir) = $uri =~ m%.*://[^/]+/(.*)%;
         my $localuri = $uri;
         $localuri =~ s%://[^/]+%://localhost%;
-        my $parent_or_opts = $items[1];
-        my $dist = $items[2];
         if(defined($release) && ($dist ne $release)) {
             next;
         }
         
         my (@section_list) = split(',',$items[3]);
         
-        my $localmirror = ($items[5] == "local");
+        my $localmirror = ($items[5] eq "local");
         
         foreach my $section (@section_list) {
-            my $packages_file = "/tmp/Packages";
-            my $status = getstore( "$uri/dists/$dist/$section/binary-$arch/Packages" => $packages_file);
-            die "Error $status on $uri" unless is_success($status);
+            $uri =~ s/^http:\/\///;
+            my $packages_file = "$packages_folder/$uri/dists/$dist/$section/binary-$arch/Packages";
             open (PACKAGES, "<$packages_file") or die "cannot open $packages_file";
             my $templatedir = "debconf.d/$dist/$section/";
             if(!defined $distributions->{"$dist/$section"}) {
@@ -206,6 +224,46 @@ sub get_packages_info {
     return $distributions;
 }
 
+
+=item store_packages_file
+Store and extract the Packages file from the repositories.
+=cut
+sub store_packages_file {
+    my ($mac,$release) = @_;
+    
+    my @repos = get_repolines($mac);
+
+    foreach my $repo (@repos) {
+        my $repoline = $repo->get_value('FAIrepository');
+        
+        my (@items) = split('\|',$repoline);
+        my $uri = $items[0];
+        my $dist = $items[2];
+        if(defined($release) && ($dist ne $release)) {
+            next;
+        }
+        
+        my (@section_list) = split(',',$items[3]);
+        
+        my $localmirror = ($items[5] eq "local");
+        
+        foreach my $section (@section_list) {
+            
+            my $dir = $uri;
+            $dir =~ s/^http:\/\///;
+            my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
+            getstore("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
+            bunzip2 ($packages_file.".bz2" => $packages_file)
+                or die "could not extract Packages file";
+        }
+    }
+}
+
+
+=item cleanup_and_extract
+Extract templates from packages.
+
+=cut
 sub cleanup_and_extract {
     my ($servdir,$distribs) = @_;
 
@@ -245,88 +303,3 @@ sub cleanup_and_extract {
 }
 
 1;
-
-__END__
-
-=pod
-
-=head1 NAME
-
-Argonaut::Package - Manage debian mirrors packages with all attributes
-
-=head1 SYNOPSIS
-
-use Argonaut::Package;
-
-  my $distributions = Argonaut::Packages::get_packages_info($mac,$release,$attrs,$filters,$from,$to);
-
-=head1 Function C<get_packages_info>
-
-=head2 Syntax
-
-  my $distributions = Argonaut::Packages::get_packages_info($mac,$release,$attrs,$filters,$from,$to);
-
-=head2 Arguments
-
-C<$mac> is the mirror server mac address.
-
-C<$release> is the debian release.
-
-C<$attrs> is the ldap attributes.
-
-C<$filters> is the ldap filter.
-
-C<$from>.
-
-C<$to>.
-
-
-=head2 Return value
-
-=head2 Description
-
-C<get_packages_info> Uses the Packages file from the server mirror.
-If no mac is provided, all servers (for the specified release) in the ldap are checked.
-
-=head1 Function C<cleanup_and_extract>
-
-=head2 Syntax
-
-  Argonaut::Packages::cleanup_and_extract($serverdir, $distribution);
-
-=head2 Arguments
-
-C<$serverdir>.
-
-C<$distribution>.
-
-=head2 Return value
-
-nothing
-
-=head2 Description
-
-C<cleanup_and_extract> Uses the Packages file from the server mirror and decompress debconf templates
-
-=head1 BUGS
-
-Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
-
-=head1 LICENCE AND COPYRIGHT
-
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
-
-=over 3
-
-=item Copyright (C) 2011 FusionDirectory project
-
-=back
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-=cut
-
