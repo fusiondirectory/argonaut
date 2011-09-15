@@ -25,7 +25,7 @@ use 5.010;
 use JSON::RPC::Client;
 use Config::IniFiles;
   
-my $configfile = "/etc/argonaut/argonaut.conf"
+my $configfile = "/etc/argonaut/argonaut.conf";
   
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
@@ -44,7 +44,7 @@ It has never been tested.
 open (ID, "<$file") or die "cannot open $file";
     $taskid = <ID>;
 close(ID);
-                
+
 while (my $var = <STDIN>) {
     $var =~ /(\w+) (.*)/;
     if($1 eq "TASKBEGIN") {
@@ -58,7 +58,7 @@ while (my $var = <STDIN>) {
 
         if($res) {
           if ($res->is_error) {
-              die "Error : ", $res->error_message."\n";
+              die "Error : ", $res->error_message;
           }
           else {
               print "Result : ".$res->result."\n";
@@ -66,9 +66,9 @@ while (my $var = <STDIN>) {
           }
         }
         else {
-          die "Status : ".$client->status_line."\n";
+          die "Status : ".$client->status_line;
         }
-    } else if($1 eq "TASKERROR") {
+    } elsif($1 eq "TASKERROR") {
         #do something
         
         my $client = new JSON::RPC::Client;
@@ -79,7 +79,7 @@ while (my $var = <STDIN>) {
 
         if($res) {
           if ($res->is_error) {
-              die "Error : ", $res->error_message."\n";
+              die "Error : ", $res->error_message;
           }
           else {
               print "Result : ".$res->result."\n";
@@ -87,7 +87,7 @@ while (my $var = <STDIN>) {
           }
         }
         else {
-          die "Status : ".$client->status_line."\n";
+          die "Status : ".$client->status_line;
         }
     }
 }
