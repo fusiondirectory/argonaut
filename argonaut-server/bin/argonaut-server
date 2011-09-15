@@ -166,36 +166,17 @@ sub do_action { # if ip pings, send the request
 	}
 }
 
-=pod
-item handler_fai
-Put the right boot mode in the ldap and send the right thing to the client.
-Parameters : the targetted mac address, the action received, the args received for it (args are currently unused).
+=item
+
 =cut
-sub handler_fai {
-    my($target,$action,$args) = @_;
-    my $fai_state = {
-                "trigger_action_reinstall"  => "install",
-                "trigger_action_update"     => "softupdate",
-                "trigger_action_reboot"     => "localboot",
-                "trigger_action_wake"       => "localboot"
-                };
-    
-    my $need_reboot = ($action ne "trigger_action_wake");
-    
-	#~ my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
+sub flag {
+    my ($target,$fai_state) = @_;
     my ($ldap,$ldap_base) = bind_ldap();
 	
-    #~ my $mesg;
-    #~ if($ldap_dn ne "") {
-        #~ $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
-    #~ } else {
-        #~ $mesg = $ldap->bind ;    # an anonymous bind
-    #~ }
-
-    
 	my $mesg = $ldap->search( # perform a search
 						base   => $ldap_base,
 						filter => "macAddress=$target"
+                        #~ ,attrs => [ 'ipHostNumber' ]
 					  );
 
 	$mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
@@ -212,13 +193,34 @@ sub handler_fai {
 	$mesg = $ldap->modify(
 						$dn,
                         replace => {
-                            "FAIstate" => $fai_state->{$action}
+                            "FAIstate" => $fai_state
                         }
 					  );
 
 	$mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
 
 	$mesg = $ldap->unbind;   # take down session
+    
+    return $ip;
+}
+
+=pod
+item handler_fai
+Put the right boot mode in the ldap and send the right thing to the client.
+Parameters : the targetted mac address, the action received, the args received for it (args are currently unused).
+=cut
+sub handler_fai {
+    my($target,$action,$args) = @_;
+    my $fai_state = {
+                "trigger_action_reinstall"  => "install",
+                "trigger_action_update"     => "softupdate",
+                "trigger_action_reboot"     => "localboot",
+                "trigger_action_wake"       => "localboot"
+                };
+    
+    my $need_reboot = ($action ne "trigger_action_wake");
+    
+    my $ip = flag($target,$fai_state->{$action});
     
     eval { # try
         if($need_reboot) {
@@ -383,6 +385,15 @@ POE::Session->create(
                 ];
             #~ $_[KERNEL]->yield(add=>undef,undef,"job_trigger_action_halt",["00:11:22:33:44:55"],{timestamp=>1314107700});
             $log->notice("argonaut launched");
+            $_[HEAP]{crawler} = POE::Component::Schedule->add(
+                $_[SESSION],
+                packages_crawler => DateTime::Set->from_recurrence(
+                                after      => DateTime->now,
+                                recurrence => sub {
+                                    return $_[0]->add( days => 1 )
+                                },
+                            ));
+            $_[KERNEL]->yield("packages_crawler"); #FIXME should be included in the recurrence
         },
         echo => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
@@ -422,13 +433,26 @@ POE::Session->create(
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($taskid,$substatus,$progress) = @params;
             
-            $log->info("setting task $taskid substatus to $progress,$substatus");
+            if(defined $progress) {
+                $log->info("setting task $taskid substatus to '$substatus' ($progress %)");
+            } else {
+                $log->info("setting task $taskid substatus to '$substatus'");
+            }
             
             if(!defined $heap->{tasks}->{$taskid}) {
                 $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
             } else {
                 $heap->{tasks}->{$taskid}->{substatus} = $substatus;
-                $heap->{tasks}->{$taskid}->{progress} = $progress;
+                if(defined $progress) {
+                    $heap->{tasks}->{$taskid}->{progress} = $progress;
+                    if($progress>=100) {
+                        flag($heap->{tasks}->{$taskid}->{target},"localboot");
+                        $heap->{tasks}->{$taskid}->{status} = "processed";
+                        if($delete_finished_tasks) {
+                            delete $heap->{tasks}->{$taskid};
+                        }
+                    }
+                }
                 $kernel->post( $jsonrpc => 'result' => $id, "ok");
             }
         },
@@ -436,7 +460,7 @@ POE::Session->create(
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($taskid,$error) = @params;
             
-            $log->info("setting task $taskid error to $error");
+            $log->info("setting task $taskid error to '$error'");
             
             if(!defined $heap->{tasks}->{$taskid}) {
                 $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
@@ -625,7 +649,7 @@ POE::Session->create(
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
             my ($release,$attrs,$filters,$from,$to) = @params;
             
-            $log->info("get_packages($release,$attrs,$filters,$from,$to)");
+            $log->info("get_packages($release,(".join(',',@{$attrs})."),(".join(',',@{$filters})."),$from,$to)");
             
             eval {
                 my $distributions = Argonaut::Packages::get_packages_info(undef,$release,$attrs,$filters,$from,$to);
@@ -635,6 +659,14 @@ POE::Session->create(
                 $log->error($@);
                 $kernel->post( $jsonrpc => 'error' => $id, $@);
             }
+        },
+        packages_crawler => sub {
+            $log->info("Getting Packages files from repositories");
+            my $errors = Argonaut::Packages::store_packages_file();
+            if(@{$errors} > 0) {
+                $log->notice("Errors while getting Packages files : ".join(',',@{$errors}));
+            }
+            $log->info("done");
         },
         loadDump => sub { # this function has not been tested
             my ($kernel,$filename) = @_[KERNEL,ARG0..$#_];

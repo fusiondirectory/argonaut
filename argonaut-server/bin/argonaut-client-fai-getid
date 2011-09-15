@@ -54,12 +54,18 @@ my $callobj = {
 
 my $taskid = $client->call("http://".$server_ip.":".$server_port, $callobj);
 
-if(!$taskid || $taskid->is_error) {
-    die "Error : ", $taskid->error_message."\n";
+if($taskid) {
+	if ($taskid->is_error) {
+        print $myMac;
+		die "Error : ", $taskid->error_message;
+	} else {
+        open (ID, ">$file") or die "cannot write in $file";
+        print ID $taskid->content->{result};
+        close(ID);
+	}
+} else {
+    print $myMac;
+	die "Error while trying to contact Argonaut server : ".$client->status_line;
 }
-
-open (ID, ">$file") or die "cannot write in $file";
-print ID $taskid;
-close(ID);
 
 print $myMac;

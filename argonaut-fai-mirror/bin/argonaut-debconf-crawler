@@ -41,5 +41,6 @@ Extract templates from packages.
 Templates are saved as $servdir/debconf.d/release/section/nameofthepackage
 
 =cut
-
-cleanup_and_extract($servpath,Argonaut::Packages::get_packages_info($mymac,undef,["package","version","filename"]));
+Argonaut::Packages::store_packages_file($mymac); # FIXME : should be replaced by an mv+extract (no getstore in this case).
+Argonaut::Packages::cleanup_and_extract($servpath,Argonaut::Packages::get_packages_info($mymac,undef,["package","version","filename"]));
+say "done";

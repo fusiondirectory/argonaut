@@ -20,6 +20,10 @@ done
 # Copy make-fai-nfsroot.conf to allow debootstrapping later on
 cp /etc/fai/make-fai-nfsroot.conf "${NFSROOT}"/etc/fai
 
+#copy argonaut.conf & ldap.conf
+cp /etc/argonaut/argonaut.conf "${NFSROOT}"/etc/argonaut
+cp /etc/ldap/ldap.conf "${NFSROOT}"/etc/ldap/ldap.conf
+
 # Set locale if needed
 if [ -n "$NFSROOT_LOCALE" ]; then
   echo "set locales/default_environment_locale $NFSROOT_LOCALE" | chroot $NFSROOT debconf-communicate

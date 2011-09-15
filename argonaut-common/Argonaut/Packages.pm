@@ -1,10 +1,12 @@
 package Argonaut::Packages;
 
 use MIME::Base64;
+use Argonaut::Common;
 use Path::Class;
 use Net::LDAP;
 use Config::IniFiles;
 use File::Path;
+use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 
 use strict;
 use warnings;
@@ -13,6 +15,7 @@ use 5.010;
 use LWP::Simple;
 
 my $configfile = "/etc/argonaut/argonaut.conf";
+my $ldap_configfile = "/etc/ldap/ldap.conf";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
@@ -28,20 +31,23 @@ sub get_repolines {
     my ($mac) = @_;
     
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-    my $ldap_url               =   $config->val( ldap => "url"                     ,"localhost");
-    my $ldap_port              =   $config->val( ldap => "port"                    ,"389");
-    my $ldap_base              =   $config->val( ldap => "base"                    ,"");
+    #~ my $ldap_url               =   $config->val( ldap => "url"                     ,"localhost");
+    #~ my $ldap_port              =   $config->val( ldap => "port"                    ,"389");
+    #~ my $ldap_base              =   $config->val( ldap => "base"                    ,"");
     my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     my $ldap_password          =   $config->val( ldap => "password"                ,"");
     
-	my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
+	#~ my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
+    my $ldapinfos = Argonaut::Common::goto_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+    my $ldap = $ldapinfos->{'HANDLE'};
+    my $ldap_base = $ldapinfos->{'BASE'};
     
     my $mesg;
-    if($ldap_dn ne "") {
-        $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
-    } else {
-        $mesg = $ldap->bind ;    # an anonymous bind
-    }
+    #~ if($ldap_dn ne "") {
+        #~ $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
+    #~ } else {
+        #~ $mesg = $ldap->bind ;    # an anonymous bind
+    #~ }
     
     if(defined $mac) {
         $mesg = $ldap->search(
@@ -56,6 +62,8 @@ sub get_repolines {
     }
     
     $mesg->code && die "Error while searching repositories :".$mesg->error;
+ 
+    $ldap->unbind();
  
     return $mesg->entries;
 }
@@ -107,11 +115,15 @@ sub get_packages_info {
         my (@section_list) = split(',',$items[3]);
         
         my $localmirror = ($items[5] eq "local");
+        if(!$localmirror) {
+            push @{$attrs},'FILENAME' if (not (grep {uc($_) eq 'FILENAME'} @{$attrs}));
+        }
         
         foreach my $section (@section_list) {
-            $uri =~ s/^http:\/\///;
-            my $packages_file = "$packages_folder/$uri/dists/$dist/$section/binary-$arch/Packages";
-            open (PACKAGES, "<$packages_file") or die "cannot open $packages_file";
+            my $localuri = $uri;
+            $localuri =~ s/^http:\/\///;
+            my $packages_file = "$packages_folder/$localuri/dists/$dist/$section/binary-$arch/Packages";
+            open (PACKAGES, "<$packages_file") or next;
             my $templatedir = "debconf.d/$dist/$section/";
             if(!defined $distributions->{"$dist/$section"}) {
                 $distributions->{"$dist/$section"} = {};
@@ -135,8 +147,12 @@ sub get_packages_info {
                             }
                         } else {
                             if ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs})) {
-                                getstore("$uri/".$parsed->{'FILENAME'},$deb_filepath."/".$parsed->{'FILENAME'});
-                            }                          
+                                my $filedir = $parsed->{'FILENAME'};
+                                $filedir =~ s/[^\/]+$//;
+                                say "FILE DIR IS $filedir";
+                                mkpath($deb_filepath."/".$filedir);
+                                mirror("$uri/".$parsed->{'FILENAME'},$deb_filepath."/".$parsed->{'FILENAME'});
+                            }        
                         }
                         if(defined $packages->{$parsed->{'PACKAGE'}}) {
                             if(grep {uc($_) eq 'VERSION'} @{$attrs}) {
@@ -195,18 +211,18 @@ sub get_packages_info {
             }
             if(!$localmirror && ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}))) {
                 my $distribs = {};
-                my @tmp = values(%{$distributions->{"$dist/$section"}});
+                my @tmp = values(%{$packages});
                 $distribs->{"$dist/$section"} = \@tmp;
                 cleanup_and_extract($deb_filepath,$distribs);
-                foreach my $key (keys(%{$distributions})) {
-                    if(defined $distributions->{$key}->{'TEMPLATE'}) {
+                foreach my $key (keys(%{$packages})) {
+                    if(defined $packages->{$key}->{'TEMPLATE'}) {
                         next;
                     }
-                    my $filename = $deb_filepath."/$templatedir".$distributions->{$key}->{'PACKAGE'};
+                    my $filename = $deb_filepath."/$templatedir".$packages->{$key}->{'PACKAGE'};
                     if(open (my $FILE, "$filename")) {
-                        $distributions->{$key}->{'HASTEMPLATE'} = 1;
+                        $packages->{$key}->{'HASTEMPLATE'} = 1;
                         if(grep {uc($_) eq 'TEMPLATE'} @{$attrs}) {
-                            $distributions->{$key}->{'TEMPLATE'} = <$FILE>;
+                            $packages->{$key}->{'TEMPLATE'} = <$FILE>;
                         }
                         close($FILE);
                     }
@@ -233,6 +249,8 @@ sub store_packages_file {
     
     my @repos = get_repolines($mac);
 
+    my @errors;
+
     foreach my $repo (@repos) {
         my $repoline = $repo->get_value('FAIrepository');
         
@@ -252,11 +270,18 @@ sub store_packages_file {
             my $dir = $uri;
             $dir =~ s/^http:\/\///;
             my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
-            getstore("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
-            bunzip2 ($packages_file.".bz2" => $packages_file)
-                or die "could not extract Packages file";
+            mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
+            my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
+            if(is_error($res)) {
+                push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
+            } else {
+                bunzip2 ($packages_file.".bz2" => $packages_file)
+                    or push @errors,"could not extract Packages file : $Bunzip2Error";
+            }
         }
     }
+    
+    return \@errors;
 }
 
 
@@ -272,6 +297,7 @@ sub cleanup_and_extract {
     }
 
     while (my ($distsection,$packages) = each(%{$distribs})) {
+        say "analysing $distsection";
         #~ $distsection =~ qr{(\w+/\w+)$} or die "$filedir : could not extract dist";
         #~ my $dist = $1;
         my $outdir = "$servdir/debconf.d/$distsection";

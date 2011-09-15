@@ -36,54 +36,115 @@ my $file                            =   $config->val( client => "file"          
 
 my $taskid;
 
+my %progress_value = (
+    "confdir"   =>  0,
+    "setup"     =>  1,
+    "defclass"  =>  1,
+    "defvar"    =>  1,
+    "action"    =>  1,
+    "install"   =>  2,
+    "partition" =>  2,
+    "extrbase"  =>  3,
+    "debconf"   =>  15,
+    "prepareapt"=>  15,
+    "updatebase"=>  15,
+    "instsoft"  =>  16,
+    "configure" =>  80,
+    "savelog"   =>  90
+);
+
 =pod
 This program is supposed to read on stdin the sendmon fai output, extract useful information and send them to argonaut-server.
 It has never been tested.
 =cut
 
+sub save_log {
+    my $iptool = "ifconfig";
+    my $interface                       =   $config->val( client => "interface"           ,"eth0");
+    my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
+    chomp ($mac);
+    my $local_logdir = "/tmp/fai";
+    my $dest_logdir = "/var/log/fai/$mac/install_".time;
+    system ("mkdir -p $dest_logdir && cp $local_logdir/* $dest_logdir");
+}
+
 open (ID, "<$file") or die "cannot open $file";
     $taskid = <ID>;
 close(ID);
+chomp($taskid);
 
 while (my $var = <STDIN>) {
-    $var =~ /(\w+) (.*)/;
-    if($1 eq "TASKBEGIN") {
-        say "task $2 begun";
+    $var =~ /(\w+) (\S+)\s?(\S*)/;
+    my $keyword = $1;
+    my $taskname = $2;
+    my $errorcode = $3;
+    if($keyword eq "TASKBEGIN") {
+        say "task $taskname begun";
+        
+        my $progress = undef;
+        if(defined $progress_value{$taskname}) {
+            $progress = $progress_value{$taskname};
+        }
         
         my $client = new JSON::RPC::Client;
         $client->version('1.0');
 
-        $client->prepare("http://".$server_ip.":".$server_port, ['set_task_substatus']);
-        my $res = $client->set_task_substatus($taskid,$2,50);
+        my $callobj = {
+          method  => "set_task_substatus",
+          params  => [$taskid,$taskname,$progress],
+        };
+
+        my $res = $client->call("http://".$server_ip.":".$server_port, $callobj);
 
         if($res) {
-          if ($res->is_error) {
-              die "Error : ", $res->error_message;
-          }
-          else {
-              print "Result : ".$res->result."\n";
-              return $res->result;
-          }
+            if ($res->is_error) {
+                die "Error : ", $res->error_message;
+            }
+        } else {
+            die "Error while trying to contact Argonaut server : ".$client->status_line;
         }
-        else {
-          die "Status : ".$client->status_line;
+    } elsif($keyword eq "TASKEND") {
+        say "task $taskname ended";
+        
+        if($taskname eq "faiend") {
+            save_log();
+        
+            my $client = new JSON::RPC::Client;
+            $client->version('1.0');
+
+            my $callobj = {
+              method  => "set_task_substatus",
+              params  => [$taskid,$taskname,100],
+            };
+
+            my $res = $client->call("http://".$server_ip.":".$server_port, $callobj);
+
+            if($res) {
+                if ($res->is_error) {
+                    die "Error : ", $res->error_message;
+                }
+            } else {
+                die "Error while trying to contact Argonaut server : ".$client->status_line;
+            }
         }
-    } elsif($1 eq "TASKERROR") {
-        #do something
+    } elsif($keyword eq "TASKERROR") {
+        say "task error $taskname $errorcode";
+        
+        save_log();
         
         my $client = new JSON::RPC::Client;
         $client->version('1.0');
 
-        $client->prepare("http://".$server_ip.":".$server_port, ['set_error']);
-        my $res = $client->set_error($taskid,$2);
+        my $callobj = {
+          method  => "set_error",
+          params  => [$taskid,$taskname." ".$errorcode],
+        };
+        
+        my $res = $client->call("http://".$server_ip.":".$server_port, $callobj);
 
         if($res) {
           if ($res->is_error) {
               die "Error : ", $res->error_message;
-          }
-          else {
-              print "Result : ".$res->result."\n";
-              return $res->result;
           }
         }
         else {
