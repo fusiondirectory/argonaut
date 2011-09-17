@@ -41,7 +41,7 @@ my $server_ip                       =   $config->val( network => "server_ip"    
 my $file                            =   $config->val( client => "file"                ,"/tmp/argonaut");
 my $interface                       =   $config->val( client => "interface"           ,"eth0");
 
-my $myMac = Argonaut::Common::get_mac($interface);
+my $myMac = Argonaut::Common::goto_get_mac($interface);
 
 my $client = new JSON::RPC::Client;
 $client->version('1.0');

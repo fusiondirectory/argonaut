@@ -75,9 +75,6 @@ sub readConfig {
 
     $port                   =   $config->val( network => "server_port"          ,8080);
 
-    #~ $ldap_url               =   $config->val( ldap => "url"                     ,"localhost");
-    #~ $ldap_port              =   $config->val( ldap => "port"                    ,"389");
-    #~ $ldap_base              =   $config->val( ldap => "base"                    ,undef);
     $ldap_dn                =   $config->val( ldap => "dn"                      ,undef);
     $ldap_password          =   $config->val( ldap => "password"                ,undef);
 
@@ -249,13 +246,8 @@ sub wakeOnLan {
 
     $log->info("wake on lan");
 
-    #~ my $logger     = $self->{logger};
-
     return unless defined $macaddress;
 
-    #~ if ($macaddress !~ /^$mac_address_pattern$/) {
-        #~ die "Invalid MacAddress $macaddress . Exiting...";
-    #~ }
     $macaddress =~ s/://g;
 
     ###  for LINUX ONLY ###

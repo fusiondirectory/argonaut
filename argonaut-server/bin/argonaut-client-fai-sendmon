@@ -54,8 +54,7 @@ my %progress_value = (
 );
 
 =pod
-This program is supposed to read on stdin the sendmon fai output, extract useful information and send them to argonaut-server.
-It has never been tested.
+This program read on stdin the sendmon fai output, extract useful information and send them to argonaut-server.
 =cut
 
 open (ID, "<$file") or die "cannot open $file";
