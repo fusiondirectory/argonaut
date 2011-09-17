@@ -143,8 +143,7 @@ my $ldapuris = $ldapinfo->{URIS};
 my $handle = $ldapinfo->{HANDLE};
 
 # find mac address of the host running ldap2repository
-my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
-chomp( $mac );
+goto_get_mac($interface);
 
 # create the outdir if it doesn't exist
 -d "$outdir" 

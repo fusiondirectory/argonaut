@@ -66,7 +66,14 @@ BEGIN
   Exporter::export_ok_tags(keys %EXPORT_TAGS);
 }
 
-sub get_mac {
+#-----------------------------------------------------------------------------
+# routine to get mac from a defined interface
+#
+# $interface     = name of the interface
+#
+# Returns the mac of the interface
+# 
+sub goto_get_mac {
     my ($interface) = @_;
     my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
     chomp ($mac);
