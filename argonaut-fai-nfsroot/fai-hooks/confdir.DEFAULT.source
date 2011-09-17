@@ -13,7 +13,7 @@ if [ -x $FAI/hooks/hostname ]; then
 	hostname $HOSTNAME
 fi
 
-if [ $logged -eq 0 ]; then
+#if [ $logged -eq 0 ]; then
 
 # Always open new VT, but don't switch to it
 #
@@ -21,29 +21,29 @@ if [ $logged -eq 0 ]; then
 # - first setup environment
 # - echo -ne "\033%G" sets UTF-8
 #
-FAI_PROGRESS_VT=$(openvt -v 2>&1 -- sh -c "
-        export TERM=linux ;
-        export TERM_UTF8=yes ;
-        export FAI_LOG_PATH=$LOGDIR/fai.log ;
-	[ -f /etc/default/locale ] && eval $(echo -n "export "; grep ^LANG /etc/default/locale) ;
+#FAI_PROGRESS_VT=$(openvt -v 2>&1 -- sh -c "
+#        export TERM=linux ;
+#        export TERM_UTF8=yes ;
+#        export FAI_LOG_PATH=$LOGDIR/fai.log ;
+#	[ -f /etc/default/locale ] && eval $(echo -n "export "; grep ^LANG /etc/default/locale) ;
+#
+#        if [ -c /dev/fb0 ]; then
+#                export DEBIAN_FRONTEND=gtk ;
+#        else
+#                export DEBIAN_FRONTEND=newt ;
+#        fi ;
+#
+#	echo -ne '\033%G' ;
+#
+#        setterm -blank 0 -powersave off -powerdown 0 ;
+#        touch -f $LOGDIR/fai.log ;
+#        /usr/lib/cdebconf/debconf /usr/bin/argonaut-fai-progress ;
+#        reset")
+#export FAI_PROGRESS_VT=${FAI_PROGRESS_VT##* }
+#echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/argonaut-fai-progress-vt
+#fi
 
-        if [ -c /dev/fb0 ]; then
-                export DEBIAN_FRONTEND=gtk ;
-        else
-                export DEBIAN_FRONTEND=newt ;
-        fi ;
-
-	echo -ne '\033%G' ;
-
-        setterm -blank 0 -powersave off -powerdown 0 ;
-        touch -f $LOGDIR/fai.log ;
-        /usr/lib/cdebconf/debconf /usr/bin/argonaut-fai-progress ;
-        reset")
-export FAI_PROGRESS_VT=${FAI_PROGRESS_VT##* }
-echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/argonaut-fai-progress-vt
-fi
-
-# Redefine sendmon in order to get the progress bar and Argonaut-server
+# Redefine sendmon in order to get info form task and send them to Argonaut-server
 # informed
 unset sendmon
 sendmon() {
@@ -53,12 +53,12 @@ sendmon() {
 
 if [ "$action" != "softupdate" ]; then
 
-        if [ $logged -eq 0 -a ! -c /dev/fb0 ]; then
-                # newt cdebconf frontend needs a chvt
-                chvt ${FAI_PROGRESS_VT##/dev/tty}
-        fi
+#        if [ $logged -eq 0 -a ! -c /dev/fb0 ]; then
+#                # newt cdebconf frontend needs a chvt
+#                chvt ${FAI_PROGRESS_VT##/dev/tty}
+#        fi
 
-else
+#else
         # Check the dhclient lease file for the server-name to set SERVER
         LEASE=$(ps ax | grep "dhclient" | grep -v "grep" | sed -n 's/.*-lf \([^ ]*\).*/\1/p')
         if [ -f $LEASE ]; then
@@ -68,7 +68,7 @@ fi
 
 # Rebase FAI to load the LDAP stuff later on
 FAI_REBASE=$(mktemp -d "/tmp/fai-ldap-XXXXXX")
-export FAI_CONFIG_SRC="gosa://${FAI_REBASE}"
+export FAI_CONFIG_SRC="argonaut://${FAI_REBASE}"
 
 # Copy error hook to make it available in the target system
 mkdir -p "$FAI_REBASE/hooks"

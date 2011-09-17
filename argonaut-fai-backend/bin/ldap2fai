@@ -374,7 +374,7 @@ sub get_classes {
   if( (! defined $fai_class_str) || ('' eq $fai_class_str) ) {
     print( "No FAI information stored in host object - looking for host groups...\n" ) if( $verbose );
 
-    $filter = '(&(member=' . escape_filter_value(${host_dn}) . ')(objectClass=gosaGroupOfNames)(gosaGroupObjects=[W])(objectClass=FAIobject))';
+    $filter = '(&(member=' . escape_filter_value(${host_dn}) . ')(objectClass=gosaGroupOfNames)(gosaGroupObjects=[*])(objectClass=FAIobject))';
     $mesg = $ldap->search(
       base => "$base",
       filter => $faiobj->prepare_filter( $filter ),

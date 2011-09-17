@@ -115,7 +115,7 @@ sub get_packages_info {
         my (@section_list) = split(',',$items[3]);
         
         my $localmirror = ($items[5] eq "local");
-        if(!$localmirror) {
+        if(!$localmirror && ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}))) {
             push @{$attrs},'FILENAME' if (not (grep {uc($_) eq 'FILENAME'} @{$attrs}));
         }
         
@@ -124,7 +124,6 @@ sub get_packages_info {
             $localuri =~ s/^http:\/\///;
             my $packages_file = "$packages_folder/$localuri/dists/$dist/$section/binary-$arch/Packages";
             open (PACKAGES, "<$packages_file") or next;
-            my $templatedir = "debconf.d/$dist/$section/";
             if(!defined $distributions->{"$dist/$section"}) {
                 $distributions->{"$dist/$section"} = {};
             }
@@ -136,12 +135,12 @@ sub get_packages_info {
                     if((! defined $from) || ($package_indice>$from)) {
                         if($localmirror) {
                             if (grep {uc($_) eq 'TEMPLATE'} @{$attrs}) {
-                                my $template = get("$uri/$templatedir/".$parsed->{'PACKAGE'});
+                                my $template = get("$uri/debconf.d/$dist/$section/".$parsed->{'PACKAGE'});
                                 if(defined $template) {
                                     $parsed->{'TEMPLATE'} = $template;
                                 }
                             } elsif (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}) {
-                                if(head("$uri/$templatedir/".$parsed->{'PACKAGE'})) {
+                                if(head("$uri/debconf.d/$dist/$section/".$parsed->{'PACKAGE'})) {
                                     $parsed->{'HASTEMPLATE'} = 1;
                                 }
                             }
@@ -149,10 +148,9 @@ sub get_packages_info {
                             if ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs})) {
                                 my $filedir = $parsed->{'FILENAME'};
                                 $filedir =~ s/[^\/]+$//;
-                                say "FILE DIR IS $filedir";
                                 mkpath($deb_filepath."/".$filedir);
                                 mirror("$uri/".$parsed->{'FILENAME'},$deb_filepath."/".$parsed->{'FILENAME'});
-                            }        
+                            }
                         }
                         if(defined $packages->{$parsed->{'PACKAGE'}}) {
                             if(grep {uc($_) eq 'VERSION'} @{$attrs}) {
@@ -202,7 +200,10 @@ sub get_packages_info {
                 else {
                     s/ //;
                     s/^\.$//;
-                    $parsed->{body} .= $_;
+                    my $body = $_;
+                    if(grep {uc($_) eq uc('BODY')} @{$attrs}) {
+                        $parsed->{'BODY'} .= $body;
+                    }
                 }
             }
             close(PACKAGES);
@@ -218,17 +219,15 @@ sub get_packages_info {
                     if(defined $packages->{$key}->{'TEMPLATE'}) {
                         next;
                     }
-                    my $filename = $deb_filepath."/$templatedir".$packages->{$key}->{'PACKAGE'};
-                    if(open (my $FILE, "$filename")) {
+                    my $filename = $deb_filepath."/debconf.d/$dist/$section/".$packages->{$key}->{'PACKAGE'};
+                    if(-f $filename) {
                         $packages->{$key}->{'HASTEMPLATE'} = 1;
                         if(grep {uc($_) eq 'TEMPLATE'} @{$attrs}) {
-                            $packages->{$key}->{'TEMPLATE'} = <$FILE>;
+                            $packages->{$key}->{'TEMPLATE'} = file($filename)->slurp();
                         }
-                        close($FILE);
                     }
                 }
-                rmtree($deb_filepath);
-                mkpath($deb_filepath);
+                rmtree($deb_filepath."/debconf.d/");
             }
         }
     }
@@ -292,14 +291,11 @@ Extract templates from packages.
 sub cleanup_and_extract {
     my ($servdir,$distribs) = @_;
 
-    if (!keys(%{$distribs})) {
+    #~ if (!keys(%{$distribs})) {
         #~ say "No packages on this server";
-    }
+    #~ }
 
     while (my ($distsection,$packages) = each(%{$distribs})) {
-        say "analysing $distsection";
-        #~ $distsection =~ qr{(\w+/\w+)$} or die "$filedir : could not extract dist";
-        #~ my $dist = $1;
         my $outdir = "$servdir/debconf.d/$distsection";
         my $tmpdir = "/tmp";
         mkpath($outdir);
@@ -309,19 +305,13 @@ sub cleanup_and_extract {
             system( "dpkg -e '$servdir/".$package->{'FILENAME'}."' '$tmpdir/DEBIAN'" );
 
             if( -f "$tmpdir/DEBIAN/templates" ) {
-
-                my $tmpl= ""; {
-                    local $/=undef;
-                    open(my $FILE, "$tmpdir/DEBIAN/templates");
-                    $tmpl = &encode_base64(<$FILE>);
-                    close($FILE);
-                }
-
+                my $tmpl = encode_base64(file("$tmpdir/DEBIAN/templates")->slurp());
+                
                 open (FILE, ">$outdir/".$package->{'PACKAGE'}) or die "cannot open file";
-                #~ my $line = $package->{'PACKAGE'}.":".$package->{'VERSION'}.":".;
                 print FILE $tmpl;
                 close(FILE); 
             }
+            unlink("$tmpdir/DEBIAN/templates");
         }
     }
 

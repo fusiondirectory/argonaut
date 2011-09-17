@@ -649,7 +649,7 @@ POE::Session->create(
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
             my ($release,$attrs,$filters,$from,$to) = @params;
             
-            $log->info("get_packages($release,(".join(',',@{$attrs})."),(".join(',',@{$filters})."),$from,$to)");
+            $log->info("get_packages($release,".join(',',@{$attrs}).",".join(',',@{$filters}).",$from,$to)");
             
             eval {
                 my $distributions = Argonaut::Packages::get_packages_info(undef,$release,$attrs,$filters,$from,$to);

@@ -23,7 +23,8 @@ use strict;
 use Net::LDAP;
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
-use Data::Dumper;
+
+my $iptool = "ifconfig";
 
 BEGIN
 {
@@ -65,6 +66,13 @@ BEGIN
   Exporter::export_ok_tags(keys %EXPORT_TAGS);
 }
 
+sub get_mac {
+    my ($interface) = @_;
+    my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
+    chomp ($mac);
+    return $mac;
+}
+
 #------------------------------------------------------------------------------
 # Common LDAP initialization routine
 #
@@ -93,15 +101,16 @@ sub goto_ldap_init {
   my %results;
 
   # Parse ldap config
-  my ($base,$ldapuris) = goto_ldap_parse_config( $ldap_conf );
-  %results = ( 'BASE' => $base, 'URIS' => $ldapuris);
+  my ($base,$ldapuris,$binddn,$file) = goto_ldap_parse_config( $ldap_conf );
+  %results = ( 'BASE' => $base, 'URIS' => $ldapuris, 'BINDDN' => $binddn );
+  $results{ 'CFGFILE' } = $file if( $file ne $ldap_conf );
 
   die( "Couldn't find LDAP base in config!" ) if( ! defined $base );
   die( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
 
   # Create handle
   my $ldap = Net::LDAP->new( $ldapuris ) ||
-    die( "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'" );
+    die( sprintf( "LDAP 'new' error: %s (%i)", $@, __LINE__ ) );
   $results{ 'HANDLE' } = $ldap;
 
   # Prompt for DN
@@ -117,9 +126,9 @@ sub goto_ldap_init {
   my $mesg;
   if( defined $bind_dn ) {
     if( defined $bind_pwd ) {
-      $mesg = $ldap->bind( $bind_dn, password => $bind_pwd );
+      $mesg = $ldap->bind( $binddn, password => $bind_pwd );
     }
-    elsif( defined $prompt_pwd && $prompt_pwd) {
+    elsif( defined $prompt_pwd ) {
       # Prompt for password
 
       $| = 1;
@@ -141,9 +150,9 @@ sub goto_ldap_init {
 
       $results{ 'BINDPWD' } = $bind_pwd;
 
-      $mesg = $ldap->bind( $bind_dn, password => $bind_pwd );
+      $mesg = $ldap->bind( $binddn, password => $bind_pwd );
     }
-    else { $mesg = $ldap->bind( $bind_dn ); }
+    else { $mesg = $ldap->bind( $binddn ); }
   }
   else {
          $mesg = $ldap->bind();
@@ -189,7 +198,7 @@ sub goto_ldap_parse_config
           my $ldap_server = $3 ? $1 : $2.'localhost';
           $ldap_server =~ s/\/\/127\.0\.0\.1/\/\/localhost/;
           push @ldap_uris, $ldap_server 
-            if ( ! grep { $_ =~ /^$ldap_server$/ } @ldap_uris );
+            if ( $1 && ! grep { $_ =~ /^$ldap_server$/ } @ldap_uris );
         }
       }
       next;

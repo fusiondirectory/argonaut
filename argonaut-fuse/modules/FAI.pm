@@ -128,7 +128,7 @@ reconnect:
 
 		my $filter = '(&(member=' . escape_filter_value($host_dn) . ')'
 		. '(objectClass=gosaGroupOfNames)'
-		. '(gosaGroupObjects=[W]))';
+		. '(gosaGroupObjects=[*]))';
 		$mesg = $main::ldap_handle->search(
 			base => $main::ldap_base,
 			filter => $filter,
