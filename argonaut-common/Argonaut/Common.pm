@@ -108,16 +108,15 @@ sub goto_ldap_init {
   my %results;
 
   # Parse ldap config
-  my ($base,$ldapuris,$binddn,$file) = goto_ldap_parse_config( $ldap_conf );
-  %results = ( 'BASE' => $base, 'URIS' => $ldapuris, 'BINDDN' => $binddn );
-  $results{ 'CFGFILE' } = $file if( $file ne $ldap_conf );
+  my ($base,$ldapuris) = goto_ldap_parse_config( $ldap_conf );
+  %results = ( 'BASE' => $base, 'URIS' => $ldapuris);
 
-  die( "Couldn't find LDAP base in config!" ) if( ! defined $base );
-  die( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
+  return( "Couldn't find LDAP base in config!" ) if( ! defined $base );
+  return( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
 
   # Create handle
   my $ldap = Net::LDAP->new( $ldapuris ) ||
-    die( sprintf( "LDAP 'new' error: %s (%i)", $@, __LINE__ ) );
+    return( "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'" );
   $results{ 'HANDLE' } = $ldap;
 
   # Prompt for DN
@@ -133,9 +132,9 @@ sub goto_ldap_init {
   my $mesg;
   if( defined $bind_dn ) {
     if( defined $bind_pwd ) {
-      $mesg = $ldap->bind( $binddn, password => $bind_pwd );
+      $mesg = $ldap->bind( $bind_dn, password => $bind_pwd );
     }
-    elsif( defined $prompt_pwd ) {
+    elsif( defined $prompt_pwd && $prompt_pwd) {
       # Prompt for password
 
       $| = 1;
@@ -157,16 +156,16 @@ sub goto_ldap_init {
 
       $results{ 'BINDPWD' } = $bind_pwd;
 
-      $mesg = $ldap->bind( $binddn, password => $bind_pwd );
+      $mesg = $ldap->bind( $bind_dn, password => $bind_pwd );
     }
-    else { $mesg = $ldap->bind( $binddn ); }
+    else { $mesg = $ldap->bind( $bind_dn ); }
   }
   else {
          $mesg = $ldap->bind();
          $results{ 'BINDMSG' } = $mesg;
        } # Anonymous bind
 
-  die( "LDAP bind error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
+  return( "LDAP bind error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
     if( 0 != $mesg->code );
 
   return \%results;
@@ -205,7 +204,7 @@ sub goto_ldap_parse_config
           my $ldap_server = $3 ? $1 : $2.'localhost';
           $ldap_server =~ s/\/\/127\.0\.0\.1/\/\/localhost/;
           push @ldap_uris, $ldap_server 
-            if ( $1 && ! grep { $_ =~ /^$ldap_server$/ } @ldap_uris );
+          if ( ! grep { $_ =~ /^$ldap_server$/ } @ldap_uris );
         }
       }
       next;
