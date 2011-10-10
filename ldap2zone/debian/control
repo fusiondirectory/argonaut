@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: ldap2zone
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, bind9
+Depends: ${misc:Depends}, ${shlibs:Depends}, bind9, ldap-utils
 Conflicts: ldapdns, ldap2dns
 Description: Extract DNS zones from LDAP trees
  This is a tool that reads info for a zone from LDAP and constructs
