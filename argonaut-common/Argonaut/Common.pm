@@ -60,6 +60,7 @@ BEGIN
       &goto_options_parse
       &goto_get_pid_lock
       &goto_load_modules
+      &goto_get_mac
     )]
   );
 
