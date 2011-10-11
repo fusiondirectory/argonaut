@@ -83,7 +83,7 @@ for domain in $ZONES; do
 		[ $lines -gt 1 ] && mv /tmp/$domain $BIND_DATA/${PREFIX}${domain}
 	fi
 
-	result=$($rndc reload $domain 2>&1)
+	result=$($rndc freeze $domain && $rndc reload $domain && $rndc thaw $domain 2>&1)
 	if [ $? -ne 0 ]; then
 		printf "Reloading the zone '$domain' failed: $result\n" 1>&2
 	else
