@@ -1,4 +1,4 @@
-ldap2zone		/usr/sbin
-ldap2bind		/usr/sbin
+bin/ldap2zone		/usr/sbin
+bin/ldap2bind		/usr/sbin
 debian/default		/etc/default/ldap2zone
 
