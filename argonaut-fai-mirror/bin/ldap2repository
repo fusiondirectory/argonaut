@@ -90,7 +90,7 @@ use MIME::Base64;
 use Getopt::Std;
 use File::Path;
 use File::Copy;
-use Argonaut::Common qw(:ldap :file :array);
+use Argonaut::Common qw(:ldap :file :array :misc);
 
 use vars qw/ %opt /;
 
@@ -112,8 +112,11 @@ my $nosource ="";
 my $releasegpg = "";
 my $diff = "";
 my $contents = "";
+my $installer = "";
 my $iptool = "/sbin/ifconfig";
 my $result;
+my $mac;
+my $ldapinfo;
 
 getopts( "$opt_string", \%opt ) or usage("Wrong parameters");
 usage("ldap2repository - creating debian repositories cronjob for the Argonaut deployment system.") if $opt{h};
@@ -133,8 +136,7 @@ $nosource  = $opt{s} ? "--nosource" : "";
 $releasegpg = $opt{g} ? "--ignore-release-gpg" : "";
 $diff = $opt{z} ? "--pdiff" : "";
 $contents = $opt{l} ? "--getcontents" : "";
-
-my $ldapinfo;
+$installer = $opt{y} ? ",main/debian-installer" : "";
 
 eval { #try
     $ldapinfo = goto_ldap_init($ldapconf);
@@ -150,7 +152,7 @@ my $ldapuris = $ldapinfo->{URIS};
 my $handle = $ldapinfo->{HANDLE};
 
 # find mac address of the host running ldap2repository
-goto_get_mac($interface);
+$mac = goto_get_mac($interface);
 
 # create the outdir if it doesn't exist
 -d "$outdir" 
@@ -165,6 +167,8 @@ generate_cronjob();
 
 # take down ldap session
 $handle->unbind;
+$handle->disconnect;
+
 exit 0;
 
 sub usage
@@ -233,9 +237,9 @@ $outdir/mirror-update-cronjob\n";
   print CRON "#!/bin/sh\n";
 
   my $reposerver = goto_search_repo_server($handle, $base, $mac);
-  if( 0 == $reposerver ) {
+  if( 0 == $reposerver->count ) {
       print( "Server object doesn't contain software repositories\n" );
-      die;
+      exit 0;
   }
 
   @entries = $reposerver->entries;
@@ -267,7 +271,7 @@ $outdir/mirror-update-cronjob\n";
     if (":" eq substr($parent_or_opts,0,1)) {
         # No FusionDirectory internal mirror or too complicated: write as additional options
         print CRON "debmirror ${releasegpg} ${nosource} ${small_errors} ${diff} ${contents} -a ${arch} --dist=${dist} --sections=${sections}" 
-          . substr($parent_or_opts,1) . "${proxy} ${srvdir}/${dist}\n";
+          . substr($parent_or_opts,1) . "${installer} ${proxy} ${srvdir}/${dist}\n";
         print " +Cc ${dist} (${sections})\n" if( $verbose );
     }
     else {
@@ -304,7 +308,7 @@ $outdir/mirror-update-cronjob\n";
 
           if (0 != scalar @{outline}) {
               print CRON "\ndebmirror ${progress} ${nocleanup} ${releasegpg} ${nosource} ${small_errors} ${diff} ${contents} -a ${arch} --dist=${dist} --section=" . join(",", @{outline}) 
-              . " --method=${method} --host=${host} --root=${root} ${proxy} ${srvdir}/${dir}\n";
+              . "${installer} --method=${method} --host=${host} --root=${root} ${proxy} ${srvdir}/${dir}\n";
             print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose );
           }
           last if (0 == scalar @section_list);
