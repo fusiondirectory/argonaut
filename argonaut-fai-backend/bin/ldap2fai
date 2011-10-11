@@ -58,7 +58,7 @@ ldap2fai [-hnvW] [-c config] [-D bind_dn ] [-w bind password] [-d dump_dir] [-H 
     
 =item B<-w>
     read password from command line
-		
+    
 =item B<-H>
     check hostname
 
@@ -556,11 +556,6 @@ BAILOUT_CHECK_SERVER:
 sub generate_kernel_packagelist {
   my $kernel= shift;
   my( $mesg, $entry, $line, @deblines, @modsections, @rdns, %saw, $debline );
-
-  # Some fallback for "default" values
-  if( $kernel eq "default" ) {
-    $kernel= "linux-image-2.6-486";
-  }
 
   if ($verbose) {
     print "Generate kernel package script for class 'LAST'\n"
