@@ -59,7 +59,6 @@ BEGIN
      'misc' => [qw(
       &goto_options_parse
       &goto_get_pid_lock
-      &goto_load_modules
       &goto_get_mac
     )]
   );
@@ -728,66 +727,6 @@ sub goto_get_pid_lock {
   }
 
   return( $LOCK_FILE ); 
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# Dynamically load perl modules as plugins
-#
-# @param string $modules_path: directory for module lookup
-# @param string $reg_function: function name to call for registration
-# @param string $reg_params: perl parameters for the function call
-# @param sub $reg_init: function to call with the result of the registration
-#                       result will be saved as the value of 
-#                       $registered_modules{ $mod_name }
-# @return hashref of registered modules, arrayref of error strings or undef
-#
-sub goto_load_modules {
-  my( $modules_path, $reg_func, $reg_params, $reg_init ) = @_;
-  my %registered_modules;
-  my @errors;
-  my $errorref = \@errors;
-  $reg_params = '' if( ! defined $reg_params );
-
-  if( ! opendir (DIR, $modules_path) ) {
-    push( @errors, "ERROR while loading modules from directory $modules_path : $!\n" );
-    return( undef, \@errors );
-  }
-
-  my $abs_modules = abs_path( $modules_path );
-  push( @INC, $abs_modules );
-
-  while (defined (my $file = readdir (DIR))) {
-    next if( $file !~ /([^\.].+)\.pm$/ );
-    my $mod_name = $1;
-
-    eval "require '$file';";
-    if ($@) {
-      my $import_error = $@;
-      push( @errors, "ERROR: could not load module $file" );
-      for my $line (split( "\n", $import_error )) {
-        push( @errors, " perl: $line" );
-      }
-    } else {
-      my $result = eval( "${mod_name}::${reg_func}(${reg_params});" );
-      if( (! $@) && $result ) {
-        $result = $reg_init->( $mod_name, $result ) if( defined $reg_init );
-        $registered_modules{ $mod_name } = $result;
-      }
-      else { push( @errors, $@ ); }
-    }
-  }
-  close (DIR);
-
-  for( my $i = 0; $i < scalar @INC; $i++ ) {
-    if( $INC[ $i ] eq $abs_modules ) {
-      splice( @INC, $i, 1 );
-      last;
-    }
-  }
-
-  $errorref = undef if( ! scalar @errors );
-  return( \%registered_modules, \@errors );
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
