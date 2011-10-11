@@ -124,49 +124,52 @@
 .\" ========================================================================
 .\"
 .IX Title "LDAP2REPOSITORY 1"
-.TH LDAP2REPOSITORY 1 "2011-08-26" "Argonaut 1.0" "Argonaut Documentation"
+.TH LDAP2REPOSITORY 1 "2011-10-11" "Argonaut 1.0" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-ldap2repository \- creating debian repositories cronjob for the FusionDirectory FAI plugin.
+ldap2repository \- creating debian repositories cronjob for the Argonaut deployment system.
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-ldap2repository [\-hvnpejsg] [\-c config] [\-d outdir] [\-r srvroot] [\-i interface] [\-a arch] [\-P proxy]
+ldap2repository [\-hvnpejsglz] [\-c config] [\-d outdir] [\-r srvroot] [\-i interface] [\-a arch] [\-P proxy]
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-ldap2repository is a script to create the cronjob for the local.
-debian repositories needed by FusionDirectory \s-1FAI\s0 plugin.
+ldap2repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
 .IP "\fB\-c\fR        \s-1LDAP\s0 config file (default: /etc/ldap/ldap.conf)" 14
 .IX Item "-c        LDAP config file (default: /etc/ldap/ldap.conf)"
 .PD 0
-.IP "\fB\-d\fR        output dir (default: /etc/fusiondirectory/fai)" 14
-.IX Item "-d        output dir (default: /etc/fusiondirectory/fai)"
-.IP "\fB\-h\fR        display this help and exit" 14
-.IX Item "-h        display this help and exit"
-.IP "\fB\-n\fR        skip cleanup for mirrors" 14
-.IX Item "-n        skip cleanup for mirrors"
-.IP "\fB\-p\fR        show progress in cronjob" 14
-.IX Item "-p        show progress in cronjob"
-.IP "\fB\-v\fR        be verbose" 14
-.IX Item "-v        be verbose"
-.IP "\fB\-i\fR        network interface (default: eth0)" 14
-.IX Item "-i        network interface (default: eth0)"
-.IP "\fB\-j\fR        create a new /etc/cron.d/argonaut\-mirror" 14
-.IX Item "-j        create a new /etc/cron.d/argonaut-mirror"
-.IP "\fB\-r\fR        server root (default: /srv/www)" 14
-.IX Item "-r        server root (default: /srv/www)"
-.IP "\fB\-e\fR        ignore small errors" 14
-.IX Item "-e        ignore small errors"
-.IP "\fB\-a\fR        processor architecture (default: i386)" 14
-.IX Item "-a        processor architecture (default: i386)"
+.IP "\fB\-d\fR        Output dir (default: /etc/argonaut/fai)" 14
+.IX Item "-d        Output dir (default: /etc/argonaut/fai)"
+.IP "\fB\-h\fR        Display this help and exit" 14
+.IX Item "-h        Display this help and exit"
+.IP "\fB\-n\fR        Skip cleanup for mirrors" 14
+.IX Item "-n        Skip cleanup for mirrors"
+.IP "\fB\-p\fR        Show progress in cronjob" 14
+.IX Item "-p        Show progress in cronjob"
+.IP "\fB\-v\fR        Be verbose" 14
+.IX Item "-v        Be verbose"
+.IP "\fB\-i\fR        Network interface (default: eth0)" 14
+.IX Item "-i        Network interface (default: eth0)"
+.IP "\fB\-j\fR        Create a new /etc/cron.d/argonaut\-mirror" 14
+.IX Item "-j        Create a new /etc/cron.d/argonaut-mirror"
+.IP "\fB\-r\fR        Server root (default: /srv/www)" 14
+.IX Item "-r        Server root (default: /srv/www)"
+.IP "\fB\-e\fR        Ignore small errors" 14
+.IX Item "-e        Ignore small errors"
+.IP "\fB\-a\fR        Processor architecture (default: i386)" 14
+.IX Item "-a        Processor architecture (default: i386)"
 .IP "\fB\-P\fR        proxy (default: none)" 14
 .IX Item "-P        proxy (default: none)"
-.IP "\fB\-s\fR        don't mirror source packages" 14
-.IX Item "-s        don't mirror source packages"
-.IP "\fB\-g\fR        don't check gpg signature on release file" 14
-.IX Item "-g        don't check gpg signature on release file"
+.IP "\fB\-s\fR        Don't mirror source packages" 14
+.IX Item "-s        Don't mirror source packages"
+.IP "\fB\-g\fR        Don't check gpg signature on release file" 14
+.IX Item "-g        Don't check gpg signature on release file"
+.IP "\fB\-l\fR        Download Contents.arch.gz files" 14
+.IX Item "-l        Download Contents.arch.gz files"
+.IP "\fB\-z\fR        Update Packages.gz and Sources.gz with pdiff files" 14
+.IX Item "-z        Update Packages.gz and Sources.gz with pdiff files"
 .PD
 .SH "BUGS"
 .IX Header "BUGS"

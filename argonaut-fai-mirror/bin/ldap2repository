@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-# $Id$
 #*********************************************************************
 #
 # (c) 2005,2006 Jan-Marek Glogowski <glogow@fbihome.de>
@@ -13,7 +12,7 @@ ldap2repository - creating debian repositories cronjob for the Argonaut deployme
 
 =head1 SYNOPSIS
 
-ldap2repository [-hvnpejsg] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
+ldap2repository [-hvnpejsglz] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
 
 =head1 DESCRIPTION
 
@@ -23,31 +22,35 @@ ldap2repository is a script to create the cronjob for the local debian repositor
 
 =item B<-c>        LDAP config file (default: /etc/ldap/ldap.conf)
 
-=item B<-d>        output dir (default: /etc/argonaut/fai)
+=item B<-d>        Output dir (default: /etc/argonaut/fai)
 
-=item B<-h>        display this help and exit
+=item B<-h>        Display this help and exit
 
-=item B<-n>        skip cleanup for mirrors
+=item B<-n>        Skip cleanup for mirrors
 
-=item B<-p>        show progress in cronjob
+=item B<-p>        Show progress in cronjob
 
-=item B<-v>        be verbose
+=item B<-v>        Be verbose
 
-=item B<-i>        network interface (default: eth0)
+=item B<-i>        Network interface (default: eth0)
 
-=item B<-j>        create a new /etc/cron.d/argonaut-mirror
+=item B<-j>        Create a new /etc/cron.d/argonaut-mirror
 
-=item B<-r>        server root (default: /srv/www)
+=item B<-r>        Server root (default: /srv/www)
 
-=item B<-e>        ignore small errors
+=item B<-e>        Ignore small errors
 
-=item B<-a>        processor architecture (default: i386)
+=item B<-a>        Processor architecture (default: i386)
 
 =item B<-P>        proxy (default: none)
 
-=item B<-s>        don't mirror source packages
+=item B<-s>        Don't mirror source packages
 
-=item B<-g>        don't check gpg signature on release file
+=item B<-g>        Don't check gpg signature on release file
+
+=item B<-l>        Download Contents.arch.gz files
+
+=item B<-z>        Update Packages.gz and Sources.gz with pdiff files
 
 =back
 
@@ -97,7 +100,7 @@ my $crond_dir= "/etc/cron.d";
 my $interface = "eth0";
 my $verbose = 0;
 my $newcrond = 0;
-my $opt_string = 'hvnpejsgc:d:r:i:a:P';
+my $opt_string = 'hvnpejsglzc:d:r:i:a:P';
 my $hostname;
 my $srvdir = "/srv/www";
 my $progress = "";
@@ -107,6 +110,8 @@ my $arch = "i386";
 my $proxy = "";
 my $nosource ="";
 my $releasegpg = "";
+my $diff = "";
+my $contents = "";
 my $iptool = "/sbin/ifconfig";
 my $result;
 
@@ -116,16 +121,18 @@ usage("ldap2repository - creating debian repositories cronjob for the Argonaut d
 $verbose   = $opt{v} ? 1 : 0;
 $newcrond  = $opt{j} ? 1 : 0;
 $outdir    = $opt{d} ? $opt{d} : $outdir;
-$ldapconf   = $opt{c} ? $opt{c} : $ldapconf;
+$ldapconf  = $opt{c} ? $opt{c} : $ldapconf;
 $interface = $opt{i} ? $opt{i} : $interface;
 $nocleanup = $opt{n} ? "--nocleanup" : "";
 $srvdir    = $opt{r} ? $opt{r} : $srvdir;
 $progress  = $opt{p} ? "--progress" : "";
 $arch      = $opt{a} ? $opt{a} : $arch;
 $small_errors = $opt{e} ? "--ignore-small-errors" : "";
-$proxy	   = $opt{P} ? "--proxy=".$opt{P} : "";
+$proxy     = $opt{P} ? "--proxy=".$opt{P} : "";
 $nosource  = $opt{s} ? "--nosource" : "";
 $releasegpg = $opt{g} ? "--ignore-release-gpg" : "";
+$diff = $opt{z} ? "--pdiff" : "";
+$contents = $opt{l} ? "--getcontents" : "";
 
 my $ldapinfo;
 
@@ -165,24 +172,26 @@ sub usage
   (@_) && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
-usage: $0 [-hvnpejsg] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
+usage: $0 [-hvnpejsglz] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
 
-  -h    : this (help) message
+  -h    : This (help) message
   -c    : LDAP config file (default: ${ldapconf})
-  -d    : output dir (default: ${outdir})
-  -i    : network interface (default: ${interface})
-  -j    : create a new cron.d/argonaut-mirror
-  -n    : skip cleanup for mirrors
-  -p    : show progress in cronjob
-  -r    : server root (default ${srvdir})
-  -v    : be verbose on generate
-  -P    : proxy (default: ${proxy})
-  -e    : ignore small errors
-  -a    : processor architecture (default: ${arch})
-  -s    : don't mirror source packages
-  -g    : don't check gpg signature on release file
+  -d    : Output dir (default: ${outdir})
+  -i    : Network interface (default: ${interface})
+  -j    : Create a new cron.d/argonaut-mirror
+  -n    : Skip cleanup for mirrors
+  -p    : Show progress in cronjob
+  -r    : Server root (default ${srvdir})
+  -v    : Be verbose on generate
+  -P    : Proxy (default: ${proxy})
+  -e    : Ignore small errors
+  -a    : Processor architecture (default: ${arch})
+  -s    : Don't mirror source packages
+  -g    : Don't check gpg signature on release file
+  -l    : Download Contents.arch.gz files
+  -z    : Use pdiff files
 EOF
-	exit -1;
+  exit -1;
 }
 
 sub generate_cronjob {
@@ -257,7 +266,7 @@ $outdir/mirror-update-cronjob\n";
 
     if (":" eq substr($parent_or_opts,0,1)) {
         # No FusionDirectory internal mirror or too complicated: write as additional options
-        print CRON "debmirror ${releasegpg} ${nosource} ${small_errors} -a ${arch} --dist=${dist} --sections=${sections} $proxy " 
+        print CRON "debmirror ${releasegpg} ${nosource} ${small_errors} ${diff} ${contents} -a ${arch} --dist=${dist} --sections=${sections}" 
           . substr($parent_or_opts,1) . "${proxy} ${srvdir}/${dist}\n";
         print " +Cc ${dist} (${sections})\n" if( $verbose );
     }
@@ -294,8 +303,8 @@ $outdir/mirror-update-cronjob\n";
           }
 
           if (0 != scalar @{outline}) {
-          	  print CRON "\ndebmirror ${progress} ${nocleanup} ${releasegpg} ${nosource} ${small_errors} -a ${arch} --dist=${dist} --section=" . join(",", @{outline}) 
-              . " --method=${method} --host=${host} --root=${root} $proxy ${srvdir}/${dir}\n";
+              print CRON "\ndebmirror ${progress} ${nocleanup} ${releasegpg} ${nosource} ${small_errors} ${diff} ${contents} -a ${arch} --dist=${dist} --section=" . join(",", @{outline}) 
+              . " --method=${method} --host=${host} --root=${root} ${proxy} ${srvdir}/${dir}\n";
             print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose );
           }
           last if (0 == scalar @section_list);
