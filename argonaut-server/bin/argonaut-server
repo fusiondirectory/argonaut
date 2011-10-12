@@ -47,11 +47,9 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-#,$ldap_url,$ldap_port,$ldap_base
-my ($port,$ldap_dn,$ldap_password,$client_port,$delete_finished_tasks,$interface,$packages_files,$logdir);
+my ($port,$ldap_dn,$ldap_password,$ldap_configfile,$client_port,$delete_finished_tasks,$interface,$packages_files,$logdir);
 my $iptool = "/sbin/ifconfig";
 my $configfile = "/etc/argonaut/argonaut.conf";
-my $ldap_configfile = "/etc/ldap/ldap.conf";
 
 readConfig();
 
@@ -77,6 +75,7 @@ sub readConfig {
 
     $ldap_dn                =   $config->val( ldap => "dn"                      ,undef);
     $ldap_password          =   $config->val( ldap => "password"                ,undef);
+    $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
 
     $client_port            =   $config->val( network => "client_port"          ,8081);
     
@@ -86,6 +85,12 @@ sub readConfig {
     $packages_files         =   $config->val( server => "packages"              ,"/usr/src/packages/Packages");
     
     $logdir                 =   $config->val( log => "dir"                      ,"/var/log/argonaut/");
+}
+
+=item createLogDir
+Create the log dir
+=cut
+sub createLogDir {
     mkpath($logdir,0);# or die "Could not create logdir $logdir";
 }
 
