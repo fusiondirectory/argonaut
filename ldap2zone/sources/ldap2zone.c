@@ -272,7 +272,6 @@ int main(int argc, char **argv) {
     if (!s || strlen(s) < 3 || s[1] != '/' || s[2] != '/')
 	err(argv[0], "Not an LDAP URL");
 
-    s = strchr(s+3, '/');
     if (s) {
 	*s++ = '\0';
 	base = s;
