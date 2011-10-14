@@ -225,9 +225,9 @@ sub generate_cronjob {
       || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
 
     print CROND "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
-    print CROND "\@reboot root  ldap2repository $nocleanup $progress $small_errors -i $interface -a $arch $proxy;  [ -f $outdir/mirror-update-cronjob ] && sh 
+    print CROND "\@reboot root  ldap2repository $progress $nocleanup $releasegpg $nosource $small_errors $diff $contents -i $interface -a $arch $proxy;  [ -f $outdir/mirror-update-cronjob ] && sh 
 $outdir/mirror-update-cronjob\n";
-    print CROND "\@daily  root  ldap2repository $nocleanup $progress $small_errors -i $interface -a $arch $proxy;  [ -f $outdir/mirror-update-cronjob ] && sh 
+    print CROND "\@daily  root  ldap2repository $progress $nocleanup $releasegpg $nosource $small_errors $diff $contents -i $interface -a $arch $proxy;  [ -f $outdir/mirror-update-cronjob ] && sh 
 $outdir/mirror-update-cronjob\n";
 
     close (CROND);
