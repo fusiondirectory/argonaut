@@ -50,7 +50,7 @@ ldap2repository is a script to create the cronjob for the local debian repositor
 
 =item B<-l>        Download Contents.arch.gz files
 
-=item B<-z>        Update Packages.gz and Sources.gz with pdiff files
+=item B<-z>        Update Packages.gz and Sources.gz with diff files
 
 =back
 
@@ -134,7 +134,7 @@ $small_errors = $opt{e} ? "--ignore-small-errors" : "";
 $proxy     = $opt{P} ? "--proxy=".$opt{P} : "";
 $nosource  = $opt{s} ? "--nosource" : "";
 $releasegpg = $opt{g} ? "--ignore-release-gpg" : "";
-$diff = $opt{z} ? "--pdiff" : "";
+$diff = $opt{z} ? "--diff" : "";
 $contents = $opt{l} ? "--getcontents" : "";
 $installer = $opt{y} ? ",main/debian-installer" : "";
 
@@ -193,7 +193,7 @@ usage: $0 [-hvnpejsglz] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a 
   -s    : Don't mirror source packages
   -g    : Don't check gpg signature on release file
   -l    : Download Contents.arch.gz files
-  -z    : Use pdiff files
+  -z    : Use diff files
 EOF
   exit -1;
 }
