@@ -23,7 +23,13 @@ cp /etc/fai/make-fai-nfsroot.conf "${NFSROOT}"/etc/fai
 #copy argonaut.conf & ldap.conf
 msg "Copy argonaut.conf and ldap.conf"
 cp /etc/argonaut/argonaut.conf "${NFSROOT}"/etc/argonaut
-cp /etc/ldap/ldap.conf "${NFSROOT}"/etc/ldap/ldap.conf
+cp /etc/ldap/ldap-fai.conf "${NFSROOT}"/etc/ldap/ldap.conf
+
+#copy cacert.pem to /etc/ssl/certs
+if [ -n "$FAI_CERTS" ]; then
+  msg "installing ca certinto nfs root"
+  cp ${FAI_CERTS} ${NFSROOT}/etc/ssl/certs
+fi
 
 # Set locale if needed
 if [ -n "$NFSROOT_LOCALE" ]; then
