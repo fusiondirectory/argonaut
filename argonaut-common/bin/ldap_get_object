@@ -191,7 +191,7 @@ if (defined($object))
 my @attributeSelectionRegexes = @ARGV;
 scalar(@attributeSelectionRegexes) == 0 and @attributeSelectionRegexes = ("\@.*");
 
-my ($ldapbase,$ldapuris) = goto_ldap_parse_config();
+my ($ldapbase,$ldapuris) = argonaut_ldap_parse_config();
  # Note: $ldapuris is a reference to an array of URIs
 my $ldap = Net::LDAP->new( $ldapuris, timeout => $timeout ) or error("Could not connect to LDAP server!");
 my $results = $ldap->bind() ;  # anonymous bind

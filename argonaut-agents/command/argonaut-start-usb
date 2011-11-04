@@ -159,7 +159,7 @@ EOF
 ##########################################################################
 # Initializing
 ##########################################################################
-my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
+my $ldapinfo = argonaut_ldap_parse_config_ex(); #ref to hash
 ($ldapbase,$ldapuris) = ($ldapinfo->{"LDAP_BASE"}, $ldapinfo->{"LDAP_URIS"});
 
 ##########################################################################

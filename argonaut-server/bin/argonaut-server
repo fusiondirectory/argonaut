@@ -98,7 +98,7 @@ sub createLogDir {
 Connect to ldap and return handle.
 =cut
 sub bind_ldap {
-    my $ldapinfos = Argonaut::Common::goto_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+    my $ldapinfos = Argonaut::Common::argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
     return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 }
 
@@ -108,29 +108,29 @@ Search in the ldap for the IP associated to a Mac address.
 Parameter : the mac address
 =cut
 sub getIpFromMac {
-	my ($mac) = @_;
-	
+  my ($mac) = @_;
+  
     my ($ldap,$ldap_base) = bind_ldap();
       
-	my $mesg = $ldap->search( # perform a search
-						base   => $ldap_base,
-						filter => "macAddress=$mac",
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "macAddress=$mac",
                         attrs => [ 'ipHostNumber' ]
-					  );
+            );
 
-	$mesg->code && die "Error while searching IP for mac address '$mac' :".$mesg->error;
+  $mesg->code && die "Error while searching IP for mac address '$mac' :".$mesg->error;
 
-	if(scalar($mesg->entries)>1) {
-		die "Multiple IPs were found for the Mac address $mac!";
-	} elsif(scalar($mesg->entries)<1) {
-		die "No IPs were found for the Mac address $mac!";
-	}
+  if(scalar($mesg->entries)>1) {
+    die "Multiple IPs were found for the Mac address $mac!";
+  } elsif(scalar($mesg->entries)<1) {
+    die "No IPs were found for the Mac address $mac!";
+  }
 
-	my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
+  my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
 
-	$mesg = $ldap->unbind;   # take down session
-	
-	return $ip;
+  $mesg = $ldap->unbind;   # take down session
+  
+  return $ip;
 }
 
 =pod
@@ -139,33 +139,33 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub do_action { # if ip pings, send the request
-	my ($ip,$action,$params) = @_;
-	
-	# this line is only needed when debugging stuff on localhost
-	#$ip = "localhost";
-	
-	my $client = new JSON::RPC::Client;
-	$client->version('1.0');
+  my ($ip,$action,$params) = @_;
+  
+  # this line is only needed when debugging stuff on localhost
+  #$ip = "localhost";
+  
+  my $client = new JSON::RPC::Client;
+  $client->version('1.0');
 
-	my $callobj = {
-	  method  => $action,
-	  params  => [$params],
-	};
+  my $callobj = {
+    method  => $action,
+    params  => [$params],
+  };
 
-	my $res = $client->call("http://".$ip.":".$client_port, $callobj);
+  my $res = $client->call("http://".$ip.":".$client_port, $callobj);
 
-	if($res) {
-	  if ($res->is_error) {
-		  die "Error : ", $res->error_message."\n";
-	  }
-	  else {
-		  $log->info("Result : ".$res->result);
+  if($res) {
+    if ($res->is_error) {
+      die "Error : ", $res->error_message."\n";
+    }
+    else {
+      $log->info("Result : ".$res->result);
           return $res->result;
-	  }
-	}
-	else {
-	  die "Status : ".$client->status_line."\n";
-	}
+    }
+  }
+  else {
+    die "Status : ".$client->status_line."\n";
+  }
 }
 
 =item
@@ -174,34 +174,34 @@ sub do_action { # if ip pings, send the request
 sub flag {
     my ($target,$fai_state) = @_;
     my ($ldap,$ldap_base) = bind_ldap();
-	
-	my $mesg = $ldap->search( # perform a search
-						base   => $ldap_base,
-						filter => "macAddress=$target"
+  
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "macAddress=$target"
                         #~ ,attrs => [ 'ipHostNumber' ]
-					  );
+            );
 
-	$mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
+  $mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
 
-	if(scalar($mesg->entries)>1) {
-		die "Multiple entries were found for the Mac address $target!";
-	} elsif(scalar($mesg->entries)<1) {
-		die "No entry were found for the Mac address $target!";
-	}
+  if(scalar($mesg->entries)>1) {
+    die "Multiple entries were found for the Mac address $target!";
+  } elsif(scalar($mesg->entries)<1) {
+    die "No entry were found for the Mac address $target!";
+  }
 
-	my $dn = ($mesg->entries)[0];
-	my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
+  my $dn = ($mesg->entries)[0];
+  my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
     
-	$mesg = $ldap->modify(
-						$dn,
+  $mesg = $ldap->modify(
+            $dn,
                         replace => {
                             "FAIstate" => $fai_state
                         }
-					  );
+            );
 
-	$mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
+  $mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
 
-	$mesg = $ldap->unbind;   # take down session
+  $mesg = $ldap->unbind;   # take down session
     
     return $ip;
 }

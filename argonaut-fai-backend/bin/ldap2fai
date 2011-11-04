@@ -154,7 +154,7 @@ my $init_results;
 # initialize ldap
 eval { #try
     $init_results =
-      goto_ldap_init( $ldap_conf, 0, $bind_dn, $prompt_pwd, $bind_pwd );
+      argonaut_ldap_init( $ldap_conf, 0, $bind_dn, $prompt_pwd, $bind_pwd );
 };
 if($@) { #catch
     do_exit( 3, $@ );
@@ -343,7 +343,7 @@ sub get_classes {
   $faiobj->tag( $host_tag ) if( defined $host_tag );
 
   # set $host_base
-  my @rdn = goto_ldap_split_dn( $host_dn );
+  my @rdn = argonaut_ldap_split_dn( $host_dn );
   shift( @rdn ); # hostname
   shift( @rdn ); # servers / workstations / terminals
   shift( @rdn ); # systems
@@ -461,7 +461,7 @@ sub generate_sources_list {
     if( ! defined $search_base )
       { $search_base = $host_base; }
     else {
-      my @rdn = goto_ldap_split_dn( $search_base );
+      my @rdn = argonaut_ldap_split_dn( $search_base );
       shift( @rdn );
       $search_base = join( ',', @rdn );
     }
@@ -469,7 +469,7 @@ sub generate_sources_list {
     print( " - using search start base: $search_base\n" ) if $verbose;
 
     # Look for repository servers
-    ($mesg,$search_base) = goto_ldap_rsearch( $ldap, $host_base, '',
+    ($mesg,$search_base) = argonaut_ldap_rsearch( $ldap, $host_base, '',
       $faiobj->prepare_filter( '(objectClass=FAIrepositoryServer)' ),
       'one', 'ou=servers,ou=systems', [ 'FAIrepository', 'cn' ] );
 
@@ -503,7 +503,7 @@ sub generate_sources_list {
           # and add to 
           my $index = 0;
           foreach my $section (@modsections) {
-            if( 0 == goto_array_find_and_remove
+            if( 0 == argonaut_array_find_and_remove
               ( $release_sections{ $items[ 2 ] }, $section ) ) 
             {
               splice( @modsections, $index, 1 );

@@ -41,31 +41,31 @@ BEGIN
 
   %EXPORT_TAGS = (
     'ldap' => [qw(
-      &goto_ldap_parse_config
-      &goto_ldap_parse_config_ex
-      &goto_ldap_parse_config_multi
-      &goto_ldap_fsearch
-      &goto_ldap_rsearch
-      &goto_ldap_is_single_result
-      &goto_ldap_split_dn
-      &goto_ldap_init
-      &goto_search_repo_server
-      &goto_search_parent_repo_server
+      &argonaut_ldap_parse_config
+      &argonaut_ldap_parse_config_ex
+      &argonaut_ldap_parse_config_multi
+      &argonaut_ldap_fsearch
+      &argonaut_ldap_rsearch
+      &argonaut_ldap_is_single_result
+      &argonaut_ldap_split_dn
+      &argonaut_ldap_init
+      &argonaut_search_repo_server
+      &argonaut_search_parent_repo_server
     )],
     'file' => [qw(
-      &goto_file_write
-      &goto_file_chown
+      &argonaut_file_write
+      &argonaut_file_chown
     )],
     'array' => [qw(
-      &goto_array_find_and_remove
+      &argonaut_array_find_and_remove
     )],
     'string' => [qw(
-      &goto_gen_random_str
+      &argonaut_gen_random_str
     )],
      'misc' => [qw(
-      &goto_options_parse
-      &goto_get_pid_lock
-      &goto_get_mac
+      &argonaut_options_parse
+      &argonaut_get_pid_lock
+      &argonaut_get_mac
     )]
   );
 
@@ -79,7 +79,7 @@ BEGIN
 #
 # Returns the mac of the interface
 # 
-sub goto_get_mac {
+sub argonaut_get_mac {
     my ($interface) = @_;
     my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
     chomp ($mac);
@@ -108,13 +108,13 @@ sub goto_get_mac {
 # These values are just filled, if they weren't provided,
 # i.e. 
 #
-sub goto_ldap_init {
+sub argonaut_ldap_init {
   my( $ldap_conf, $prompt_dn, $bind_dn, 
       $prompt_pwd, $bind_pwd, $obfuscate_pwd ) = @_;
   my %results;
 
   # Parse ldap config
-  my ($base,$ldapuris) = goto_ldap_parse_config( $ldap_conf );
+  my ($base,$ldapuris) = argonaut_ldap_parse_config( $ldap_conf );
   %results = ( 'BASE' => $base, 'URIS' => $ldapuris);
 
   return( "Couldn't find LDAP base in config!" ) if( ! defined $base );
@@ -178,7 +178,7 @@ sub goto_ldap_init {
 }
 
 #------------------------------------------------------------------------------
-sub goto_ldap_parse_config
+sub argonaut_ldap_parse_config
 {
   my ($ldap_config) = @_;
 
@@ -221,7 +221,7 @@ sub goto_ldap_parse_config
 }
 
 #------------------------------------------------------------------------------
-sub goto_ldap_parse_config_ex
+sub argonaut_ldap_parse_config_ex
 {
   my %result = ();
 
@@ -255,7 +255,7 @@ sub goto_ldap_parse_config_ex
 }
 
 # Split the dn (works with escaped commas)
-sub goto_ldap_split_dn {
+sub argonaut_ldap_split_dn {
   my ($dn) = @_;
 
   # Split at comma
@@ -285,7 +285,7 @@ sub goto_ldap_split_dn {
 #
 # parse config for user or global config
 #
-sub goto_ldap_parse_config_multi
+sub argonaut_ldap_parse_config_multi
 {
   my ($ldap_config) = @_;
 
@@ -358,19 +358,19 @@ config_open:
 }
 #----------------------------------------------------------------------------
 # search the parent(s) fai repo(s) declared in FusionDirectory
-sub goto_search_parent_repo_server {
+sub argonaut_search_parent_repo_server {
   my ($handle,$base,$cn) = @_;
   my @attrs = ( 'FAIrepository' );
-  my ($sresult) = goto_ldap_rsearch( $handle, $base, '',
+  my ($sresult) = argonaut_ldap_rsearch( $handle, $base, '',
       "(&(objectClass=FAIrepositoryServer)(cn=${cn}))",
       "one", "ou=servers,ou=systems", \@attrs );
-  return goto_ldap_is_single_result( $sresult, 1 );
+  return argonaut_ldap_is_single_result( $sresult, 1 );
 }
 
 #----------------------------------------------------------------------------
 # search if there is a fai repo for the server mac address
 
-sub goto_search_repo_server {
+sub argonaut_search_repo_server {
   my ($handle,$base,$mac) = @_;
   my @attrs = ( 'FAIrepository', 'cn' );
   my $sresult = $handle->search(
@@ -382,7 +382,7 @@ sub goto_search_repo_server {
 
 #------------------------------------------------------------------------------
 #
-sub goto_file_write {
+sub argonaut_file_write {
 
   my @opts = @_;
   my $len = scalar @_;
@@ -396,12 +396,12 @@ sub goto_file_write {
   close(SCRIPT);
 
   ($opts[2] ne "") && chmod oct($opts[2]),${filename};
-  ($opts[3] ne "") && goto_file_chown(${filename}, $opts[3]);
+  ($opts[3] ne "") && argonaut_file_chown(${filename}, $opts[3]);
 }
 
 #------------------------------------------------------------------------------
 #
-sub goto_file_chown
+sub argonaut_file_chown
 {
   my @owner = split('.',$_[1]);
   my $filename = $_[0];
@@ -416,18 +416,18 @@ sub goto_file_chown
 #
 # Common checks for forward and reverse searches
 #
-sub goto_ldap_search_checks {
+sub argonaut_ldap_search_checks {
   my( $base, $sbase ) = (@_)[1,2];
 
   if( scalar @_ < 3 ) {
-    warn( "goto_ldap_search needs at least 3 parameters" );
+    warn( "argonaut_ldap_search needs at least 3 parameters" );
     return;
   };
 
   if( defined $sbase && (length($sbase) > 0) ) {
     # Check, if $sbase is a base of $base
     if( $sbase ne substr($base,-1 * length($sbase)) ) {
-      warn( "goto_ldap_search: (1) '$sbase' isn't the base of '$base'" );
+      warn( "argonaut_ldap_search: (1) '$sbase' isn't the base of '$base'" );
       return;
     }
 
@@ -435,7 +435,7 @@ sub goto_ldap_search_checks {
 
     # Check, if $base ends with ',' after $sbase strip
     if( ',' ne substr( $base, -1 ) ) {
-      warn( "goto_ldap_search: (2) '$sbase' isn't the base of '$base'" );
+      warn( "argonaut_ldap_search: (2) '$sbase' isn't the base of '$base'" );
       return;
     }
     $base  = substr( $base, 0, length($base) - 1 );
@@ -465,17 +465,17 @@ sub goto_ldap_search_checks {
 # Returns (Net::LDAP::Search, $search_base) on success
 # Returns undef on non-LDAP failures
 #
-sub goto_ldap_rsearch {
+sub argonaut_ldap_rsearch {
   use Switch;
 
   my ($ldap,$base,$sbase,$filter,$scope,$subbase,$attrs) = @_;
 
-  ( $base, $sbase ) = goto_ldap_search_checks( @_ );
+  ( $base, $sbase ) = argonaut_ldap_search_checks( @_ );
   return if( ! defined $base );
 
   my (@rdns,$search_base,$mesg);
 
-  @rdns = goto_ldap_split_dn( $base );
+  @rdns = argonaut_ldap_split_dn( $base );
   return if( 0 == scalar @rdns );
 
   while( 1 ) {
@@ -555,7 +555,7 @@ NEXT_REFERRAL:
 }
 
 #------------------------------------------------------------------------------
-# See goto_ldap_fsearch
+# See argonaut_ldap_fsearch
 #
 # sbase = start base
 #
@@ -564,17 +564,17 @@ NEXT_REFERRAL:
 #   ou=do,ou=me,ou=very,ou=well
 #   ou=do,ou=test,ou=me,ou=very,ou=well
 # 
-sub goto_ldap_fsearch {
+sub argonaut_ldap_fsearch {
   use Switch;
 
   my ($ldap,$base,$sbase,$filter,$scope,$subbase,$attrs) = @_;
 
-  ( $base, $sbase ) = goto_ldap_search_checks( @_ );
+  ( $base, $sbase ) = argonaut_ldap_search_checks( @_ );
   return if( ! defined $base );
 
   my (@rdns,$search_base,$mesg,$rdn_count);
 
-  @rdns = reverse goto_ldap_split_dn( $base );
+  @rdns = reverse argonaut_ldap_split_dn( $base );
   $rdn_count = scalar @rdns;
   return if( 0 == $rdn_count );
 
@@ -630,7 +630,7 @@ sub goto_ldap_fsearch {
 #
 # returns 0 on failure
 #
-sub goto_ldap_is_single_result {
+sub argonaut_ldap_is_single_result {
   my ($search_result,$get_entry) = @_;
   my $result = 0;
   if( (defined $search_result)
@@ -647,7 +647,7 @@ sub goto_ldap_is_single_result {
 
 #------------------------------------------------------------------------------
 #
-sub goto_array_find_and_remove {
+sub argonaut_array_find_and_remove {
   my ($haystack,$needle) = @_;
   my $index = 0;
 
@@ -669,7 +669,7 @@ sub goto_array_find_and_remove {
 # @param array ref: symbol set (optional)
 # @return string or undef
 #
-sub goto_gen_random_str {
+sub argonaut_gen_random_str {
   my ($strlen, $symbolset) = @_;
   return if( (! defined $strlen) || (0 > $strlen) );
   return '' if( 0 == $strlen );
@@ -694,7 +694,7 @@ sub goto_gen_random_str {
 # @param string $pidfile: lockfile name
 # @return undef, $errstr or LOCKFILE handle
 #
-sub goto_get_pid_lock {
+sub argonaut_get_pid_lock {
   my( $cmd, $pidfile ) = @_;
   my( $LOCK_FILE, $pid );
 
@@ -741,7 +741,7 @@ sub goto_get_pid_lock {
 #
 # Copied from Net::LDAP
 #
-sub goto_options_parse {
+sub argonaut_options_parse {
   my %ret = @_;
   my $once = 0;
   for my $v (grep { /^-/ } keys %ret) {
@@ -765,5 +765,58 @@ END {}
 1;
 
 __END__
+
+=head1 NAME
+
+Argonaut::Common - Argonaut basic functions
+
+=head1 SYNOPSIS
+
+use Argonaut::Utils;
+
+  $result = process_input($line);
+
+=head1 Function C<process_input>
+
+=head2 Syntax
+
+  $result = process_input($line);
+
+=head2 Arguments
+
+C<$line> input line we get
+
+=head2 Return value
+
+ true if stream wants us to finish
+
+=head2 Description
+
+C<process_input> parses information from the lines and sets the progress respectively
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2008 Landeshauptstadt München
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
 
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

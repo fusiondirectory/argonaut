@@ -44,43 +44,43 @@ my @app_attributes;
 
 sub translate 
 {
-	my $length = @GOTO_LOCALES;
-	my $string = $_[0];
+  my $length = @GOTO_LOCALES;
+  my $string = $_[0];
 
-	chomp($string);
+  chomp($string);
 
-	if( $length == 0 ) {
-		open(FD, "/etc/argonaut/atgonaut-locales.dat") || die "The file /etc/argonaut/argonaut-locales.dat is unavailable";
-		@GOTO_LOCALES = <FD>;
-		close(FD);
-	}
+  if( $length == 0 ) {
+    open(FD, "/etc/argonaut/atgonaut-locales.dat") || die "The file /etc/argonaut/argonaut-locales.dat is unavailable";
+    @GOTO_LOCALES = <FD>;
+    close(FD);
+  }
 
-	my $result = $string;
+  my $result = $string;
 
-	foreach my $line (@GOTO_LOCALES) {
-		my $de;
-		my $en;
+  foreach my $line (@GOTO_LOCALES) {
+    my $de;
+    my $en;
 
-		($en, $de) = split(/=/, $line);
-		chomp($de) if( defined $de );
-		chomp($en);
-		if( $en eq $string ) {
-			$result = $de;
-		}
-	}
+    ($en, $de) = split(/=/, $line);
+    chomp($de) if( defined $de );
+    chomp($en);
+    if( $en eq $string ) {
+      $result = $de;
+    }
+  }
 
-	return $result;
+  return $result;
 }
 
 sub sort_and_uniq 
 {
-	return sort keys %{{ map { $_ => 1 } @_ }};
+  return sort keys %{{ map { $_ => 1 } @_ }};
 }
 
 sub app2var 
 {
-	my $attr= "";
-	my $val= "";
+  my $attr= "";
+  my $val= "";
 
         $_[0] =~ /^$/ && next;
         if ($_[0] =~ /^([^=]+)="([^:][^"]*)"$/) {
@@ -104,8 +104,8 @@ sub app2var
                 $val = "";
         }
 
-	$ENV{"$attr"}=$val;
-	# TODO: here include only the $attr that are not listed in the array
+  $ENV{"$attr"}=$val;
+  # TODO: here include only the $attr that are not listed in the array
         push(@app_attributes, $attr);
 }
 
@@ -121,7 +121,7 @@ my $uid = $ENV{'USER'};
 my $HOME = $ENV{'HOME'};
 my $MAC = $ENV{'MAC'};
 
-my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
+my $ldapinfo = argonaut_ldap_parse_config_ex(); #ref to hash
 my ($ldapbase,$ldapuris) = ($ldapinfo->{"LDAP_BASE"}, $ldapinfo->{"LDAP_URIS"});
 
 my @createdObjects = ();
@@ -153,40 +153,40 @@ my $RELEASE = undef;
 my $DN;
 
 foreach my $entry (@RELEASES) {
-	$DN = $entry->dn();
-	$RELEASE = $entry->get_value('FAIClass');
-	if( $RELEASE ) {
-		$RELEASE =~ s/^.* ://;
-	}
+  $DN = $entry->dn();
+  $RELEASE = $entry->get_value('FAIClass');
+  if( $RELEASE ) {
+    $RELEASE =~ s/^.* ://;
+  }
 }
 
 if( ! $RELEASE ) {
-	# no FAIClass available at the workstation -> Check the object class
-	$mesg = $ldap->search( # perform a search
+  # no FAIClass available at the workstation -> Check the object class
+  $mesg = $ldap->search( # perform a search
                         base   => "$ldapbase",
                         filter => "(&(objectclass=gotoWorkstationTemplate)$$ldapinfo{UNIT_TAG_FILTER}(FAIClass=*)(member=" . escape_filter_value($DN) . "))",
-			attrs => ['FAIclass' ]
-			);
-	$mesg->code && die $mesg->error;
+                        attrs => ['FAIclass' ]
+          );
+  $mesg->code && die $mesg->error;
 
-	@RELEASES=$mesg->entries;
+  @RELEASES=$mesg->entries;
 
-	$RELEASE = undef;
-	foreach my $entry (@RELEASES) {
-		$RELEASE = $entry->get_value('FAIClass');
-		if( $RELEASE ) {
-			$RELEASE =~ s/^.* ://;
-		}
-	}
+  $RELEASE = undef;
+  foreach my $entry (@RELEASES) {
+    $RELEASE = $entry->get_value('FAIClass');
+    if( $RELEASE ) {
+      $RELEASE =~ s/^.* ://;
+    }
+  }
 }
 
 my $LDAP_RELEASE = '';
 
 if( $RELEASE ) {
-	$ENV{'RELEASE'}=$RELEASE;
+  $ENV{'RELEASE'}=$RELEASE;
 
-	my @RELEASES = split(/\//, $RELEASE);
-	$LDAP_RELEASE = 'ou=' . join( ',ou=', reverse( @RELEASES ) ) . ',';
+  my @RELEASES = split(/\//, $RELEASE);
+  $LDAP_RELEASE = 'ou=' . join( ',ou=', reverse( @RELEASES ) ) . ',';
 }
 
 
@@ -196,7 +196,7 @@ if( $RELEASE ) {
 $mesg = $ldap->search( # perform a search
                         base   => "${LDAP_RELEASE}ou=apps,$ldapbase",
                         filter => "(&(objectclass=gosaApplication)$$ldapinfo{UNIT_TAG_FILTER})",
-			scope => 'one'
+                        scope => 'one'
                       );
  
 $mesg->code && die $mesg->error;
@@ -205,12 +205,12 @@ my @APPLICATIONS=$mesg->entries;
 
 my %APPLICATIONKEYS= ();
 foreach my $application (@APPLICATIONS) {
-	my $dn = $application->dn();
-	my $cn = $application->get_value ('cn');
+  my $dn = $application->dn();
+  my $cn = $application->get_value ('cn');
 
-	if ( $dn =~ /^cn=$cn,$LDAP_RELEASE/ ) {
-		$APPLICATIONKEYS{$cn} = $application;
-	}
+  if ( $dn =~ /^cn=$cn,$LDAP_RELEASE/ ) {
+    $APPLICATIONKEYS{$cn} = $application;
+  }
 }
 
 ##########################################################################
@@ -426,17 +426,17 @@ $mesg = $ldap->unbind;   # take down session
 # create directories
 ##########################################################################
 my @DIRS=("$HOME/.config/menus",
-	"$HOME/.local/share/desktop-directories",
-	"$HOME/.local/share/applications",
-	"$HOME/.argonaut/applications",
-	"$HOME/.argonaut/log/applications",
-	"$HOME/.argonaut/log/plugins",
-	"$HOME/Desktop",
-	"$HOME/.kde/shutdown" );
+  "$HOME/.local/share/desktop-directories",
+  "$HOME/.local/share/applications",
+  "$HOME/.argonaut/applications",
+  "$HOME/.argonaut/log/applications",
+  "$HOME/.argonaut/log/plugins",
+  "$HOME/Desktop",
+  "$HOME/.kde/shutdown" );
 
 foreach my $dir (@DIRS) {
-	#-d $dir && rmtree($dir);
-	mkpath $dir || die "Create the directory $dir failed";
+  #-d $dir && rmtree($dir);
+  mkpath $dir || die "Create the directory $dir failed";
 }
 
 ##########################################################################
@@ -444,7 +444,7 @@ foreach my $dir (@DIRS) {
 ##########################################################################
 
 if ( -s "$HOME/.kde/shutdown/argonaut-end-session" || -f "$HOME/.kde/shutdown/argonaut-end-session" ) {
-	unlink "$HOME/.kde/shutdown/argonaut-end-session";
+  unlink "$HOME/.kde/shutdown/argonaut-end-session";
 }
 
 symlink("/usr/bin/argonaut-end-session", "$HOME/.kde/shutdown/argonaut-end-session");
@@ -468,18 +468,18 @@ my $CURRENT = 0;
 my ($PROGRESS, $STRING);
 
 foreach my $plugin (@PLUGINS) {
-	open(FILE, $plugin) || die "$plugin file can not be opened";
-	my $NAME = <FILE> || die "First line of file $plugin could not be read";
-	close(FILE);
-	$NAME =~ s/^#NAME://;
-	$CURRENT = $CURRENT + $STEP;
-	$PROGRESS = $CURRENT / 100;
-	$STRING = translate($NAME);
-	printf("%d %s\n", $PROGRESS, $STRING);
+  open(FILE, $plugin) || die "$plugin file can not be opened";
+  my $NAME = <FILE> || die "First line of file $plugin could not be read";
+  close(FILE);
+  $NAME =~ s/^#NAME://;
+  $CURRENT = $CURRENT + $STEP;
+  $PROGRESS = $CURRENT / 100;
+  $STRING = translate($NAME);
+  printf("%d %s\n", $PROGRESS, $STRING);
 
-	my $plugin_basename = basename($plugin);
+  my $plugin_basename = basename($plugin);
 
-	system("/bin/sh $plugin &> $HOME/.argonaut/log/plugins/$plugin_basename.log");
+  system("/bin/sh $plugin &> $HOME/.argonaut/log/plugins/$plugin_basename.log");
 }
 
 ##########################################################################
@@ -492,9 +492,9 @@ unlink(glob("$HOME/.argonaut/applications/*"));
 
 # Cleanup desktop links
 foreach my $file (glob("$HOME/Desktop/*.desktop")) {
-	if( -l $file ) {
-  		unlink($file) unless( -f $file );
-	}
+  if( -l $file ) {
+      unlink($file) unless( -f $file );
+  }
 }
 
 ##########################################################################
@@ -507,23 +507,23 @@ my $idoutput=`id $uid`;
 -f "$HOME/Desktop/Diskette" && unlink("$HOME/Desktop/Diskette");
 
 if( $idoutput =~ m/(floppy)/ ) {
-	open(FILE, "> $HOME/Desktop/Diskette");
-	print FILE "[Desktop Action Format]\n";
-	print FILE "Exec=kfloppy %v\n";
-	print FILE "Name=Format\n";
-	print FILE "Name[de]=Formatieren\n";
-	print FILE "\n";
-	print FILE "[Desktop Entry]\n";
-	print FILE "Actions=Format\n";
-	print FILE "Dev=/dev/fd0\n";
-	print FILE "Encoding=UTF-8\n";
-	print FILE "Icon=3floppy_mount\n";
-	print FILE "MountPoint=/media/floppy0\n";
-	print FILE "ReadOnly=false\n";
-	print FILE "Type=FSDevice\n";
-	print FILE "UnmountIcon=3floppy_unmount\n";
-	print FILE "X-KDE-Priority=TopLevel\n";
-	close(FILE);
+  open(FILE, "> $HOME/Desktop/Diskette");
+  print FILE "[Desktop Action Format]\n";
+  print FILE "Exec=kfloppy %v\n";
+  print FILE "Name=Format\n";
+  print FILE "Name[de]=Formatieren\n";
+  print FILE "\n";
+  print FILE "[Desktop Entry]\n";
+  print FILE "Actions=Format\n";
+  print FILE "Dev=/dev/fd0\n";
+  print FILE "Encoding=UTF-8\n";
+  print FILE "Icon=3floppy_mount\n";
+  print FILE "MountPoint=/media/floppy0\n";
+  print FILE "ReadOnly=false\n";
+  print FILE "Type=FSDevice\n";
+  print FILE "UnmountIcon=3floppy_unmount\n";
+  print FILE "X-KDE-Priority=TopLevel\n";
+  close(FILE);
 }
 
 ##########################################################################
@@ -532,119 +532,119 @@ if( $idoutput =~ m/(floppy)/ ) {
 
 foreach my $app (keys %USER_APPLICATIONS)  {
 
-	my @attributes = ( 'gosaApplicationExecute', 
-			'gosaApplicationName',
-			'description',
-			'gosaApplicationParameter' );
+  my @attributes = ( 'gosaApplicationExecute', 
+      'gosaApplicationName',
+      'description',
+      'gosaApplicationParameter' );
 
-	$CURRENT += $STEP;
-	$PROGRESS = $CURRENT / 100;
+  $CURRENT += $STEP;
+  $PROGRESS = $CURRENT / 100;
 
-	# Skip non-existing application
-	my $application = $APPLICATIONKEYS{$app};
-	if( ! $application ) {
-		next;
-	}
+  # Skip non-existing application
+  my $application = $APPLICATIONKEYS{$app};
+  if( ! $application ) {
+    next;
+  }
 
-	$STRING = translate("Adapting application '%s'");
-	$STRING =~ s/%s/$app/;
-	printf("%d %s\n", $PROGRESS, $STRING);
+  $STRING = translate("Adapting application '%s'");
+  $STRING =~ s/%s/$app/;
+  printf("%d %s\n", $PROGRESS, $STRING);
 
-	# test if application is installed and executable
-	my $execfile = $application->get_value('gosaApplicationExecute');
-	$execfile =~ s/^(\S*)\s.*/$1/;
+  # test if application is installed and executable
+  my $execfile = $application->get_value('gosaApplicationExecute');
+  $execfile =~ s/^(\S*)\s.*/$1/;
 
-	my $execpath = "";
-	$execpath = `which $execfile`;
-	chomp($execpath);
+  my $execpath = "";
+  $execpath = `which $execfile`;
+  chomp($execpath);
 
-	if( -x $execpath ) {
+  if( -x $execpath ) {
 
-		# Reset all attributes
-		foreach my $attribute (@attributes) {
-			$ENV{"$attribute"}="";
-		}
-		
-		@app_attributes = ();
-	
-		# Export attributes (especially gosaApplicationParameters)
-		# Because the application parameters have been appended to
-		# the attribute list during construction of %MENU in
-		# order of precedence, this loop already takes into account
-		# overwriting of default app parameters with group-specific
-		# parameters.
-		foreach my $attribute (@attributes) {
-			my @attr = $application->get_value("$attribute");
-			foreach my $value (@attr) {
-				app2var("$attribute=\"$value\"");
-			}
-		}
-	
-	
-		# create required entries and print message
-		my $applicationFlags = $application->get_value('gosaApplicationFlags');
+    # Reset all attributes
+    foreach my $attribute (@attributes) {
+      $ENV{"$attribute"}="";
+    }
+    
+    @app_attributes = ();
+  
+    # Export attributes (especially gosaApplicationParameters)
+    # Because the application parameters have been appended to
+    # the attribute list during construction of %MENU in
+    # order of precedence, this loop already takes into account
+    # overwriting of default app parameters with group-specific
+    # parameters.
+    foreach my $attribute (@attributes) {
+      my @attr = $application->get_value("$attribute");
+      foreach my $value (@attr) {
+        app2var("$attribute=\"$value\"");
+      }
+    }
+  
+  
+    # create required entries and print message
+    my $applicationFlags = $application->get_value('gosaApplicationFlags');
 
-		#create_menu_entry;
-		if( $applicationFlags =~ m/M/ ) {
-                	open(FILE, "> $HOME/.local/share/applications/$app.desktop");
-			print FILE "[Desktop Entry]\n";
-			print FILE "Type=Application\n";
-			print FILE "Encoding=UTF-8\n";
-			print FILE "Exec=$ENV{'gosaApplicationExecute'}\n";
-			print FILE "Name=$ENV{'gosaApplicationName'}\n";
-			print FILE "GenericName=$ENV{'description'}\n";
-			print FILE "Comment=$ENV{'description'}\n";
-			print FILE "Icon=$HOME/.kde/share/icons/$app.png\n";
-			print FILE "Terminal=false\n";
-			close(FILE);
+    #create_menu_entry;
+    if( $applicationFlags =~ m/M/ ) {
+                  open(FILE, "> $HOME/.local/share/applications/$app.desktop");
+      print FILE "[Desktop Entry]\n";
+      print FILE "Type=Application\n";
+      print FILE "Encoding=UTF-8\n";
+      print FILE "Exec=$ENV{'gosaApplicationExecute'}\n";
+      print FILE "Name=$ENV{'gosaApplicationName'}\n";
+      print FILE "GenericName=$ENV{'description'}\n";
+      print FILE "Comment=$ENV{'description'}\n";
+      print FILE "Icon=$HOME/.kde/share/icons/$app.png\n";
+      print FILE "Terminal=false\n";
+      close(FILE);
 
-			#we can't create desktop links without the menu entry
-			#create_desktop_link;
-			if( $applicationFlags =~ m/D/ ) {
-                		symlink("$HOME/.local/share/applications/$app.desktop", 
-					"$HOME/Desktop/$app.desktop");
-			}
-		} else {
-			print "gosaApplicationFlags not set in LDAP for application $ENV{'gosaApplicationName'}, $ENV{'gosaApplicationExecute'}, skipping";
-		}
+      #we can't create desktop links without the menu entry
+      #create_desktop_link;
+      if( $applicationFlags =~ m/D/ ) {
+                    symlink("$HOME/.local/share/applications/$app.desktop", 
+          "$HOME/Desktop/$app.desktop");
+      }
+    } else {
+      print "gosaApplicationFlags not set in LDAP for application $ENV{'gosaApplicationName'}, $ENV{'gosaApplicationExecute'}, skipping";
+    }
 
-		if( -r "/etc/argonaut/application/$app" ) {
-			system("/bin/sh /etc/argonaut/application/$app &> $HOME/.argonaut/log/applications/$app.log");
-		} else {
-			my $logonscript = $application->get_value('gotoLogonScript');
-	
-			if( $logonscript ) {
-				open(FDSCRIPT, "> $HOME/.argonaut/applications/$app") ||
-					die "$HOME/.argonaut/applications/$app could not be opened for writing.";
-				$logonscript =~ s/\015//g;
-				$logonscript =~ s/\032//g;
-				print FDSCRIPT "# Include argonaut support library and configuration\n";
-				print FDSCRIPT ". /usr/lib/argonaut/argonaut-support.lib\n";
-				print FDSCRIPT ". /etc/argonaut/argonaut-agent.conf\n";
-				print FDSCRIPT "$logonscript\n";
-				close(FDSCRIPT);
-	
-				system("/bin/sh $HOME/.argonaut/applications/$app &> $HOME/.argonaut/log/applications/$app.log"); 
-			}
-		}
-	
-		# Extract Icon from LDAP
-		my $applicationIcon = $application->get_value('gosaApplicationIcon');
-	
-		if ( $applicationIcon ) {
-			open(FDICON, "> $HOME/.kde/share/icons/$app.png") ||
-				die "$HOME/.kde/share/icons/$app.png could not be opened for writing.";
-			binmode FDICON;
-			print FDICON "$applicationIcon";
-			close(FDICON);
-		}
+    if( -r "/etc/argonaut/application/$app" ) {
+      system("/bin/sh /etc/argonaut/application/$app &> $HOME/.argonaut/log/applications/$app.log");
+    } else {
+      my $logonscript = $application->get_value('gotoLogonScript');
+  
+      if( $logonscript ) {
+        open(FDSCRIPT, "> $HOME/.argonaut/applications/$app") ||
+          die "$HOME/.argonaut/applications/$app could not be opened for writing.";
+        $logonscript =~ s/\015//g;
+        $logonscript =~ s/\032//g;
+        print FDSCRIPT "# Include argonaut support library and configuration\n";
+        print FDSCRIPT ". /usr/lib/argonaut/argonaut-support.lib\n";
+        print FDSCRIPT ". /etc/argonaut/argonaut-agent.conf\n";
+        print FDSCRIPT "$logonscript\n";
+        close(FDSCRIPT);
+  
+        system("/bin/sh $HOME/.argonaut/applications/$app &> $HOME/.argonaut/log/applications/$app.log"); 
+      }
+    }
+  
+    # Extract Icon from LDAP
+    my $applicationIcon = $application->get_value('gosaApplicationIcon');
+  
+    if ( $applicationIcon ) {
+      open(FDICON, "> $HOME/.kde/share/icons/$app.png") ||
+        die "$HOME/.kde/share/icons/$app.png could not be opened for writing.";
+      binmode FDICON;
+      print FDICON "$applicationIcon";
+      close(FDICON);
+    }
 
-		# clean environment
-		foreach my $app_attribute (@app_attributes) {
-			delete $ENV{$app_attribute};
-		}
-		
-	}
+    # clean environment
+    foreach my $app_attribute (@app_attributes) {
+      delete $ENV{$app_attribute};
+    }
+    
+  }
 
 }
 
@@ -655,7 +655,7 @@ foreach my $app (keys %USER_APPLICATIONS)  {
 my $menuxml = XML::LibXML->createDocument( "1.0", "UTF-8" );
 $menuxml->createInternalSubset(
         "Menu", "-//freedesktop//DTD Menu 1.0//EN",
-	                "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd" );
+                  "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd" );
 
 my $menuNode = $menuxml->createElement( 'Menu' );
 $menuxml->setDocumentElement( $menuNode );
@@ -694,7 +694,7 @@ sub create_menu
         $merger->setAttribute( 'type', 'menus' );
         $have_added_merge_menus = 1;
       }
-			
+      
       $layout->appendTextChild( 'Filename', $entry->{"__name"} . ".desktop" );
       $include->appendTextChild( 'Category', $category );
       $include->appendTextChild( 'Filename', $entry->{"__name"} . ".desktop" );

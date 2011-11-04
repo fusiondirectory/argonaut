@@ -139,7 +139,7 @@ $contents = $opt{l} ? "--getcontents" : "";
 $installer = $opt{y} ? ",main/debian-installer" : "";
 
 eval { #try
-    $ldapinfo = goto_ldap_init($ldapconf);
+    $ldapinfo = argonaut_ldap_init($ldapconf);
 };
 if($@) { #catch (just in case we want later to treat errors)
     die $@;
@@ -152,7 +152,7 @@ my $ldapuris = $ldapinfo->{URIS};
 my $handle = $ldapinfo->{HANDLE};
 
 # find mac address of the host running ldap2repository
-$mac = goto_get_mac($interface);
+$mac = argonaut_get_mac($interface);
 
 # create the outdir if it doesn't exist
 -d "$outdir" 
@@ -236,7 +236,7 @@ $outdir/mirror-update-cronjob\n";
   # Write cron script
   print CRON "#!/bin/sh\n";
 
-  my $reposerver = goto_search_repo_server($handle, $base, $mac);
+  my $reposerver = argonaut_search_repo_server($handle, $base, $mac);
   if( 0 == $reposerver->count ) {
       print( "Server object doesn't contain software repositories\n" );
       exit 0;
@@ -280,7 +280,7 @@ $outdir/mirror-update-cronjob\n";
 
       @rdns = split(',',$base);
 
-      $par_entry = goto_search_parent_repo_server( $handle, $base, "${parent_or_opts}" );
+      $par_entry = argonaut_search_parent_repo_server( $handle, $base, "${parent_or_opts}" );
       if( 0 == $par_entry ) {
         print( "Couldn't find parent repository server for '$repoline'\n" );
         next;
@@ -300,7 +300,7 @@ $outdir/mirror-update-cronjob\n";
         if ("$dist" eq "$par_dist") {
           my (@par_section_list) = split(',', $items[3]);
           foreach my $section (@par_section_list) {
-            if (goto_array_find_and_remove( \@section_list, ${section})) {
+            if (argonaut_array_find_and_remove( \@section_list, ${section})) {
               push( @outline, $section );
               last if (0 == scalar @section_list);
             }

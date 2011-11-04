@@ -41,7 +41,7 @@ my $server_ip                       =   $config->val( network => "server_ip"    
 my $file                            =   $config->val( client => "file"                ,"/tmp/argonaut");
 my $interface                       =   $config->val( client => "interface"           ,"eth0");
 
-my $myMac = Argonaut::Common::goto_get_mac($interface);
+my $myMac = Argonaut::Common::argonaut_get_mac($interface);
 
 my $client = new JSON::RPC::Client;
 $client->version('1.0');
@@ -54,17 +54,17 @@ my $callobj = {
 my $taskid = $client->call("http://".$server_ip.":".$server_port, $callobj);
 
 if($taskid) {
-	if ($taskid->is_error) {
+  if ($taskid->is_error) {
         print $myMac;
-		die "Error : ", $taskid->error_message;
-	} else {
+    die "Error : ", $taskid->error_message;
+  } else {
         open (ID, ">$file") or die "cannot write in $file";
         print ID $taskid->content->{result};
         close(ID);
-	}
+  }
 } else {
     print $myMac;
-	die "Error while trying to contact Argonaut server : ".$client->status_line;
+  die "Error while trying to contact Argonaut server : ".$client->status_line;
 }
 
 print $myMac;

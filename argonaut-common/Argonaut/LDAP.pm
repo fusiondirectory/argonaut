@@ -594,14 +594,14 @@ __END__
 
 =head1 NAME
 
-Argonaut::LDAP - Support library for goto-* scripts to access LDAP
+Argonaut::LDAP - Support library for argonaut-* scripts to access LDAP
 
 =head1 SYNOPSIS
 
   use Argonaut::Common qw(:ldap);
   use Argonaut::LDAP qw(ldap_get_object);
  
-  my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
+  my $ldapinfo = argonaut_ldap_parse_config_ex(); #ref to hash
   my ($ldapbase,$ldapuris) = ($ldapinfo->{"LDAP_BASE"}, $ldapinfo->{"LDAP_URIS"});
  
   my $ldap = Net::LDAP->new( $ldapuris, timeout => $timeout ) or die; 

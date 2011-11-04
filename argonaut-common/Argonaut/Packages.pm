@@ -23,19 +23,19 @@
 
 package Argonaut::Packages;
 
+use strict;
+use warnings;
+use 5.010;
+
 use MIME::Base64;
-use Argonaut::Common;
 use Path::Class;
 use Net::LDAP;
 use Config::IniFiles;
 use File::Path;
 use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
-
-use strict;
-use warnings;
-use 5.010;
-
 use LWP::Simple;
+
+use Argonaut::Common;
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $ldap_configfile = "/etc/ldap/ldap.conf";
@@ -54,23 +54,14 @@ sub get_repolines {
     my ($mac) = @_;
     
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-    #~ my $ldap_url               =   $config->val( ldap => "url"                     ,"localhost");
-    #~ my $ldap_port              =   $config->val( ldap => "port"                    ,"389");
-    #~ my $ldap_base              =   $config->val( ldap => "base"                    ,"");
     my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     my $ldap_password          =   $config->val( ldap => "password"                ,"");
     
-  #~ my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
-    my $ldapinfos = Argonaut::Common::goto_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+    my $ldapinfos = Argonaut::Common::argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
     my $ldap = $ldapinfos->{'HANDLE'};
     my $ldap_base = $ldapinfos->{'BASE'};
     
     my $mesg;
-    #~ if($ldap_dn ne "") {
-        #~ $mesg = $ldap->bind($ldap_dn, password => $ldap_password);
-    #~ } else {
-        #~ $mesg = $ldap->bind ;    # an anonymous bind
-    #~ }
     
     if(defined $mac) {
         $mesg = $ldap->search(
@@ -313,10 +304,6 @@ Extract templates from packages.
 =cut
 sub cleanup_and_extract {
     my ($servdir,$distribs) = @_;
-
-    #~ if (!keys(%{$distribs})) {
-        #~ say "No packages on this server";
-    #~ }
 
     while (my ($distsection,$packages) = each(%{$distribs})) {
         my $outdir = "$servdir/debconf.d/$distsection";

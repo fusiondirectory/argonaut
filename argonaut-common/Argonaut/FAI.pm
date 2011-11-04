@@ -82,7 +82,7 @@ sub prepare_filter {
 sub new {
   my $self = shift;
   my $type = ref($self) || $self;
-  my $args = &goto_options_parse;
+  my $args = &argonaut_options_parse;
 
   my $obj  = bless {}, $type;
   $obj->{ 'LDAP' } = undef;
@@ -441,7 +441,7 @@ sub fill_class_cache {
     my $norm_release = substr( $branch->dn, 0, length( $branch->dn ) - length( $base ) );
     if( length( $norm_release ) > 0 ) {
       $norm_release = substr( $norm_release, 0, length( $norm_release ) - 1 );
-      my @rdns = goto_ldap_split_dn( $norm_release );
+      my @rdns = argonaut_ldap_split_dn( $norm_release );
       $norm_release = join( ',', reverse @rdns );
       $norm_release =~ s/,ou=/\//g;
       $norm_release =~ s/\./\//g;
@@ -468,7 +468,7 @@ sub fill_class_cache {
   foreach my $entry ($mesg->entries()) {
     my $dn = substr( $entry->dn, 0, length( $entry->dn ) - length( $base ) );
     $dn = substr( $dn, 0, length( $dn ) - 1 ) if( length( $dn ) > 0 );
-    my @rdns = goto_ldap_split_dn( $dn );
+    my @rdns = argonaut_ldap_split_dn( $dn );
     my $class = $entry->get_value( 'cn' );
     my $type = substr( $rdns[ 1 ], 3 );
 
@@ -625,7 +625,7 @@ sub extend_class_cache {
 
             # Check disk
             if( $obj =~ /^FAIpartitionDisk$/i ) {
-              @rdns = goto_ldap_split_dn( $entry->dn() );
+              @rdns = argonaut_ldap_split_dn( $entry->dn() );
               shift( @rdns );
               $dn_tail = join( ',', @rdns );
               my $cn = $entry->get_value( 'cn' );
@@ -648,7 +648,7 @@ sub extend_class_cache {
 
             # Check partition
             if( $obj =~ /^FAIpartitionEntry$/i ) {
-              my @rdns = goto_ldap_split_dn( $entry->dn() );
+              my @rdns = argonaut_ldap_split_dn( $entry->dn() );
               shift @rdns;
               my $disk = shift @rdns;
               $dn_tail = join( ',', @rdns );
@@ -1116,7 +1116,7 @@ sub dump_disk_config {
             }
             elsif ($dl->get_value('FAIfsType') eq 'swap') {
               # Labels are limited to 15 chars
-              my $swaplabel = 'swap-' . goto_gen_random_str( 10 );
+              my $swaplabel = 'swap-' . argonaut_gen_random_str( 10 );
               $line = sprintf( "%-7s %-12s %-12s %-10s ; mounttype=label label='%s'\n",
                 $dl->get_value('FAIpartitionType'),
                 $dl->get_value('FAImountPoint'),
@@ -1240,7 +1240,7 @@ sub write_fai_file {
   else {
     chmod( oct($mode), ${filename} )
       if( defined $mode && ($mode =~ /^0*[0-7]{1,4}$/) );
-    goto_file_chown( ${filename}, $owner )
+    argonaut_file_chown( ${filename}, $owner )
       if( defined $owner && ($owner ne '') );
   }
 }

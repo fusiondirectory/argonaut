@@ -89,7 +89,7 @@ print( 'Current user(s) with GUI: '
 
 
 # Read FusionDirectory tag filter and ldap params from config
-my $ldapinfo = goto_ldap_parse_config_ex(); #ref to hash
+my $ldapinfo = argonaut_ldap_parse_config_ex(); #ref to hash
 my ($base,$ldapuris,$tag_filter) = ($ldapinfo->{"LDAP_BASE"}, 
                                     $ldapinfo->{"LDAP_URIS"}, 
                                     $ldapinfo->{"UNIT_TAG_FILTER"});
