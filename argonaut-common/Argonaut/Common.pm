@@ -1,7 +1,12 @@
+#######################################################################
+#
+# Argonaut::Common package -- Argonaut basic functions.
+#
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (C) 2011 FusionDirectory project
 #
 # Author: Matthias S. Benkmann
+#         Come Bernigaud
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +21,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
+#######################################################################
 
 package Argonaut::Common;
 
@@ -221,7 +227,7 @@ sub goto_ldap_parse_config_ex
 
   my $ldap_info = '/etc/ldap/ldap-shell.conf';
   if ( -r '/etc/ldap/ldap-offline.conf' ) {
-  	$ldap_info = '/etc/ldap/ldap-offline.conf';
+    $ldap_info = '/etc/ldap/ldap-offline.conf';
   }
 
   if (!open( LDAPINFO, "<${ldap_info}" ))
@@ -378,19 +384,19 @@ sub goto_search_repo_server {
 #
 sub goto_file_write {
 
-	my @opts = @_;
-	my $len = scalar @_;
-	($len < 2) && return;
+  my @opts = @_;
+  my $len = scalar @_;
+  ($len < 2) && return;
 
-	my $filename = shift;
-	my $data = shift;
+  my $filename = shift;
+  my $data = shift;
 
-	open (SCRIPT,">${filename}") || warn "Can't create ${filename}. $!\n";
-	print SCRIPT $data;
-	close(SCRIPT);
+  open (SCRIPT,">${filename}") || warn "Can't create ${filename}. $!\n";
+  print SCRIPT $data;
+  close(SCRIPT);
 
   ($opts[2] ne "") && chmod oct($opts[2]),${filename};
-	($opts[3] ne "") && goto_file_chown(${filename}, $opts[3]);
+  ($opts[3] ne "") && goto_file_chown(${filename}, $opts[3]);
 }
 
 #------------------------------------------------------------------------------

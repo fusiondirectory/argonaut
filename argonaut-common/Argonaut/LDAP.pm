@@ -1,4 +1,8 @@
 #!/usr/bin/perl -l -s
+#######################################################################
+#
+# Argonaut:LDAP - Support library for argonaut-* scripts to access LDAP
+#
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (C) 2011 FusionDirectory project
 #
@@ -16,19 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-# Documentation available via
-
-
-# perldoc Argonaut::LDAP
-
-
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# If you change anything that affects the API, don't forget to update
-# the pod at the end of this file!
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+#######################################################################
 
 package Argonaut::LDAP;
 use strict;

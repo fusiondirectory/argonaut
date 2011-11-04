@@ -1,3 +1,7 @@
+#######################################################################
+# 
+# Argonaut::FAI packages - functions to get info for install from ldap
+#
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (C) 2011 FusionDirectory project
 #
@@ -15,6 +19,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#######################################################################
 
 package Argonaut::FAI;
 

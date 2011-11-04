@@ -1,6 +1,6 @@
-#*********************************************************************
+#######################################################################
 #
-# Argonaut::Utils package -- Log parsing aid.
+# Argonaut::Utils package -- Calculate the progress bar.
 #
 # Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
 # Copyright (C) 2011 FusionDirectory project
@@ -18,7 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
-#*********************************************************************
+#######################################################################
+
 package Argonaut::Utils;
 
 use Exporter;
@@ -198,13 +199,13 @@ sub process_input($)
       %result = ( 'status' => 0, 'task' => "goto-hardware-detection-start", 'action' => gettext("Detecting hardware"));
   } elsif ( $line =~ /goto-hardware-detection-stop/ ) {
       if ($task == TG_WAITACTIVE){
-      	%result = ( 'status' => 0, 'task' => "goto-activation-start", 'action' => gettext("Waiting for the system to be activated"));
+        %result = ( 'status' => 0, 'task' => "goto-activation-start", 'action' => gettext("Waiting for the system to be activated"));
       } else {
         %result = ( 'status' => 0, 'task' => "goto-hardware-detection-stop", 'action' => gettext("Inventarizing hardware information"));
       }
   } elsif ( $line =~ m/goto-activation-start/ ) {
       if ($task != TG_HWDETECT){
-      	%result = ( 'status' => 0, 'task' => "goto-activation-start", 'action' => gettext("Waiting for the system to be activated"));
+        %result = ( 'status' => 0, 'task' => "goto-activation-start", 'action' => gettext("Waiting for the system to be activated"));
       }
       $task= TG_WAITACTIVE;
   } elsif ( $line =~ m/goto-activation-stop/ ) {
@@ -217,9 +218,6 @@ sub process_input($)
 1;
 
 __END__
-
-
-=pod
 
 =head1 NAME
 

@@ -1,3 +1,26 @@
+#######################################################################
+#
+# Argonaut::Packages package -- get and parse Debian Packages.
+#
+# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (C) 2011 FusionDirectory project
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+
 package Argonaut::Packages;
 
 use MIME::Base64;
@@ -37,7 +60,7 @@ sub get_repolines {
     my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     my $ldap_password          =   $config->val( ldap => "password"                ,"");
     
-	#~ my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
+  #~ my $ldap = Net::LDAP->new( $ldap_url , port => $ldap_port ) or die "Error while connecting to LDAP : $@";
     my $ldapinfos = Argonaut::Common::goto_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
     my $ldap = $ldapinfos->{'HANDLE'};
     my $ldap_base = $ldapinfos->{'BASE'};
@@ -315,7 +338,7 @@ sub cleanup_and_extract {
         }
     }
 
-	return;
+  return;
 }
 
 1;
