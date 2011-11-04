@@ -15,7 +15,7 @@ The method "process_entries_now" allows you to launch a bunch of scheduled entri
 
 =Action method=
 Action method takes 3 parameters :
-   - The action to be launch on the client
+   - The action to be launched on the client
    - The list of concerned mac addresses
    - A hash containing:
         timestamp -> the date and time we want the action to be launched, unix timestamp utc format. (epoch)
@@ -64,7 +64,7 @@ Warning : If the timestamp is X*Y units in the past, the action will be launched
             ],
     "id":1
 }
--> will call action "foo_bar" on client "00:11:22:33:44:55" immediatly
+-> will call action "foo_bar" on client "00:11:22:33:44:55" immediately
 
 {
     "method": "action",
