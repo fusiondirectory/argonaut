@@ -1,6 +1,0 @@
-#!/bin/sh
-if [ -d "$FAI" ]; then
-	ldap2fai -v -d $FAI $(ifconfig | grep "eth0" | awk '{ print $5; }')
-else
-	echo "No \$FAI found - aborted"
-fi
