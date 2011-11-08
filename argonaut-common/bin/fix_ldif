@@ -1,35 +1,64 @@
 #!/usr/bin/perl -w
+
+#######################################################################
+#
+# fix_ldif -- 
+#
+# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (C) 2011 FusionDirectory project
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
 use strict;
+
+use 5.008;
+
 use MIME::Base64;
 
 my $buffer= "";
 
 while (<STDIN>) {
-	chomp;
-	if ($_ =~ /^[a-zA-Z0-9]/) {
+  chomp;
+  if ($_ =~ /^[a-zA-Z0-9]/) {
 
-		if ($buffer) {
-			if ($buffer =~ /^dn::/){
-				$buffer =~ /^([^:]+):: (.*)$/;
-				$buffer= "$1: ".decode_base64($2);
-			}
-			print $buffer."\n";
-		}
-		$buffer= $_;
-		next;
-	}
+    if ($buffer) {
+      if ($buffer =~ /^dn::/){
+        $buffer =~ /^([^:]+):: (.*)$/;
+        $buffer= "$1: ".decode_base64($2);
+      }
+      print $buffer."\n";
+    }
+    $buffer= $_;
+    next;
+  }
 
-	if ($_ =~ /^ (.*)$/) {
-		$buffer.= $1;
-		next;
-	}
+  if ($_ =~ /^ (.*)$/) {
+    $buffer.= $1;
+    next;
+  }
 }
 
 if ($buffer) {
-	if ($buffer =~ /^dn::/){
-		$buffer =~ /^([^:]+):: (.*)$/;
-		$buffer= "$1: ".decode_base64($2);
-	}
-	print $buffer."\n";
+  if ($buffer =~ /^dn::/){
+    $buffer =~ /^([^:]+):: (.*)$/;
+    $buffer= "$1: ".decode_base64($2);
+  }
+  print $buffer."\n";
 }
 
+__END__
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

@@ -1,85 +1,35 @@
 #!/usr/bin/perl -w
 
-#************************************************************************************
+#######################################################################
 #
-# argonaut-fuse -- fuse-supplicant which allows one to create pxelinux configurations
-#                  for different types of clients using external modules.
+# argonaut-fuse -- fuse-supplicant which allows one to create pxelinux 
+#                  configurations for different types of clients using
+#                  external modules.
 #
-# (c) 2010 by Jan Wenzel <wenzel@gonicus.de>
+# Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
+# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (c) 2008,2009, 2010 by Jan Wenzel <wenzel@gonicus.de>
+# Copyright (C) 2011 FusionDirectory project <contact@fusiondirectory.org>
 #
-# Based on ctftpd
-# (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
-# (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
-# (c) 2008,2009 by Jan Wenzel <wenzel@gonicus.de>
-# (C) 2011 The FusionDirectory Project <contact@fusiondirectory.org>
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
 #
-#************************************************************************************
-
-=head1 NAME
-
-argonaut-fuse - FUSE/TFTP supplicant targeted to work with LDAP entries written by FusionDirectory
-
-=head1 SYNOPSIS
-
-argonaut-fuse [-hnfsv] [-d <show>] [-c config] 
-
-=head1 DESCRIPTION
-
-B<argonaut-fuse> is a modular fuse-tftp-supplicant written in perl which allows one to create pxelinux configurations for different types of clients using external modules.
-There is already written modules for FAI (Fully automated install).
-
-=over 10
-
-=item B<-c> <cfg>  argonaut-fuse config file (default: /etc/argonaut-fuse/argonaut-fuse.conf)
-
-=item B<-d> <dump> dump argonaut-fuse config to stdout ( 1 = current, 2 = default )
-
-=item B<-h>        display this help and exit
-
-=item B<-n>        dry-run
-
-=item B<-v>        be verbose (multiple to increase verbosity)
-
-=item B<-f>        go to foreground (don't fork)
-
-=item B<-s>        log to stdout
-
-=back
-
-=head1 BUGS
-
-Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
-
-=head1 LICENCE AND COPYRIGHT
-
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
-
-This code was Based on ctftpd
-
-=over 5
-
-=item Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
-
-=item Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
-
-=item Copyright (c) 2008,2009 by Jan Wenzel <wenzel@gonicus.de>
-
-=item Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>
-
-=item Copyright (C) 2011 FusionDirectory project
-
-=back
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-=cut
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
 
 use strict;
 use warnings;
+
+use 5.008;
 
 # Check for Net::LDAP module
 my $ldap_available;
@@ -93,9 +43,6 @@ BEGIN {
   }
 }
 END {}
-
-my $modules_path= "/usr/lib/argonaut/modules";
-use lib "/usr/lib/argonaut/modules";
 
 use POSIX;
 use FindBin;
@@ -116,6 +63,8 @@ use Storable qw(freeze thaw);
 use Time::HiRes qw(gettimeofday usleep);
 
 use constant USEC => 1000000;
+
+use lib "/usr/lib/argonaut/modules";
 
 our $ldap_base;
 our $usec = USEC;
@@ -145,6 +94,9 @@ GetOptions( 'v|verbose+' => \$verbose,
             'f|foreground' => \$foreground,
             'n|dry-run' => \$dry_run )
   or usage( '', 1 );
+
+#where to look for modules files
+my $modules_path= "/usr/lib/argonaut/modules";
 
 # Predefined variables for config
 my ( $pidfile, $logfile, $loglevel );
@@ -792,5 +744,69 @@ EOF
 1;
 
 __END__
+
+
+=head1 NAME
+
+argonaut-fuse - FUSE/TFTP supplicant targeted to work with LDAP entries written by FusionDirectory
+
+=head1 SYNOPSIS
+
+argonaut-fuse [-hnfsv] [-d <show>] [-c config] 
+
+=head1 DESCRIPTION
+
+B<argonaut-fuse> is a modular fuse-tftp-supplicant written in perl which allows one to create pxelinux configurations for different types of clients using external modules.
+There is already written modules for FAI (Fully automated install).
+
+=over 10
+
+=item B<-c> <cfg>  argonaut-fuse config file (default: /etc/argonaut-fuse/argonaut-fuse.conf)
+
+=item B<-d> <dump> dump argonaut-fuse config to stdout ( 1 = current, 2 = default )
+
+=item B<-h>        display this help and exit
+
+=item B<-n>        dry-run
+
+=item B<-v>        be verbose (multiple to increase verbosity)
+
+=item B<-f>        go to foreground (don't fork)
+
+=item B<-s>        log to stdout
+
+=back
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+This code was Based on ctftpd
+
+=over 5
+
+=item Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
+
+=item Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+
+=item Copyright (c) 2008,2009 by Jan Wenzel <wenzel@gonicus.de>
+
+=item Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
 
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

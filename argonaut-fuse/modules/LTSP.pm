@@ -1,30 +1,56 @@
-package LTSP;
+#######################################################################
+#
+# Argonaut::Fuse::LTSP
+#
+# Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
+# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (c) 2008,2009, 2010 by Jan Wenzel <wenzel@gonicus.de>
+# Copyright (C) 2011 FusionDirectory project <contact@fusiondirectory.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
 
-use Exporter;
-@ISA = ("Exporter");
+package LTSP;
 
 use strict;
 use warnings;
+
+use 5.008;
 
 use Switch;
 use Socket;
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 
+use Exporter;
+@ISA = ("Exporter");
+
 sub get_module_info {
-	return "Linux Terminal Server Project";
+  return "Linux Terminal Server Project";
 };
 
 my $admin;
 my $password;
 my $server;
 my $cfg_defaults = {
-	# 'dflt_init' => [ my	$dflt_init, 'install' ], # 'install', 'fallback';;
-	'server' => [ \$server, 'localhost' ],
+  # 'dflt_init' => [ my $dflt_init, 'install' ], # 'install', 'fallback';;
+  'server' => [ \$server, 'localhost' ],
 };
 
 sub get_config_sections {
-	return $cfg_defaults;
+  return $cfg_defaults;
 }
 
 # Check if this module should handle this client
@@ -41,26 +67,26 @@ sub has_pxe_config {
         $mac = substr( $mac, -1*(5*3+2) );
 
         # Prepare the ldap handle
-	reconnect:
-	return undef if( ! &main::prepare_ldap_handle_retry
-		( 5 * $main::usec, -1, 0.5 * $main::usec, 1.2 ) );
+  reconnect:
+  return undef if( ! &main::prepare_ldap_handle_retry
+    ( 5 * $main::usec, -1, 0.5 * $main::usec, 1.2 ) );
 
 
-	# Search for the host to examine the FAI state
-	my $mesg = $main::ldap_handle->search(
-		base => "$main::ldap_base",
-		filter => "(&(macAddress=$mac)(objectClass=gotoTerminal))",
-		attrs => [ 'gotoTerminalPath', 'gotoBootKernel',
-		'gotoKernelParameters', 'gotoLdapServer', 'cn' ] );
+  # Search for the host to examine the FAI state
+  my $mesg = $main::ldap_handle->search(
+    base => "$main::ldap_base",
+    filter => "(&(macAddress=$mac)(objectClass=gotoTerminal))",
+    attrs => [ 'gotoTerminalPath', 'gotoBootKernel',
+    'gotoKernelParameters', 'gotoLdapServer', 'cn' ] );
 
 
-	if( 0 != $mesg->code ) {
-		goto reconnect if( 81 == $mesg->code );
-		&main::daemon_log( sprintf( "$mac - LDAP MAC lookup error(%i): %s\n",
-				$mesg->code, $mesg->error ) );
+  if( 0 != $mesg->code ) {
+    goto reconnect if( 81 == $mesg->code );
+    &main::daemon_log( sprintf( "$mac - LDAP MAC lookup error(%i): %s\n",
+        $mesg->code, $mesg->error ) );
 
-		return undef;
-	}
+    return undef;
+  }
 
         if($mesg->count() == 1) {
                 &main::daemon_log("Found LTSP configuration for client with MAC ${mac}\n");
@@ -76,7 +102,7 @@ sub has_pxe_config {
 # Do everything that is needed, i.e. write the pxelinux.cfg file
 sub get_pxe_config {
         my ($filename) = shift || return undef;
-	my $cmdline;
+  my $cmdline;
         my $result = undef;
 
         # Extract MAC from PXE filename
@@ -112,20 +138,20 @@ reconnect:
                 $hostname = $entry->get_value( 'cn' );
         } elsif ($mesg->count() == 0) {
                 &main::daemon_log("No LTSP configuration for client with MAC ${mac}\n");
-		return undef;
-	} else {
+    return undef;
+  } else {
                 &main::daemon_log( "$filename - MAC lookup error: too many LDAP results ("
                         . $mesg->count() . ")\n" );
                 return undef;
         }
 
 
-	my $kernel= $entry->get_value( 'gotoBootKernel' );
-	my $nfsroot = $entry->get_value( 'gotoTerminalPath' );
-	$cmdline= $entry->get_value( 'gotoKernelparameters' );
-	my $ldap_srv= $entry->get_value( 'gotoLDAPServer' );
+  my $kernel= $entry->get_value( 'gotoBootKernel' );
+  my $nfsroot = $entry->get_value( 'gotoTerminalPath' );
+  $cmdline= $entry->get_value( 'gotoKernelparameters' );
+  my $ldap_srv= $entry->get_value( 'gotoLDAPServer' );
 
-	# Check group
+  # Check group
         my $host_dn = $entry->dn;
 
         # If any of these values isn't provided by the client check group membership
@@ -197,48 +223,48 @@ reconnect:
                 }
         }
 
-	# Compile initrd name
-	my $initrd= $kernel;
-	$initrd =~ s/^[^-]+-//;
-	$initrd = "initrd.img-$initrd";
+  # Compile initrd name
+  my $initrd= $kernel;
+  $initrd =~ s/^[^-]+-//;
+  $initrd = "initrd.img-$initrd";
 
-	# Set NFSROOT
-	if (not defined $nfsroot) {
-		$nfsroot= "";
-	} else {
-		# Transform to IP if possible
-		my $server= $nfsroot;
-		my $path= $nfsroot;
-		$server =~ s/:.*$//;
-		$path =~ s/^[^:]+://;
-		if ($server !~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ ){
-			$server = inet_ntoa(inet_aton($server));
-		}
+  # Set NFSROOT
+  if (not defined $nfsroot) {
+    $nfsroot= "";
+  } else {
+    # Transform to IP if possible
+    my $server= $nfsroot;
+    my $path= $nfsroot;
+    $server =~ s/:.*$//;
+    $path =~ s/^[^:]+://;
+    if ($server !~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ ){
+      $server = inet_ntoa(inet_aton($server));
+    }
 
-		$nfsroot= "nfsroot=$server:$path";
-	}
+    $nfsroot= "nfsroot=$server:$path";
+  }
 
-	# Set kernel parameters
-	if (not defined $cmdline) {
-		$cmdline= "";
-	}
+  # Set kernel parameters
+  if (not defined $cmdline) {
+    $cmdline= "";
+  }
 
-	# Assign commandline
-	$cmdline = "ro initrd=$initrd ip=dhcp boot=nfs root=/dev/nfs $nfsroot $cmdline";
+  # Assign commandline
+  $cmdline = "ro initrd=$initrd ip=dhcp boot=nfs root=/dev/nfs $nfsroot $cmdline";
 
 &main::daemon_log( "DEBUG: Kernel ($kernel) $cmdline\n" );
 
-	&main::daemon_log( "$filename - PXE status: boot\n" );
-	my $code = &main::write_pxe_config_file( undef, $filename, "kernel $kernel", $cmdline );
-	if ( $code == 0) {
-		return time;
-	} 
-	if ( $code == -1) {
-		&main::daemon_log( "$filename - unknown error\n" );
-	}
+  &main::daemon_log( "$filename - PXE status: boot\n" );
+  my $code = &main::write_pxe_config_file( undef, $filename, "kernel $kernel", $cmdline );
+  if ( $code == 0) {
+    return time;
+  } 
+  if ( $code == -1) {
+    &main::daemon_log( "$filename - unknown error\n" );
+  }
 
-	# Return our result
-	return $result;
+  # Return our result
+  return $result;
 }
 
 1;

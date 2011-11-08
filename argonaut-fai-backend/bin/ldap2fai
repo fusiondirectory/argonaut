@@ -1,4 +1,8 @@
 #!/usr/bin/perl -w
+
+#######################################################################
+#
+# ldap2fai
 #
 # Copyright (c) 2008 Landeshauptstadt München 
 # Copyright (c) 2008-2010 GONICUS GmbH  <gosa-devel@oss.gonicus.de>
@@ -21,82 +25,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
-
-
-=head1 NAME
-
-ldap2fai - read FAI config from LDAP and create config space.
-
-=head1 SYNOPSIS
-
-ldap2fai [-hnvW] [-c config] [-D bind_dn ] [-w bind password] [-d dump_dir] [-H hostname] <MAC>
-
-=head1 OPTIONS
-
-=over 14
-
-=item B<-h>
-    print out this help message
-
-=item B<-v>
-    be verbose (multiple v's will increase verbosity) 
-
-=item B<-n>
-    dry run (includes verbose)
-
-=item B<-c>
-    LDAP config file (default: /etc/ldap/ldap.conf)
-
-=item B<-d>
-    output dir (default: /var/lib/fai/config)
-
-=item B<-D>
-    bind dn
-
-=item B<-W>
-    prompt for password
-    
-=item B<-w>
-    read password from command line
-    
-=item B<-H>
-    check hostname
-
-=back
-
-=head1 DESCRIPTION
-
-ldap2fai is a script to create read the fai config from LDAP and create fai config space.
-
-=head1 BUGS 
-
-Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
-
-=head1 LICENCE AND COPYRIGHT
-
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
-
-=over 3
-
-=item Copyright (c) 2008 Landeshauptstadt München
-
-=item Copyright (c) 2008-2010 GONICUS GmbH
-
-=item Copyright (C) 2011 FusionDirectory project
-        
-=back
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-=cut
-
+#######################################################################
 
 use strict;
 use warnings;
+
+use 5.008;
 
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
@@ -574,5 +508,7 @@ sub generate_kernel_packagelist {
     chmod 0700, "${dump_dir}/scripts/LAST/99-install-kernel";
   }
 }
+
+__END__
 
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

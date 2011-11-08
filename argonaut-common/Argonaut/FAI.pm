@@ -26,6 +26,8 @@ package Argonaut::FAI;
 use strict;
 use warnings;
 
+use 5.008;
+
 use Data::Dumper;
 use Net::LDAP;
 use File::Path;
@@ -37,7 +39,7 @@ BEGIN
 {
   use Exporter ();
   use vars qw(%EXPORT_TAGS @ISA $VERSION);
-  $VERSION = '2008-04-08_01';
+  $VERSION = '2011-04-11';
   @ISA = qw(Exporter);
 
   %EXPORT_TAGS = (

@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Argonaut::Utils package -- Calculate the progress bar.
+# Argonaut::Utils package -- Calculate the progress bar for fai install.
 #
 # Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
 # Copyright (C) 2011 FusionDirectory project
@@ -22,15 +22,19 @@
 
 package Argonaut::Utils;
 
-use Exporter;
-@ISA = qw(Exporter);
-@EXPORT = qw(process_input);
-
 use strict;
 use warnings;
+
+use 5.008;
+
 use POSIX;
 use Locale::gettext;
 use MIME::Base64;
+
+use Exporter;
+
+@ISA = qw(Exporter);
+@EXPORT = qw(process_input);
 
 BEGIN {}
 

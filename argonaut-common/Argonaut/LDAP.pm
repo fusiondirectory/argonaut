@@ -1,4 +1,5 @@
 #!/usr/bin/perl -l -s
+
 #######################################################################
 #
 # Argonaut:LDAP - Support library for argonaut-* scripts to access LDAP
@@ -23,8 +24,11 @@
 #######################################################################
 
 package Argonaut::LDAP;
+
 use strict;
 use warnings;
+
+use 5.008;
 
 use Carp;
 
@@ -33,7 +37,6 @@ use Net::LDAP::Util qw(escape_filter_value ldap_explode_dn);
 use MIME::Base64;
 
 our (@ISA, @EXPORT, @EXPORT_OK);
-
 
 require Exporter; @ISA=('Exporter');
 

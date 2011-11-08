@@ -1,15 +1,41 @@
-package OPSI;
+#######################################################################
+#
+# Argonaut::Fuse::OPSI
+#
+# Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
+# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (c) 2008,2009, 2010 by Jan Wenzel <wenzel@gonicus.de>
+# Copyright (C) 2011 FusionDirectory project <contact@fusiondirectory.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
 
-use Exporter;
-@ISA = ("Exporter");
+package OPSI;
 
 use strict;
 use warnings;
+
+use 5.008;
 
 use Switch;
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 use JSON::RPC::Client;
+
+use Exporter;
+@ISA = ("Exporter");
 
 sub get_module_info {
   return "Automatic Windows Installation";
@@ -22,7 +48,7 @@ my $lang;
 my $sclient="";
 
 my $cfg_defaults = {
-  # 'dflt_init' => [ my	$dflt_init, 'install' ], # 'install', 'fallback';;
+  # 'dflt_init' => [ my $dflt_init, 'install' ], # 'install', 'fallback';;
   'admin'  => [ \$admin,  'admin' ],
   'password'  => [ \$password,  '' ],
   'server' => [ \$server, 'localhost' ],
@@ -179,5 +205,7 @@ return $result;
 }
 
 1;
+
+__END__
 
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

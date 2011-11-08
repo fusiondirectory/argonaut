@@ -1,4 +1,8 @@
 #!/usr/bin/perl -l -s
+#######################################################################
+#
+# Argonaut - ldap_get_object - Calculate the progress bar.
+#
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (C) 2011 FusionDirectory project
 #
@@ -16,13 +20,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#######################################################################
 
 use strict;
 use warnings;
 
+use 5.008;
+
 use lib ("/usr/lib/argonaut");
 use Net::LDAP;
 use Net::LDAP::Util qw(escape_filter_value ldap_explode_dn);
+
 use Argonaut::LDAP qw(ldap_get_object printEntry printAttribute);
 use Argonaut::Common qw(:ldap);
 
@@ -248,4 +256,6 @@ sub error
   exit 1
 }
 
+__END__
 
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

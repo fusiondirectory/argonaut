@@ -1,20 +1,42 @@
 #!/bin/sh
 
+#######################################################################
+#
+# argonaut-fai-backend
+#
+# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (C) 2011 FusionDirectory project
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
 msg() {
-	echo "nfsroot-hooks/fusiondirectory: $1"
+  echo "nfsroot-hooks/fusiondirectory: $1"
 }
 
 # Make sysconfig a real directory
 if [ ! -d "${NFSROOT}"/etc/sysconfig ]; then
-	msg "creating sysconfig directory"
-	mkdir -p "${NFSROOT}"/etc/sysconfig
+  msg "creating sysconfig directory"
+  mkdir -p "${NFSROOT}"/etc/sysconfig
 fi
 
 # Copy some templates
 for file in /etc/initramfs-tools/initramfs.conf /etc/initramfs-tools/update-initramfs.conf /etc/usplash.conf; do
-	name=${file##*/}
-	msg "copying $name"
-	[ -f "/etc/fai/nfsroot-templates/$name" ] && cp /etc/fai/nfsroot-templates/$name "${NFSROOT}"$file
+  name=${file##*/}
+  msg "copying $name"
+  [ -f "/etc/fai/nfsroot-templates/$name" ] && cp /etc/fai/nfsroot-templates/$name "${NFSROOT}"$file
 done
 
 # Copy make-fai-nfsroot.conf to allow debootstrapping later on
@@ -43,7 +65,7 @@ version=$(echo $NFSROOT/boot/vmlinuz-* | sort -n | head -n1 | cut -d- -f2-)
 
 # Copy as default kernel
 if [ -f "$NFSROOT/boot/vmlinuz-$version" ]; then
-	msg "installing vmlinuz-install"
+  msg "installing vmlinuz-install"
         ln -s "$NFSROOT/boot/vmlinuz-$version" "$TFTPROOT/vmlinuz-install"
 else
         msg "ERROR: cannot find kernel to use as vmlinuz-install!!!"
@@ -51,7 +73,7 @@ fi
 
 # Copy initrd if present
 if [ -f "$NFSROOT/boot/initrd.img-$version" ]; then
-	msg "installing initrd.img-install"
-	ln -s "$NFSROOT/boot/initrd.img-$version" "$TFTPROOT/initrd.img-install"
+  msg "installing initrd.img-install"
+  ln -s "$NFSROOT/boot/initrd.img-$version" "$TFTPROOT/initrd.img-install"
 fi
 

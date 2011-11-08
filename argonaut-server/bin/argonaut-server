@@ -1,25 +1,34 @@
 #!/usr/bin/perl
-##########################################################################
-#  This code is part of FusionDirectory (http://www.fusiondirectory.org/)
-#  Copyright (C) 2011  FusionDirectory
+
+#######################################################################
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2 of the License, or
-#  (at your option) any later version.
+# argonaut-server -- Json-rpc server for deployment
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+# Copyright (C) 2011 FusionDirectory project
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
-############################################################################
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+#######################################################################
 #  The wakeonlan part is taken from FusionInventory
 #  Copyright (C) 2011  FusionInventory
-#############################################################################
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
 
 use POE qw(Component::Schedule Component::Server::JSONRPC::Http);
 use DateTime;
@@ -30,15 +39,10 @@ use JSON::RPC::Client;
 use JSON;
 use Config::IniFiles;
 use File::Path;
-
-use Argonaut::Common;
-use Argonaut::Packages;
-
 use Log::Handler;
 
-use strict;
-use warnings;
-use 5.010;
+use Argonaut::Common qw(:ldap);
+use Argonaut::Packages qw(get_packages_info, store_packages_file);
 
 use constant ETH_P_ALL => 0x0003;
 use constant PF_PACKET => 17;
@@ -47,8 +51,7 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($port,$ldap_dn,$ldap_password,$ldap_configfile,$client_port,$delete_finished_tasks,$interface,$packages_files,$logdir);
-my $iptool = "/sbin/ifconfig";
+my ($ldap_configfile,$ldap_dn,$ldap_password,$server_port,$client_port,$iptool,$delete_finished_tasks,$interface,$packages_files,$logdir);
 my $configfile = "/etc/argonaut/argonaut.conf";
 
 readConfig();
@@ -71,20 +74,22 @@ No parameters needed
 sub readConfig {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    $port                   =   $config->val( network => "server_port"          ,8080);
-
-    $ldap_dn                =   $config->val( ldap => "dn"                      ,undef);
-    $ldap_password          =   $config->val( ldap => "password"                ,undef);
-    $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-
+    $server_port            =   $config->val( network => "server_port"          ,8080);
     $client_port            =   $config->val( network => "client_port"          ,8081);
+    $iptool                 =   $config->val( network => "iptool"               ,"/sbin/ifconfig");
+    $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+    $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+    $ldap_password          =   $config->val( ldap => "password"                ,"");
+
+
     
     $delete_finished_tasks  =   $config->val( server => "delete_finished_tasks" ,1);
     $interface              =   $config->val( server => "interface"             ,"eth0");
+
+# seems not to be used anywhere    
+#    $packages_files         =   $config->val( server => "packages"              ,"/usr/src/packages/Packages");
     
-    $packages_files         =   $config->val( server => "packages"              ,"/usr/src/packages/Packages");
-    
-    $logdir                 =   $config->val( log => "dir"                      ,"/var/log/argonaut/");
+    $logdir                 =   $config->val( log => "logdir"                      ,"/var/log/argonaut/");
 }
 
 =item createLogDir
@@ -98,7 +103,7 @@ sub createLogDir {
 Connect to ldap and return handle.
 =cut
 sub bind_ldap {
-    my $ldapinfos = Argonaut::Common::argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
     return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 }
 
@@ -178,7 +183,7 @@ sub flag {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "macAddress=$target"
-                        #~ ,attrs => [ 'ipHostNumber' ]
+                        # ,attrs => [ 'ipHostNumber' ]
             );
 
   $mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
@@ -194,16 +199,16 @@ sub flag {
     
   $mesg = $ldap->modify(
             $dn,
-                        replace => {
-                            "FAIstate" => $fai_state
-                        }
+            replace => {
+              "FAIstate" => $fai_state
+              }
             );
 
   $mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
 
   $mesg = $ldap->unbind;   # take down session
     
-    return $ip;
+  return $ip;
 }
 
 =pod
@@ -649,7 +654,7 @@ POE::Session->create(
             $log->info("get_packages($release,".join(',',@{$attrs}).",".join(',',@{$filters}).",$from,$to)");
             
             eval {
-                my $distributions = Argonaut::Packages::get_packages_info(undef,$release,$attrs,$filters,$from,$to);
+                my $distributions = get_packages_info(undef,$release,$attrs,$filters,$from,$to);
                 $kernel->post( $jsonrpc => 'result' => $id, $distributions);
             };
             if($@) {
@@ -659,7 +664,7 @@ POE::Session->create(
         },
         packages_crawler => sub {
             $log->info("Getting Packages files from repositories");
-            my $errors = Argonaut::Packages::store_packages_file();
+            my $errors = store_packages_file();
             if(@{$errors} > 0) {
                 $log->notice("Errors while getting Packages files : ".join(',',@{$errors}));
             }
@@ -726,3 +731,7 @@ POE::Session->create(
 POE::Kernel->run();
 
 exit 0;
+
+__END__
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

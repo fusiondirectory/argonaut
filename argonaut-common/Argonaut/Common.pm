@@ -7,6 +7,7 @@
 #
 # Author: Matthias S. Benkmann
 #         Come Bernigaud
+#         Benoit Mortier
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,6 +27,10 @@
 package Argonaut::Common;
 
 use strict;
+use warnings;
+
+use 5.008;
+
 use Net::LDAP;
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
@@ -36,7 +41,7 @@ BEGIN
 {
   use Exporter ();
   use vars qw(%EXPORT_TAGS @ISA $VERSION);
-  $VERSION = '20080116';
+  $VERSION = '2011-04-11';
   @ISA = qw(Exporter);
 
   %EXPORT_TAGS = (

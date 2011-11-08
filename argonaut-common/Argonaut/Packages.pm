@@ -2,7 +2,6 @@
 #
 # Argonaut::Packages package -- get and parse Debian Packages.
 #
-# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
 # Copyright (C) 2011 FusionDirectory project
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,12 +19,12 @@
 #
 #######################################################################
 
-
 package Argonaut::Packages;
 
 use strict;
 use warnings;
-use 5.010;
+
+use 5.008;
 
 use MIME::Base64;
 use Path::Class;
@@ -37,13 +36,17 @@ use LWP::Simple;
 
 use Argonaut::Common;
 
+require Exporter;
+
+@ISA = qw(Exporter);
+@EXPORT_OK = qw(get_repolines, get_packages_info, store_packages_file, cleanup_and_extract);
+
 my $configfile = "/etc/argonaut/argonaut.conf";
-my $ldap_configfile = "/etc/ldap/ldap.conf";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-my $arch =   $config->val( repository => "arch"                ,"i386");
-my $packages_folder =   $config->val( repository => "packages_folder"                ,"/tmp/Packages");
+my $arch            =   $config->val( repository => "arch"                ,"i386");
+my $packages_folder =   $config->val( repository => "packages_folder"     ,"/var/cache/argonaut/packages");
 
 =pod
 =item get_repolines
@@ -54,10 +57,11 @@ sub get_repolines {
     my ($mac) = @_;
     
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+    my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
     my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     my $ldap_password          =   $config->val( ldap => "password"                ,"");
     
-    my $ldapinfos = Argonaut::Common::argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
     my $ldap = $ldapinfos->{'HANDLE'};
     my $ldap_base = $ldapinfos->{'BASE'};
     
@@ -112,7 +116,7 @@ sub get_packages_info {
 
     my $package_indice = 0;
     my $distributions = {};
-    my $deb_filepath = "/tmp/argonaut-packages-tmp";
+    my $deb_filepath = "/var/cache/argonaut/tmp/argonaut-packages-tmp";
     mkpath($deb_filepath);
     foreach my $repo (@repos) {
         my $repoline = $repo->get_value('FAIrepository');
@@ -329,3 +333,7 @@ sub cleanup_and_extract {
 }
 
 1;
+
+__END__
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

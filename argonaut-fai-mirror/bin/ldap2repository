@@ -1,88 +1,32 @@
 #!/usr/bin/perl
-#*********************************************************************
+
+#######################################################################
 #
-# (c) 2005,2006 Jan-Marek Glogowski <glogow@fbihome.de>
-# (c) 2007,2009 The GOsa project <gosa-devel@oss.gonicus.de>
-# (c) 2011 The FusionDirectory Project <contact@fusiondirectory.org>
-#*********************************************************************
-
-=head1 NAME
-
-ldap2repository - creating debian repositories cronjob for the Argonaut deployment system.
-
-=head1 SYNOPSIS
-
-ldap2repository [-hvnpejsglz] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
-
-=head1 DESCRIPTION
-
-ldap2repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
-
-=over 14
-
-=item B<-c>        LDAP config file (default: /etc/ldap/ldap.conf)
-
-=item B<-d>        Output dir (default: /etc/argonaut/fai)
-
-=item B<-h>        Display this help and exit
-
-=item B<-n>        Skip cleanup for mirrors
-
-=item B<-p>        Show progress in cronjob
-
-=item B<-v>        Be verbose
-
-=item B<-i>        Network interface (default: eth0)
-
-=item B<-j>        Create a new /etc/cron.d/argonaut-mirror
-
-=item B<-r>        Server root (default: /srv/www)
-
-=item B<-e>        Ignore small errors
-
-=item B<-a>        Processor architecture (default: i386)
-
-=item B<-P>        proxy (default: none)
-
-=item B<-s>        Don't mirror source packages
-
-=item B<-g>        Don't check gpg signature on release file
-
-=item B<-l>        Download Contents.arch.gz files
-
-=item B<-z>        Update Packages.gz and Sources.gz with diff files
-
-=back
-
-=head1 BUGS 
-
-Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
-
-=head1 LICENCE AND COPYRIGHT
-
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
-
-=over 3
-
-=item Copyright (C) 2005-2006 Jan-Marek Glogowski
-
-=item Copyright (C) 2007-2010 The GOsa project
-
-=item Copyright (C) 2011 FusionDirectory project
-
-=back
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-=cut
+# ldap2repository
+#
+# Copyright (c) 2005,2006 Jan-Marek Glogowski <glogow@fbihome.de>
+# Copyrignt (c) 2007,2009 The GOsa project <gosa-devel@oss.gonicus.de>
+# Copyright (C) 2011 FusionDirectory project
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
 
 use strict;
+use warning;
 
-use lib "/usr/lib/argonaut";
+use 5.008;
 
 use Switch;
 use Net::LDAP;
@@ -90,9 +34,12 @@ use MIME::Base64;
 use Getopt::Std;
 use File::Path;
 use File::Copy;
+
 use Argonaut::Common qw(:ldap :file :array :misc);
 
 use vars qw/ %opt /;
+
+use lib "/usr/lib/argonaut";
 
 my $ldapconf = "/etc/ldap/ldap.conf";
 my $outdir = "/etc/argonaut/fai";
@@ -320,5 +267,81 @@ $outdir/mirror-update-cronjob\n";
   close (SOURCES);
   close (CRON);
 }
+
+__END__
+
+=head1 NAME
+
+ldap2repository - creating debian repositories cronjob for the Argonaut deployment system.
+
+=head1 SYNOPSIS
+
+ldap2repository [-hvnpejsglz] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
+
+=head1 DESCRIPTION
+
+ldap2repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
+
+=over 14
+
+=item B<-c>        LDAP config file (default: /etc/ldap/ldap.conf)
+
+=item B<-d>        Output dir (default: /etc/argonaut/fai)
+
+=item B<-h>        Display this help and exit
+
+=item B<-n>        Skip cleanup for mirrors
+
+=item B<-p>        Show progress in cronjob
+
+=item B<-v>        Be verbose
+
+=item B<-i>        Network interface (default: eth0)
+
+=item B<-j>        Create a new /etc/cron.d/argonaut-mirror
+
+=item B<-r>        Server root (default: /srv/www)
+
+=item B<-e>        Ignore small errors
+
+=item B<-a>        Processor architecture (default: i386)
+
+=item B<-P>        proxy (default: none)
+
+=item B<-s>        Don't mirror source packages
+
+=item B<-g>        Don't check gpg signature on release file
+
+=item B<-l>        Download Contents.arch.gz files
+
+=item B<-z>        Update Packages.gz and Sources.gz with diff files
+
+=back
+
+=head1 BUGS 
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2005-2006 Jan-Marek Glogowski
+
+=item Copyright (C) 2007-2010 The GOsa project
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
 
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
