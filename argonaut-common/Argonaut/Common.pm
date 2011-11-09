@@ -109,6 +109,8 @@ sub argonaut_get_mac {
 #  'BINDPWD' => Bind password from prompt
 #  'BINDMSG' => Bind result messages
 #  'CFGFILE' => Config file used
+#  'ERROR'   => Error Number
+#  'ERRORMSG' => Error Message
 #
 # These values are just filled, if they weren't provided,
 # i.e. 
@@ -122,12 +124,23 @@ sub argonaut_ldap_init {
   my ($base,$ldapuris) = argonaut_ldap_parse_config( $ldap_conf );
   %results = ( 'BASE' => $base, 'URIS' => $ldapuris);
 
-  return( "Couldn't find LDAP base in config!" ) if( ! defined $base );
-  return( "Couldn't find LDAP URI in config!" ) if( ! defined $ldapuris );
+  if ( ! defined $base ) {
+    %results = ( 'ERROR' => 1, 'ERRORMSG' => "Couldn't find LDAP base in config!");
+    return \%results;
+  }
 
-  # Create handle
-  my $ldap = Net::LDAP->new( $ldapuris ) ||
-    return( "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'" );
+  if ( ! defined $ldapuris ) {
+    %results = ( 'ERROR' => 1, 'ERRORMSG' => "Couldn't find LDAP URI in config!");
+    return \%results;
+  }
+
+  my $ldap = Net::LDAP->new( $ldapuris );
+
+  if ( ! defined $ldap ) {
+    %results = ( 'ERROR' => 1, 'ERRORMSG' => "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'");
+    return \%results;
+  }
+
   $results{ 'HANDLE' } = $ldap;
 
   # Prompt for DN
@@ -176,8 +189,10 @@ sub argonaut_ldap_init {
          $results{ 'BINDMSG' } = $mesg;
        } # Anonymous bind
 
-  return( "LDAP bind error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
-    if( 0 != $mesg->code );
+  if ( $mesg->code != 0 ) {
+    %results = ( 'ERROR' => 1, 'ERRORMSG' => "LDAP bind error: " . $mesg->error . "(" . $mesg->code . ")");
+    return \%results;
+  }
 
   return \%results;
 }

@@ -36,10 +36,16 @@ use LWP::Simple;
 
 use Argonaut::Common;
 
-require Exporter;
+BEGIN
+{
+  use Exporter ();
+  use vars qw(@EXPORT_OK @ISA $VERSION);
+  $VERSION = '2011-04-11';
+  @ISA = qw(Exporter);
 
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(get_repolines, get_packages_info, store_packages_file, cleanup_and_extract);
+  @EXPORT_OK = qw(get_repolines get_packages_info store_packages_file cleanup_and_extract);
+}
+
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 
@@ -62,6 +68,12 @@ sub get_repolines {
     my $ldap_password          =   $config->val( ldap => "password"                ,"");
     
     my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+    
+    if ( $ldapinfos->{'ERROR'} > 0) {
+      print ( $ldapinfos->{'ERRORMSG'}."\n" );
+      exit ($ldapinfos->{'ERROR'});
+    }
+
     my $ldap = $ldapinfos->{'HANDLE'};
     my $ldap_base = $ldapinfos->{'BASE'};
     

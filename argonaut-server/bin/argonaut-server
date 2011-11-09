@@ -42,7 +42,7 @@ use File::Path;
 use Log::Handler;
 
 use Argonaut::Common qw(:ldap);
-use Argonaut::Packages qw(get_packages_info, store_packages_file);
+use Argonaut::Packages qw(get_packages_info store_packages_file);
 
 use constant ETH_P_ALL => 0x0003;
 use constant PF_PACKET => 17;
@@ -51,7 +51,7 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($ldap_configfile,$ldap_dn,$ldap_password,$server_port,$client_port,$iptool,$delete_finished_tasks,$interface,$packages_files,$logdir);
+my ($ldap_configfile,$ldap_dn,$ldap_password,$server_port,$client_port,$iptool,$delete_finished_tasks,$interface,$logdir);
 my $configfile = "/etc/argonaut/argonaut.conf";
 
 readConfig();
@@ -80,15 +80,8 @@ sub readConfig {
     $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
     $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     $ldap_password          =   $config->val( ldap => "password"                ,"");
-
-
-    
     $delete_finished_tasks  =   $config->val( server => "delete_finished_tasks" ,1);
     $interface              =   $config->val( server => "interface"             ,"eth0");
-
-# seems not to be used anywhere    
-#    $packages_files         =   $config->val( server => "packages"              ,"/usr/src/packages/Packages");
-    
     $logdir                 =   $config->val( log => "logdir"                      ,"/var/log/argonaut/");
 }
 
@@ -115,8 +108,8 @@ Parameter : the mac address
 sub getIpFromMac {
   my ($mac) = @_;
   
-    my ($ldap,$ldap_base) = bind_ldap();
-      
+  my ($ldap,$ldap_base) = bind_ldap();
+    
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "macAddress=$mac",
@@ -357,7 +350,7 @@ POE::Session->create(
             $_[HEAP]{id} = 0;
             
             $_[HEAP]{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
-                Port    => $port,
+                Port    => $server_port,
                 Handler => {
                     'echo' => 'echo',
                     'ping' => 'ping',
@@ -688,7 +681,7 @@ POE::Session->create(
             readConfig();
             $kernel->signal($heap->{jsonserver},"KILL");
             $heap->{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
-                Port    => $port,
+                Port    => $server_port,
                 Handler => { # FIXME this hash should not be duplicated
                     'echo' => 'echo',
                     'ping' => 'ping',

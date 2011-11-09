@@ -63,7 +63,7 @@ my $installer = "";
 my $iptool = "/sbin/ifconfig";
 my $result;
 my $mac;
-my $ldapinfo;
+my $ldapinfos;
 
 getopts( "$opt_string", \%opt ) or usage("Wrong parameters");
 usage("ldap2repository - creating debian repositories cronjob for the Argonaut deployment system.") if $opt{h};
@@ -85,13 +85,13 @@ $diff = $opt{z} ? "--diff" : "";
 $contents = $opt{l} ? "--getcontents" : "";
 $installer = $opt{y} ? ",main/debian-installer" : "";
 
-eval { #try
-    $ldapinfo = argonaut_ldap_init($ldapconf);
-};
-if($@) { #catch (just in case we want later to treat errors)
-    die $@;
-};
+$ldapinfos = argonaut_ldap_init($ldapconf);
 
+if ( $ldapinfos->{'ERROR'} > 0) {
+  print ( $ldapinfos->{'ERRORMSG'}."\n" );
+  exit ($ldapinfos->{'ERROR'});
+}
+    
 my $base = $ldapinfo->{BASE};
 
 my $ldapuris = $ldapinfo->{URIS};
@@ -103,8 +103,8 @@ $mac = argonaut_get_mac($interface);
 
 # create the outdir if it doesn't exist
 -d "$outdir" 
-  or mkpath "$outdir" 
-  or warn "WARNING: Can't create subdir $outdir: $!\n";
+or mkpath "$outdir" 
+or warn "WARNING: Can't create subdir $outdir: $!\n";
 
 # tell us if outdir is not a directory
 -d "$outdir" || usage("'$outdir' is not a directory.\n");

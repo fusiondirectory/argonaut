@@ -54,6 +54,7 @@ my $dry_run = 0;
 my $release_var = 'FAIclientRelease';
 my $check_hostname;
 my $kernel;
+my $ldapinfos;
 
 Getopt::Long::Configure ("bundling");
 
@@ -83,19 +84,15 @@ if( ! $dry_run ) {
     || usage("'$dump_dir' is not a directory.\n");
 }
 
-my $init_results;
+$ldapinfos = argonaut_ldap_init( $ldap_conf, 0, $bind_dn, $prompt_pwd, $bind_pwd );
 
-# initialize ldap
-eval { #try
-    $init_results =
-      argonaut_ldap_init( $ldap_conf, 0, $bind_dn, $prompt_pwd, $bind_pwd );
-};
-if($@) { #catch
-    do_exit( 3, $@ );
-};
+if ( $ldapinfos->{'ERROR'} > 0) {
+  print ( $ldapinfos->{'ERRORMSG'}."\n" );
+  exit ($ldapinfos->{'ERROR'});
+}
 
-my $ldap = $init_results->{ 'HANDLE' };
-my $base = $init_results->{ 'BASE' };
+my $ldap = $ldapinfos->{ 'HANDLE' };
+my $base = $ldapinfos->{ 'BASE' };
 
 # Get FAI object
 my $faiobj = Argonaut::FAI->new( 'LDAP' => $ldap,
