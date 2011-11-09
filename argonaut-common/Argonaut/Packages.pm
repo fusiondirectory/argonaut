@@ -34,7 +34,7 @@ use File::Path;
 use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 use LWP::Simple;
 
-use Argonaut::Common;
+use Argonaut::Common qw(:ldap);
 
 BEGIN
 {
