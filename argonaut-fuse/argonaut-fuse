@@ -116,7 +116,7 @@ my $cfg;
 if( defined $config && (length($config) > 0) ) {
   if( -r $config )
     { $cfg = Config::IniFiles->new( -file => $config ); }
-  else { usage( "Couldn't read config file: $config" ); }
+  else { die("Couldn't read config file: $config"); }
 }
 else { $cfg = Config::IniFiles->new(); }
 
@@ -496,14 +496,6 @@ sub getdir {
 #
 sub usage
 {
-  my( $text, $help ) = @_;
-
-  $text = undef if( 'h' eq $text );
-  (defined $text) && print STDERR "\n$text\n";
-
-  if( (defined $help && $help)
-      || (!defined $help && !defined $text) )
-  {
     print STDERR << "EOF";
 
   usage: $0 [-h] [-c config]
@@ -512,8 +504,6 @@ sub usage
    -c <cfg>  : config file (default: ${config})
    
 EOF
-  }
-  print( "\n" );
 
   exit( -1 );
 }
