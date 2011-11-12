@@ -50,15 +50,9 @@ use Socket;
 use Fuse;
 
 use Data::Dumper;
-use Sys::Syslog;
-use File::Basename;
-use File::Path;
-use File::Spec::Functions;
 use File::Pid;
 use Getopt::Long;
 use Config::IniFiles;
-use MIME::Base64;
-use IO::Socket;
 use Storable qw(freeze thaw);
 use Time::HiRes qw(gettimeofday usleep);
 
