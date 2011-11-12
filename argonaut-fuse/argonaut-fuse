@@ -31,19 +31,6 @@ use warnings;
 
 use 5.008;
 
-# Check for Net::LDAP module
-my $ldap_available;
-BEGIN {
-  $ldap_available=1;
-  unless(eval('use Net::LDAP;1')) {
-    $ldap_available=0;
-  }
-  unless(eval('use Net::LDAP::Util qw(:escape);1')) {
-    $ldap_available=0;
-  }
-}
-END {}
-
 use POSIX;
 use FindBin;
 use Socket;
@@ -55,6 +42,7 @@ use Getopt::Long;
 use Config::IniFiles;
 use Storable qw(freeze thaw);
 use Time::HiRes qw(gettimeofday usleep);
+use Net::LDAP;
 
 use constant USEC => 1000000;
 
@@ -134,12 +122,11 @@ foreach my $section (keys %cfg_defaults) {
 }
 
 # Parse LDAP configuration
-if($ldap_available==1) {
   ($ldap_base,$parse_uris) = ldap_parse_config( $ldap_conf );
   usage( "Couldn't find LDAP base in config!" ) if( ! defined $ldap_base );
   usage( "Couldn't find LDAP URI in config!" ) if( ! defined $parse_uris );
   @ldapuris = ( @$parse_uris );
-}
+
 
 my $mountpoint = $tftp_root;
 
@@ -165,12 +152,6 @@ daemon_log( "${starttime}\n" );
 # Dump configuration into logfile
 dump_configuration( 3 );
 
-if($ldap_available==1) {
-  if( defined $ldap_dn )
-    { daemon_log( "LDAP bind: using authentication from config\n" ); }
-  else { daemon_log( "LDAP bind: anonymous\n" ); }
-}
-
 # Open static directory
 my $tftp_static_root_handle;
 opendir($tftp_static_root_handle, $tftp_static_root);
@@ -195,7 +176,6 @@ exit 0;
 # @return int 0 on error, 1 on success
 #
 sub prepare_ldap_handle {
-  return 0 if ($ldap_available==0);
   my $mesg;
 
   daemon_log(@main::ldapuris."\n");
@@ -243,7 +223,6 @@ sub prepare_ldap_handle {
 # @return $bool true, if LDAP bind was successful.
 #
 sub prepare_ldap_handle_retry {
-  return 0 if ($ldap_available==0);
 
   my( $timeout, $retry, $sleep, $multiply, $add, $max ) = @_;
   my $valid_handle;
