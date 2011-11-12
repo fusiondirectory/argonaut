@@ -44,6 +44,8 @@ use Storable qw(freeze thaw);
 use Time::HiRes qw(gettimeofday usleep);
 use Net::LDAP;
 
+use Argonaut::Common qw(:ldap);
+
 use constant USEC => 1000000;
 
 use lib "/usr/lib/argonaut/modules";
@@ -122,9 +124,9 @@ foreach my $section (keys %cfg_defaults) {
 }
 
 # Parse LDAP configuration
-  ($ldap_base,$parse_uris) = ldap_parse_config( $ldap_conf );
-  usage( "Couldn't find LDAP base in config!" ) if( ! defined $ldap_base );
-  usage( "Couldn't find LDAP URI in config!" ) if( ! defined $parse_uris );
+  ($ldap_base,$parse_uris) = argonaut_ldap_parse_config( $ldap_conf );
+  die ( "Couldn't find LDAP base in config!" ) if( ! defined $ldap_base );
+  die ( "Couldn't find LDAP URI in config!" ) if( ! defined $parse_uris );
   @ldapuris = ( @$parse_uris );
 
 
@@ -426,56 +428,6 @@ sub import_modules {
   }
 
   close (DIR);
-}
-
-
-#===  FUNCTION  ================================================================
-#         NAME:  ldap_parse_config
-#   PARAMETERS:  The location of the ldap.conf file (optional)
-#      RETURNS:  List with ldap_base as [0] and the ldap_uris
-#  DESCRIPTION:  Parse systems' ldap.conf
-#===============================================================================
-sub ldap_parse_config {
-  my $ldap_config = shift || undef;
-
-  # Try to guess the location of the ldap.conf - file
-  $ldap_config = $ENV{ 'LDAPCONF' }
-    if( !defined $ldap_config && exists $ENV{ 'LDAPCONF' } );
-  $ldap_config = "/etc/ldap/ldap.conf" 
-    if( !defined $ldap_config );
-  $ldap_config = "/etc/openldap/ldap.conf" 
-    if( !defined $ldap_config );
-  $ldap_config = "/etc/ldap.conf" 
-    if( !defined $ldap_config );
-
-  # Read LDAP
-  return if( ! open (LDAPCONF,"${ldap_config}") );
-
-  my @content=<LDAPCONF>;
-  close(LDAPCONF);
-
-  my ($ldap_base, @ldap_uris);
-  # Scan LDAP config
-  foreach my $line (@content) {
-    $line =~ /^\s*(#|$)/ && next;
-    chomp($line);
-
-    if ($line =~ /^BASE\s+(.*)$/i) {
-      $ldap_base= $1;
-      next;
-    }
-
-    if ($line =~ m#^URI\s+(.*)\s*$#i) {
-      my (@ldap_servers) = split( ' ', $1 );
-      foreach my $server (@ldap_servers) {
-        push( @ldap_uris, $1 )
-          if( $server =~ m#^(ldaps?://([^/:\s]+)(:([0-9]+))?)/?$#i );
-      }
-      next;
-    }
-  }
-
-  return( $ldap_base, \@ldap_uris );
 }
 
 sub array_find_and_remove {
