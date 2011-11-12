@@ -67,12 +67,8 @@ our $parse_uris;
 our $ldap_handle;
 our $last_log = '';
 
-our $SOCKET_TFTP;
-
 our $config = '/etc/argonaut-fuse/argonaut-fuse.conf';
 our $verbose = 0;
-our $do_stdout = 0;
-our $foreground = 0;
 our $dry_run = 0;
 our $dump_config = undef;
 our $filesystem;
@@ -84,8 +80,6 @@ GetOptions( 'v|verbose+' => \$verbose,
             'h|help' => \&usage,
             'c|config=s' => \$config,
             'd|dump-config=i' => \$dump_config,
-            's|stdout' => \$do_stdout,
-            'f|foreground' => \$foreground,
             'n|dry-run' => \$dry_run )
   or usage( '', 1 );
 
@@ -93,8 +87,8 @@ GetOptions( 'v|verbose+' => \$verbose,
 my $modules_path= "/usr/lib/argonaut/modules";
 
 # Predefined variables for config
-my ( $pidfile, $logfile, $loglevel );
-our( $ldap_conf, $ldap_dn, $ldap_pwd, $ldap_fmin, $ldap_fmax, $ldap_idle );
+my ( $pidfile, $logfile );
+our( $ldap_conf, $ldap_dn, $ldap_pwd );
 our( $tftp_root, $tftp_static_root );
 our( $known_modules);
 our( $dflt_init );
@@ -104,16 +98,12 @@ our %cfg_defaults = (
   'General' => {
     'pidfile'   => [ \$pidfile,   '/var/run/argonaut-fuse.pid' ],
     'logfile'   => [ \$logfile,   '/var/log/argonaut/argonaut-fuse.log' ],
-    'loglevel'  => [ \$loglevel,  5 ],
     'dflt_init' => [ \$dflt_init, 'install' ], # 'install', 'fallback';;
   },
   'LDAP' => {
     'config'    => [ \$ldap_conf, '/etc/ldap/ldap.conf' ],
     'auth_dn'   => [ \$ldap_dn,   undef ],
     'auth_pwd'  => [ \$ldap_pwd,  undef ],
-    'fork_min'  => [ \$ldap_fmin, 2 ],
-    'fork_max'  => [ \$ldap_fmax, 10 ],
-    'fork_idle' => [ \$ldap_idle, 300 ],
   },
   'TFTP' => {
     'pxelinux_cfg'      => [ \$tftp_root, '/tftpboot/pxelinux.cfg' ],
@@ -723,8 +713,6 @@ sub usage
    -c <cfg>  : config file (default: ${config})
    -d <dump> : dump configuration to stdout
              ( 1 = current, 2 = default )
-   -f        : foreground (don't fork)
-   -s        : log to stdout
    -v        : be verbose (multiple to increase verbosity)
 EOF
   }
@@ -746,7 +734,7 @@ argonaut-fuse - FUSE/TFTP supplicant targeted to work with LDAP entries written 
 
 =head1 SYNOPSIS
 
-argonaut-fuse [-hnfsv] [-d <show>] [-c config] 
+argonaut-fuse [-hnv] [-d <show>] [-c config] 
 
 =head1 DESCRIPTION
 
@@ -764,10 +752,6 @@ There is already written modules for FAI (Fully automated install).
 =item B<-n>        dry-run
 
 =item B<-v>        be verbose (multiple to increase verbosity)
-
-=item B<-f>        go to foreground (don't fork)
-
-=item B<-s>        log to stdout
 
 =back
 
