@@ -28,12 +28,14 @@ use 5.008;
 
 use JSON::RPC::Server::Daemon;
 use Config::IniFiles;
-  
+use Log::Handler;
+
 =pod
 This just launch a JSONRPC server with ClientDaemon.pm methods.
 =cut
   
 my $configfile = "/etc/argonaut/argonaut.conf";
+my $logfile = "argonaut-client-management.log";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
