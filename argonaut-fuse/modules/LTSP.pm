@@ -33,6 +33,7 @@ use Switch;
 use Socket;
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
+use Log::Handler;
 
 use Exporter;
 @ISA = ("Exporter");
@@ -49,6 +50,8 @@ my $cfg_defaults = {
   'server' => [ \$server, 'localhost' ],
 };
 
+my $log = Log::Handler->get_logger("argonaut-fuse");
+
 sub get_config_sections {
   return $cfg_defaults;
 }
@@ -59,7 +62,7 @@ sub has_pxe_config {
         my ($filename) = shift || return undef;
         my $result = 0;
 
-        &main::daemon_log("ch $$: got filename ${filename}");
+        $log->info("ch $$: got filename ${filename}");
 
         # Extract MAC from PXE filename
         my $mac = $filename;
@@ -82,17 +85,16 @@ sub has_pxe_config {
 
   if( 0 != $mesg->code ) {
     goto reconnect if( 81 == $mesg->code );
-    &main::daemon_log( sprintf( "$mac - LDAP MAC lookup error(%i): %s\n",
-        $mesg->code, $mesg->error ) );
+    $log->info("$mac - LDAP MAC lookup error $mesg->code : $mesg->error\n");
 
     return undef;
   }
 
         if($mesg->count() == 1) {
-                &main::daemon_log("Found LTSP configuration for client with MAC ${mac}\n");
+                $log->info("Found LTSP configuration for client with MAC ${mac}\n");
                 $result = 1;
         } else {
-                &main::daemon_log("No LTSP configuration for client with MAC ${mac}\n");
+                $log->info("No LTSP configuration for client with MAC ${mac}\n");
         }
 
         return $result;
@@ -126,8 +128,7 @@ reconnect:
 
         if( 0 != $mesg->code ) {
                 goto reconnect if( 81 == $mesg->code );
-                &main::daemon_log( sprintf( "$mac - LDAP MAC lookup error(%i): %s\n",
-                                $mesg->code, $mesg->error ) );
+                $log->warning("$mac - LDAP MAC lookup error $mesg->code: $mesg->error\n");
 
                 return undef;
         }
@@ -137,11 +138,10 @@ reconnect:
                 $entry = ($mesg->entries)[0];
                 $hostname = $entry->get_value( 'cn' );
         } elsif ($mesg->count() == 0) {
-                &main::daemon_log("No LTSP configuration for client with MAC ${mac}\n");
+                $log->info("No LTSP configuration for client with MAC ${mac}\n");
     return undef;
   } else {
-                &main::daemon_log( "$filename - MAC lookup error: too many LDAP results ("
-                        . $mesg->count() . ")\n" );
+                $log->warning("$filename - MAC lookup error: too many LDAP results $mesg->count()\n");
                 return undef;
         }
 
@@ -160,8 +160,8 @@ reconnect:
                 (! defined $nfsroot)  || ("" eq $nfsroot) ||
                 (! defined $ldap_srv) || ("" eq $ldap_srv)
         ) {
-                &main::daemon_log( "$filename - Information for PXE creation is missing\n" );
-                &main::daemon_log( "$filename - Checking group membership...\n" );
+                $log->warning("$filename - Information for PXE creation is missing\n");
+                $log->warning("$filename - Checking group membership...\n");
 
                 my $filter = '(&(member=' . escape_filter_value($host_dn) . ')'
                 . '(objectClass=gosaGroupOfNames)'
@@ -173,8 +173,7 @@ reconnect:
                         'gotoLdapServer', 'cn', 'gotoTerminalPath' ]);
                 if( 0 != $mesg->code ) {
                         goto reconnect if( 81 == $mesg->code );
-                        &main::daemon_log( sprintf( "$filename - LDAP group lookup error(%i): %s\n",
-                                        $mesg->code, $mesg->error ) );
+                        $log->error( sprintf("$filename - LDAP group lookup error $mesg->code: $mesg->error\n");
                         return undef;
                 }
 
@@ -197,17 +196,16 @@ reconnect:
                         my $single_log;
                         if ($mesg->count == 0){
                                 $single_log = "$filename - no group membership found - aborting\n";
-                                &main::daemon_log( $single_log );
+                                $log->error($single_log);
                         } elsif ($mesg->count == 1) {
                                 $single_log = "$filename - missing information in group - aborting\n";
-                                &main::daemon_log( $single_log );
+                                $log->error($single_log);
                         } else {
                                 $single_log = "$filename - multiple group memberships found "
                                 . "($mesg->count) - aborting!\n";
-                                &main::daemon_log( $single_log );
+                                $log->error($single_log);
                                 foreach $group_entry ($mesg->entries) {
-                                        &main::daemon_log( sprintf( "$filename - %s  (%s)\n",
-                                                        $group_entry->get_value( 'cn' ), $group_entry->dn() ) );
+                                        $log->info("$filename - $group_entry->get_value('cn') - $group_entry->dn()\n");
                                 }
                         }
 
@@ -218,7 +216,7 @@ reconnect:
                         $mesg .= ' gotoTerminalPath' if( ! defined $nfsroot );
                         $mesg .= "\n";
 
-                        &main::daemon_log( $mesg );
+                        $log->warning($mesg);
                         return undef;
                 }
         }
@@ -252,15 +250,15 @@ reconnect:
   # Assign commandline
   $cmdline = "ro initrd=$initrd ip=dhcp boot=nfs root=/dev/nfs $nfsroot $cmdline";
 
-&main::daemon_log( "DEBUG: Kernel ($kernel) $cmdline\n" );
+  $log->debug("Kernel ($kernel) $cmdline\n");
 
-  &main::daemon_log( "$filename - PXE status: boot\n" );
+  $log->info("$filename - PXE status: boot\n");
   my $code = &main::write_pxe_config_file( undef, $filename, "kernel $kernel", $cmdline );
   if ( $code == 0) {
     return time;
   } 
   if ( $code == -1) {
-    &main::daemon_log( "$filename - unknown error\n" );
+    $log->error("$filename - unknown error\n");
   }
 
   # Return our result

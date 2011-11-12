@@ -31,6 +31,7 @@ use 5.008;
 
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
+use Log::Handler;
 
 use Exporter;
 @ISA = ("Exporter");
@@ -43,6 +44,8 @@ my $cfg_defaults = {
   'fai_flags' => [ \$fai_flags, 'verbose,sshd,syslogd,createvt,reboot' ],
   'union' => [ \$union, 'unionfs' ],
 };
+
+my $log = Log::Handler->get_logger("argonaut-fuse");
 
 sub get_module_info {
   # Add additional config sections
@@ -76,14 +79,13 @@ reconnect:
 
   if( 0 != $mesg->code ) {
     goto reconnect if( 81 == $mesg->code ); 
-    &main::daemon_log( sprintf( "$mac - LDAP MAC lookup error(%i): %s\n", 
-        $mesg->code, $mesg->error ) );                                                                                                                                                                                  
+    $log->warning("$mac - LDAP MAC lookup error $mesg->code : $mesg->error\n");                                                                                                                                                                                  
     return undef; 
   } 
 
   my( $entry, $hostname, $status ); 
   if ($mesg->count() == 0) {
-    &main::daemon_log("No FAI configuration for client with MAC ${mac}\n");
+    $log->info("No FAI configuration for client with MAC ${mac}\n");
     return undef;
   } elsif ($mesg->count() == 1) { 
     $entry = ($mesg->entries)[0]; 
@@ -91,8 +93,7 @@ reconnect:
     $hostname = $entry->get_value( 'cn' );
   } elsif ($mesg->count() == 0) {
   } else { 
-    &main::daemon_log( "$filename - MAC lookup error: too many LDAP results ("  
-      . $mesg->count() . ")\n" ); 
+    $log->warning("$filename - MAC lookup error: too many LDAP results $mesg->count()\n"); 
     return undef; 
   } 
 
@@ -107,16 +108,16 @@ reconnect:
       if( -f "$main::tftp_root/$filename" ) { 
         if( ! $main::dry_run ) { 
           if( 0 == unlink( "$main::tftp_root/$filename" ) ) { 
-            &main::daemon_log( "$filename - removing from '$main::tftp_root' failed: $!\n" ); 
+            $log->error("$filename - removing from '$main::tftp_root' failed: $!\n"); 
             return undef; 
           } 
         } 
         else { 
-          &main::daemon_log( "$filename - dry-run - not removed from '$main::tftp_root'\n" );
+          $log->info("$filename - dry-run - not removed from '$main::tftp_root'\n");
           return 0;  
         }
       } else { 
-        &main::daemon_log( "$filename - no LDAP status - continue PXE boot\n" ); 
+        $log->info("$filename - no LDAP status - continue PXE boot\n"); 
       }
 
       ############# break
@@ -127,7 +128,7 @@ reconnect:
       $ldap_srv = $main::ldapuris[0] . '/' . $main::ldap_base;
       $status = 'localboot';
 
-      &main::daemon_log( "$filename - defaulting to localboot\n" );
+      $log->info("$filename - defaulting to localboot\n");
     }
   }
 
@@ -150,8 +151,8 @@ reconnect:
     (! defined $cmdline)  || ("" eq $cmdline) ||
     (! defined $ldap_srv) || ("" eq $ldap_srv) 
   ) { 
-    &main::daemon_log( "$filename - Information for PXE creation is missing\n" );
-    &main::daemon_log( "$filename - Checking group membership...\n" );
+    $log->info("$filename - Information for PXE creation is missing\n");
+    $log->info("$filename - Checking group membership...\n");
 
     my $filter = '(&(member=' . escape_filter_value($host_dn) . ')'
     . '(objectClass=gosaGroupOfNames)'
@@ -163,8 +164,7 @@ reconnect:
       'gotoLdapServer', 'cn' ]);
     if( 0 != $mesg->code ) {
       goto reconnect if( 81 == $mesg->code );
-      &main::daemon_log( sprintf( "$filename - LDAP group lookup error(%i): %s\n",
-          $mesg->code, $mesg->error ) );
+      $log->warning("$filename - LDAP group lookup error $mesg->code: $mesg->error\n");
       return undef;   
     }
 
@@ -188,17 +188,16 @@ reconnect:
       my $single_log;
       if ($mesg->count == 0){
         $single_log = "$filename - no group membership found - aborting\n";
-        &main::daemon_log( $single_log );
+        $log->error($single_log);
       } elsif ($mesg->count == 1) {
         $single_log = "$filename - missing information in group - aborting\n";
-        &main::daemon_log( $single_log );
+        $log->error($single_log);
       } else {
         $single_log = "$filename - multiple group memberships found "
         . "($mesg->count) - aborting!\n";
-        &main::daemon_log( $single_log );
+        $log->error($single_log);
         foreach $group_entry ($mesg->entries) {
-          &main::daemon_log( sprintf( "$filename - %s  (%s)\n",
-              $group_entry->get_value( 'cn' ), $group_entry->dn() ) );
+          $log->info("$filename - $group_entry->get_value('cn') - group_entry->dn()\n");
         }
       }
 
@@ -207,7 +206,7 @@ reconnect:
       $mesg .= ' gotoLdapServer' if( ! defined $ldap_srv ); 
       $mesg .= "\n";  
 
-      &main::daemon_log( $mesg );
+      $log->info($mesg);
       $main::last_log = $single_log;
       return undef;
     }
@@ -297,12 +296,12 @@ reconnect:
   }
 
   if( $valid_status ) {
-    &main::daemon_log( "$filename - PXE status: $status\n" );
+    $log->info("$filename - PXE status: $status\n");
     $code = &main::write_pxe_config_file( $hostname, $filename, $kernel, $cmdline );
   }
 
   if ($code == -1) {
-    &main::daemon_log( "$filename - unknown FAIstate: $status\n" );
+    $log->error("$filename - unknown FAIstate: $status\n");
   }
   if ($code eq 0) {
     return time;

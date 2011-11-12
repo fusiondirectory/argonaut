@@ -43,6 +43,7 @@ use Config::IniFiles;
 use Storable qw(freeze thaw);
 use Time::HiRes qw(gettimeofday usleep);
 use Net::LDAP;
+use Log::Handler;
 
 use Argonaut::Common qw(:ldap);
 
@@ -70,6 +71,10 @@ GetOptions( 'h|help' => \&usage,
 #where to look for modules files
 my $modules_path= "/usr/lib/argonaut/modules";
 
+# logfile name and dir
+my $logfile = "argonaut-fuse.log";
+my $logdir;
+
 # Predefined variables for config
 my ( $pidfile, $logfile );
 our( $ldap_conf, $ldap_dn, $ldap_pwd );
@@ -81,7 +86,7 @@ our( $dflt_init );
 our %cfg_defaults = (
   'General' => {
     'pidfile'   => [ \$pidfile,   '/var/run/argonaut-fuse.pid' ],
-    'logfile'   => [ \$logfile,   '/var/log/argonaut/argonaut-fuse.log' ],
+    'logdir'    => [ \$logdir,   '/var/log/argonaut/' ],
     'dflt_init' => [ \$dflt_init, 'install' ], # 'install', 'fallback';;
   },
   'LDAP' => {
@@ -129,6 +134,18 @@ foreach my $section (keys %cfg_defaults) {
   die ( "Couldn't find LDAP URI in config!" ) if( ! defined $parse_uris );
   @ldapuris = ( @$parse_uris );
 
+argonaut_create_dir($logdir);
+
+my $log = Log::Handler->create_logger("argonaut-fuse");
+
+$log->add(
+    file => {
+        filename => "$logdir/$logfile",
+        maxlevel => "debug",
+        minlevel => "emergency",
+        newline  => 1,
+    }
+);
 
 my $mountpoint = $tftp_root;
 
@@ -149,7 +166,6 @@ $filesystem= {
 };
 
 my($starttime) = "Started on " . localtime time;
-daemon_log( "${starttime}\n" );
 
 # Open static directory
 my $tftp_static_root_handle;
@@ -177,12 +193,11 @@ exit 0;
 sub prepare_ldap_handle {
   my $mesg;
 
-  daemon_log(@main::ldapuris."\n");
   # Get an ldap handle, if we don't have one
   $ldap_handle = Net::LDAP->new( \@main::ldapuris )
     if( ! defined $ldap_handle );
   if( ! defined $ldap_handle ) {
-    daemon_log( "ch $$: Net::LDAP constructor failed: $!\n" );
+    $log->error("ch $$: Net::LDAP constructor failed: $!\n");
     return 0;
   }
 
@@ -198,8 +213,7 @@ sub prepare_ldap_handle {
 
   if( 0 != $mesg->code ) {
     undef( $ldap_handle ) if( 81 == $mesg->code );
-    daemon_log( "ch $$: LDAP bind: error ("
-          . $mesg->code . ') - ' . $mesg->error . "\n" );
+    $log->error("ch $$: LDAP bind: error $mesg->code - $mesg->error.\n");
     return 0;
   }
 
@@ -257,8 +271,7 @@ sub prepare_ldap_handle_retry {
     }
 
     my $secs = $sleep / USEC;
-    daemon_log( "ch $$: connection error - sleeping for "
-              . $sleep / USEC . " seconds.\n" );
+    $log->info( "ch $$: connection error - sleeping for $secs seconds.\n" );
     usleep( $sleep );
 
     if( (0 >= $max) || ($sleep < $max) ) {
@@ -270,8 +283,7 @@ sub prepare_ldap_handle_retry {
 
     last if( $valid_handle || (0 == $retry) );
     my $sleep_sec = $sleep / 1000000;
-    daemon_log( "ch $$: next sleep: "
-              . $sleep / 1000000 . " seconds.\n" );
+    $log->info( "ch $$: next sleep: $sleep_sec seconds.\n" );
   }
 
   return $valid_handle;
@@ -314,7 +326,7 @@ sub write_pxe_config_file {
 #===============================================================================
 sub import_modules {
   if (not -e $modules_path) {
-    daemon_log("0 ERROR: cannot find directory or directory is not readable: $modules_path", 1);
+    $log->error("Cannot find directory or directory is not readable: $modules_path\n");
   }
 
   opendir (DIR, $modules_path) or die "ERROR while loading modules from directory $modules_path : $!\n";
@@ -326,8 +338,8 @@ sub import_modules {
 
     eval { require $file; };
     if ($@) {
-      daemon_log("0 ERROR: argonaut-fuse could not load module $file", 1);
-      daemon_log("$@", 5);
+      $log->error("argonaut-fuse could not load module $file");
+      $log->error("$@");
     } else {
       my $info = eval($mod_name.'::get_module_info()');
       # Only load module if get_module_info() returns a non-null object
@@ -335,7 +347,7 @@ sub import_modules {
         $known_modules->{$mod_name} = $info;
         
         # Load additional configuration values
-        daemon_log("Adding additional config sections for Module '$mod_name'\n", 5);
+        $log->info("Adding additional config sections for Module $mod_name\n");
         $cfg_defaults{$mod_name}= eval($mod_name.'::get_config_sections')
           if(eval($mod_name.'::get_config_sections'));
       }
@@ -359,26 +371,6 @@ sub array_find_and_remove {
   return 0;
 }
 
-sub daemon_log {
-  my( $msg, $level ) = @_;
-
-  return if( ! defined $msg );
-  $level = 1 if( ! defined $level );
-
-  $last_log = $msg;
-
-  if( ! defined($logfile) || length($logfile)<=0 ) {
-    print STDERR "$msg" if( $verbose >= $level );
-    return;
-  }
-
-  return if( ! defined open( LOG_HANDLE, ">>${logfile}" ) );
-  print "$msg" if( $verbose >= $level );
-  print( LOG_HANDLE $msg );
-  close( LOG_HANDLE );
-}
-
-
 sub getattr {
   my ($filename) = @_;
 
@@ -398,15 +390,14 @@ sub getattr {
 
         # Process known Modules
         MODULE: foreach my $module (keys %{$known_modules}) {
-          #$log->info("Processing Module '$module' with argument '${filename}'");
-          &daemon_log("Processing Module $module with argument '${path_element}'\n");
+          $log->info("Processing Module $module with argument ${path_element}\n");
           no strict "refs";
           my $answer = &{ $module."::get_pxe_config" }($path_element);
           if(exists($current->{$path_element})) {
             last MODULE;
           }
           if($@) {
-            &daemon_log("ERROR: Processing Module $module failed with '".$@."'\n");
+            $log->error("ERROR: Processing Module $module failed with $@\n");
           }
         }
       }

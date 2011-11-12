@@ -33,6 +33,7 @@ use Switch;
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 use JSON::RPC::Client;
+use Log::Handler;
 
 use Exporter;
 @ISA = ("Exporter");
@@ -55,6 +56,8 @@ my $cfg_defaults = {
   'lang' => [ \$lang, 'de' ],
 };
 
+my $log = Log::Handler->get_logger("argonaut-fuse");
+
 sub get_config_sections {
   return $cfg_defaults;
 }
@@ -68,7 +71,7 @@ sub has_pxe_config {
 
   my ($filename) = shift || return undef;
 
-  &main::daemon_log("ch $$: got filename ${filename}\n");
+  $log->info("ch $$: got filename ${filename}\n");
 
   # Extract MAC from PXE filename      
   my $mac = $filename;                 
@@ -86,14 +89,14 @@ sub has_pxe_config {
 
   if($res) {
     if($res->is_error) {
-      &main::daemon_log("ch $$: Error : ". $res->error_message."\n");
+      $log->error("ch $$: Error : $res->error_message\n");
     } else {
       my $client = $res->result;
-      &main::daemon_log("ch $$: Found OPSI configuration for client with MAC ${mac}\n");
+      $log->info("ch $$: Found OPSI configuration for client with MAC ${mac}\n");
       return 1;
     }
   } else {
-    &main::daemon_log("ch $$: Error : ". $opsi_client->status_line."\n");
+    $log->error("ch $$: Error : $opsi_client->status_line\n");
   }
 
   # Move result
@@ -129,14 +132,14 @@ sub get_pxe_config {
 
   if($res) {
     if($res->is_error) {
-      &main::daemon_log("ch $$: Error : ". $res->error_message."\n");
+      $log->error("ch $$: Error : $res->error_message\n");
     } else {
       $sclient=$res->result;
       $callobj = { method  => 'getNetBootProductStates_hash', params  => [ $sclient ], id  => 2, };
       my $res2 = $opsi_client->call($opsi_url, $callobj);
       if($res2) {
         if($res2->is_error) {
-          &main::daemon_log("ch $$: Error : ". $res2->error_message."\n");
+          $log->error("ch $$: Error : ". $res2->error_message."\n");
         } else {
           foreach my $element (@{$res2->result->{$sclient}}){
           if(
@@ -152,7 +155,7 @@ sub get_pxe_config {
         }
       }
     } else {
-      &main::daemon_log("ch $$: Error : ". $opsi_client->status_line."\n");
+      $log->error("ch $$: Error : $opsi_client->status_line\n");
     }
 
     if ( $state ) {
@@ -165,9 +168,9 @@ sub get_pxe_config {
       $res = $opsi_client->call($opsi_url, $callobj);
       if (defined $res->result){
         $pckey= "pckey=".$res->result;
-        &main::daemon_log( "setting pckey for $sclient\n" );
+        $log->info("setting pckey for $sclient\n");
       } else {
-        &main::daemon_log( "no pc key for $sclient found\n" );
+        $log->warning("no pc key for $sclient found\n");
       }
 
       # Load depot server for this client
@@ -175,9 +178,9 @@ sub get_pxe_config {
       $res = $opsi_client->call($opsi_url, $callobj);
       if (defined $res->result){
         $service= "service=".$res->result;
-        &main::daemon_log( "setting depot server for $sclient to $service\n" );
+        $log->info("setting depot server for $sclient to $service\n");
       } else {
-        &main::daemon_log( "no depot server for $sclient defined\n" );
+        $log->info("no depot server for $sclient defined\n");
       }
       $cmdline = "noapic lang=$lang ramdisk_size=175112 init=/etc/init initrd=opsi-root.gz reboot=b video=vesa:ywrap,mtrr $service $pckey vga=791 quiet splash $product";
     } else {
@@ -187,17 +190,17 @@ sub get_pxe_config {
     }
   }
 } else {
-  &main::daemon_log("ch $$: Error : ". $opsi_client->status_line."\n");
+  $log->error("ch $$: Error : $opsi_client->status_line\n");
 }
 
 
-&main::daemon_log( "$filename - PXE status: $status\n" );
+$log->info("$filename - PXE status: $status\n");
 my $code = &main::write_pxe_config_file( $sclient, $filename, $kernel, $cmdline );
 if ( $code == 0) {
   return time;
 } 
 if ( $code == -1) {
-  &main::daemon_log( "$filename - unknown state: $status\n" );
+  $log->info("$filename - unknown state: $status\n");
 }
 
 # Return our result
