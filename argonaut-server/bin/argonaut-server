@@ -41,7 +41,7 @@ use Config::IniFiles;
 use File::Path;
 use Log::Handler;
 
-use Argonaut::Common qw(:ldap);
+use Argonaut::Common qw(:ldap :file);
 use Argonaut::Packages qw(get_packages_info store_packages_file);
 
 use constant ETH_P_ALL => 0x0003;
@@ -53,22 +53,27 @@ use Socket;
 
 my ($ldap_configfile,$ldap_dn,$ldap_password,$server_port,$client_port,$iptool,$delete_finished_tasks,$interface,$logdir);
 my $configfile = "/etc/argonaut/argonaut.conf";
+my $logfile = "argonaut-server.log";
+my $protocol = "http://";
 
 readConfig();
 
-my $log = Log::Handler->new();
+argonaut_create_dir($logdir);
+
+my $log = Log::Handler->create_logger("argonaut-server");
+    
 $log->add(
     file => {
-        filename => "$logdir/argonaut-server.log",
+        filename => "$logdir/$logfile",
         maxlevel => "debug",
-        minlevel => "emergency"
+        minlevel => "emergency",
+        newline  => 1,
     }
 );
 
-
 =pod
 =item readConfig
-Read from the config file argonaut.conf the ldap informations
+Read from the config file argonaut.conf all the informations
 No parameters needed
 =cut
 sub readConfig {
@@ -82,20 +87,13 @@ sub readConfig {
     $ldap_password          =   $config->val( ldap => "password"                ,"");
     $delete_finished_tasks  =   $config->val( server => "delete_finished_tasks" ,1);
     $interface              =   $config->val( server => "interface"             ,"eth0");
-    $logdir                 =   $config->val( log => "logdir"                      ,"/var/log/argonaut/");
+    $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
 }
 
-=item createLogDir
-Create the log dir
-=cut
-sub createLogDir {
-    mkpath($logdir,0);# or die "Could not create logdir $logdir";
-}
-
-=item bind_ldap
+=item bindLdap
 Connect to ldap and return handle.
 =cut
-sub bind_ldap {
+sub bindLdap {
     my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
     return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 }
@@ -108,7 +106,7 @@ Parameter : the mac address
 sub getIpFromMac {
   my ($mac) = @_;
   
-  my ($ldap,$ldap_base) = bind_ldap();
+  my ($ldap,$ldap_base) = bindLdap();
     
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
@@ -119,8 +117,10 @@ sub getIpFromMac {
   $mesg->code && die "Error while searching IP for mac address '$mac' :".$mesg->error;
 
   if(scalar($mesg->entries)>1) {
+    $log->error("Multiple IPs were found for the Mac address $mac!");
     die "Multiple IPs were found for the Mac address $mac!";
   } elsif(scalar($mesg->entries)<1) {
+    $log->error("No IPs were found for the Mac address $mac!");    
     die "No IPs were found for the Mac address $mac!";
   }
 
@@ -150,18 +150,20 @@ sub do_action { # if ip pings, send the request
     params  => [$params],
   };
 
-  my $res = $client->call("http://".$ip.":".$client_port, $callobj);
+  my $res = $client->call($protocol.$ip.":".$client_port, $callobj);
 
   if($res) {
     if ($res->is_error) {
+      $log->error("Error : ".$res->error_message);
       die "Error : ", $res->error_message."\n";
     }
     else {
       $log->info("Result : ".$res->result);
-          return $res->result;
+      return $res->result;
     }
   }
   else {
+    $log->info("Status : ".$client->status_line);
     die "Status : ".$client->status_line."\n";
   }
 }
@@ -171,7 +173,7 @@ sub do_action { # if ip pings, send the request
 =cut
 sub flag {
     my ($target,$fai_state) = @_;
-    my ($ldap,$ldap_base) = bind_ldap();
+    my ($ldap,$ldap_base) = bindLdap();
   
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
@@ -182,8 +184,10 @@ sub flag {
   $mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
 
   if(scalar($mesg->entries)>1) {
+    $log->error("Multiple entries were found for the Mac address $target!");
     die "Multiple entries were found for the Mac address $target!";
   } elsif(scalar($mesg->entries)<1) {
+    $log->error("No entry were found for the Mac address $target!");
     die "No entry were found for the Mac address $target!";
   }
 
@@ -329,7 +333,7 @@ Used by FD to ask the immediate launch of a bunch of actions by giving their ids
 =item action
 Internal state called by the scheduler to actually launch the action.
 It calls do_action.
-=item loadDump
+=item load_dump
 Unused right now
 =item sighup
 When sighup received, reload config. See readConfig above.
@@ -659,11 +663,11 @@ POE::Session->create(
             $log->info("Getting Packages files from repositories");
             my $errors = store_packages_file();
             if(@{$errors} > 0) {
-                $log->notice("Errors while getting Packages files : ".join(',',@{$errors}));
+              $log->notice("Errors while getting Packages files : ".join(',',@{$errors}));
             }
             $log->info("done");
         },
-        loadDump => sub { # this function has not been tested
+        load_dump => sub { # this function has not been tested
             my ($kernel,$filename) = @_[KERNEL,ARG0..$#_];
             
             open (DUMP, $filename) or die "cannot open file";
