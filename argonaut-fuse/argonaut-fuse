@@ -151,9 +151,6 @@ $filesystem= {
 my($starttime) = "Started on " . localtime time;
 daemon_log( "${starttime}\n" );
 
-# Dump configuration into logfile
-dump_configuration( 3 );
-
 # Open static directory
 my $tftp_static_root_handle;
 opendir($tftp_static_root_handle, $tftp_static_root);
@@ -304,88 +301,6 @@ sub write_pxe_config_file {
   $filesystem->{'root'}->{'content'}->{$file}->{'content'}= $file_content;
 
   return 0;
-}
-
-
-#############################
-#
-# @brief Manage argonaut-fuse configuration.
-#
-# Will exit after successfull dump to stdout (type = 1 | 2)
-#
-# Dump type can be:
-#   1: Current argonaut-fuse configuration in config file (exit)
-#   2: Default argonaut-fuse configuration (exit)
-#   3: Dump to logfile (no exit)
-#
-# @param int config type
-#
-sub dump_configuration {
-
-  my( $cfg_type ) = @_;
-
-  return if( ! defined $cfg_type );
-
-  if(1==$cfg_type ) {
-    print( "# Current argonaut-fuse configuration\n" ); 
-  } elsif (2==$cfg_type) {
-    print( "# Default argonaut-fuse configuration\n" ); 
-  } elsif (3==$cfg_type) {
-    daemon_log( "Dumping argonaut-fuse configuration\n", 2 ); 
-  } else { 
-    return;
-  }
-
-  foreach my $section (keys %cfg_defaults) {
-    if( 3 != $cfg_type ) { 
-      print( "\n[${section}]\n" ); 
-    } else { 
-      daemon_log( "\n  [${section}]\n", 3 ); 
-    }
-
-    foreach my $param (sort( keys %{$cfg_defaults{ $section }})) {
-      my $pinfo = $cfg_defaults{ $section }{ $param };
-      my $value;
-      if (1==$cfg_type) {
-        if( defined( ${@$pinfo[ 0 ]} ) ) {
-          $value = ${@$pinfo[ 0 ]};
-          $value = '*** defined ***' if( 'auth_pwd' eq $param );
-          print( "$param=$value\n" ); 
-        } else {
-          print( "#${param}=\n" ); 
-        }
-      } elsif (2==$cfg_type) {
-        $value = @{$pinfo}[ 1 ];
-        if( defined( @$pinfo[ 1 ] ) ) {
-          $value = @{$pinfo}[ 1 ];
-          $value = '*** defined ***' if( 'auth_pwd' eq $param );
-          print( "$param=$value\n" );
-        } else {
-          print( "#${param}=\n" ); 
-        }
-      } elsif (3==$cfg_type) {
-        if( defined(  ${@$pinfo[ 0 ]} ) ) {
-          $value = ${@$pinfo[ 0 ]};
-          $value = '*** defined ***' if( 'auth_pwd' eq $param );
-          daemon_log( "  $param=$value\n", 3 )
-        }
-      }
-    }
-  }
-
-  if(keys(%{$known_modules})>0) {
-    daemon_log("The following modules are loaded: \n", 2);
-    foreach my $module (keys %{$known_modules} ) {
-      daemon_log("$module: ".$known_modules->{$module}."\n", 2);
-    }
-  }
-
-  # We just exit at stdout dump
-  if( 3 == $cfg_type ) { 
-    daemon_log( "\n", 3 ); 
-  } else {
-    exit( 0 );
-  }
 }
 
 
