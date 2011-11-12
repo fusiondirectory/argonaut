@@ -28,15 +28,19 @@ use 5.008;
 
 use JSON::RPC::Client;
 use Config::IniFiles;
-  
+use Log::Handler;
+
 my $configfile = "/etc/argonaut/argonaut.conf";
-  
+my $logfile = "argonaut-client-fai-sendmon.log";
+my $protocol = "http://";
+
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
 my $server_port                     =   $config->val( network => "server_port"        ,8080);
 my $server_ip                       =   $config->val( network => "server_ip"          ,"");
 
 my $file                            =   $config->val( client => "file"                ,"/tmp/argonaut");
+my $logdir                          =   $config->val( log => "logdir"                 ,"/var/log/argonaut/");
 
 my $taskid;
 
@@ -57,6 +61,16 @@ my %progress_value = (
     "savelog"   =>  90
 );
 
+argonaut_create_dir($logdir);
+
+$log->add(
+    file => {
+        filename => "$logdir/$logfile",
+        maxlevel => "debug",
+        minlevel => "emergency"
+    }
+);
+
 =pod
 This program read on stdin the sendmon fai output, extract useful information and send them to argonaut-server.
 =cut
@@ -72,7 +86,7 @@ while (my $var = <STDIN>) {
     my $taskname = $2;
     my $errorcode = $3;
     if($keyword eq "TASKBEGIN") {
-        say "[sendmon] Task $taskname begun";
+        print "[sendmon] Task $taskname begun\n";
         
         my $progress = undef;
         if(defined $progress_value{$taskname}) {
@@ -87,17 +101,19 @@ while (my $var = <STDIN>) {
           params  => [$taskid,$taskname,$progress],
         };
 
-        my $res = $client->call("http://".$server_ip.":".$server_port, $callobj);
+        my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
 
         if($res) {
             if ($res->is_error) {
-                die "Error : ", $res->error_message;
+              $log->error("Error : ".$res->error_message);
+              die "Error : ", $res->error_message;
             }
         } else {
+            $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
             die "Error while trying to contact Argonaut server : ".$client->status_line;
         }
     } elsif($keyword eq "TASKEND") {
-        say "[sendmon] Task $taskname ended";
+        print "[sendmon] Task $taskname ended\n";
         
         if($taskname eq "faiend") {
             my $client = new JSON::RPC::Client;
@@ -108,18 +124,20 @@ while (my $var = <STDIN>) {
               params  => [$taskid,$taskname,100],
             };
 
-            my $res = $client->call("http://".$server_ip.":".$server_port, $callobj);
+            my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
 
             if($res) {
                 if ($res->is_error) {
-                    die "Error : ", $res->error_message;
+                  $log->error("Error : ".$res->error_message);
+                  die "Error : ", $res->error_message;
                 }
             } else {
+                $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
                 die "Error while trying to contact Argonaut server : ".$client->status_line;
             }
         }
     } elsif($keyword eq "TASKERROR") {
-        say "[sendmon] Task error $taskname $errorcode";
+        print "[sendmon] Task error $taskname $errorcode\n";
         
         my $client = new JSON::RPC::Client;
         $client->version('1.0');
@@ -129,14 +147,16 @@ while (my $var = <STDIN>) {
           params  => [$taskid,$taskname." ".$errorcode],
         };
         
-        my $res = $client->call("http://".$server_ip.":".$server_port, $callobj);
+        my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
 
         if($res) {
           if ($res->is_error) {
+              $log->error("Error : ".$res->error_message);
               die "Error : ", $res->error_message;
           }
         }
         else {
+          $log->notice("Status : ".$client->status_line);
           die "Status : ".$client->status_line;
         }
     }
