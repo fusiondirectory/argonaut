@@ -62,8 +62,8 @@ sub manage_service : Public {
     my ($service,$action) = @{$args};
     my $folder = $config->val (services=>"folder","/etc/init.d");
     my $exec = $config->val (services=>$service,$service);
-    print "$folder/$exec $action\n";
-    return 1;
+    system ("$folder/$exec $action\n");
+    return ("done : $action $exec");
 }
 
 =item echo
