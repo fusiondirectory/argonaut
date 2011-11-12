@@ -357,20 +357,6 @@ sub import_modules {
   close (DIR);
 }
 
-sub array_find_and_remove {
-  my ($haystack,$needle) = @_;
-  my $index = 0;
-
-  foreach my $item (@$haystack) {
-    if ($item eq $needle) {
-      splice( @$haystack, $index, 1 );
-      return 1;
-    }
-    $index++;
-  }
-  return 0;
-}
-
 sub getattr {
   my ($filename) = @_;
 
