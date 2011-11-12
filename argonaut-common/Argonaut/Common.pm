@@ -60,6 +60,9 @@ BEGIN
     'file' => [qw(
       &argonaut_file_write
       &argonaut_file_chown
+      &argonaut_options_parse
+      &argonaut_get_pid_lock
+      &argonaut_get_mac_pxe
     )],
     'array' => [qw(
       &argonaut_array_find_and_remove
@@ -67,9 +70,7 @@ BEGIN
     'string' => [qw(
       &argonaut_gen_random_str
     )],
-     'misc' => [qw(
-      &argonaut_options_parse
-      &argonaut_get_pid_lock
+     'net' => [qw(
       &argonaut_get_mac
     )]
   );
@@ -86,9 +87,29 @@ BEGIN
 # 
 sub argonaut_get_mac {
     my ($interface) = @_;
+    
     my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
     chomp ($mac);
+    
     return $mac;
+}
+
+#-----------------------------------------------------------------------------
+# routine to get mac from a pxe file
+#
+# $filename     = name of the pxe file
+#
+# Returns the mac of the interface
+# 
+sub argonaut_get_mac_pxe {
+  my ($filename) = @_;
+  
+  my $mac = $filename;                 
+  $mac =~ tr/-/:/;
+  $mac = substr( $mac, -1*(5*3+2) ); 
+  chomp ($mac);
+  
+  return $mac;
 }
 
 #------------------------------------------------------------------------------
@@ -202,10 +223,15 @@ sub argonaut_ldap_parse_config
 {
   my ($ldap_config) = @_;
 
+  # Try to guess the location of the ldap.conf - file
   $ldap_config = $ENV{ 'LDAPCONF' }
-    if( !defined $ldap_config && exists $ENV{ 'LDAPCONF' } );
+    if (!defined $ldap_config && exists $ENV{ 'LDAPCONF' });
   $ldap_config = "/etc/ldap/ldap.conf" 
-    if( !defined $ldap_config );
+    if (!defined $ldap_config);
+  $ldap_config = "/etc/openldap/ldap.conf" 
+    if (!defined $ldap_config);
+  $ldap_config = "/etc/ldap.conf" 
+    if (!defined $ldap_config);
 
   # Read LDAP
   return if( ! open (LDAPCONF,"${ldap_config}") );
@@ -309,7 +335,7 @@ sub argonaut_ldap_parse_config_multi
 {
   my ($ldap_config) = @_;
 
-  # Indicat, if it's a user or global config
+  # Indicate, if it's a user or global config
   my $is_user_cfg = 1;
 
   # If we don't get a config, go searching for it
@@ -432,6 +458,15 @@ sub argonaut_file_chown
   chown $uid, $gid, $filename;
 }
 
+=item argonaut_create_dir
+Create a directory
+=cut
+sub argonaut_create_dir
+{
+  my $dir = @_;
+  
+  mkpath($dir,0);# or die "Could not create logdir $logdir";
+}
 #------------------------------------------------------------------------------
 #
 # Common checks for forward and reverse searches
