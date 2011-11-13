@@ -49,7 +49,6 @@ my $lang;
 my $sclient="";
 
 my $cfg_defaults = {
-  # 'dflt_init' => [ my $dflt_init, 'install' ], # 'install', 'fallback';;
   'admin'  => [ \$admin,  'admin' ],
   'password'  => [ \$password,  '' ],
   'server' => [ \$server, 'localhost' ],

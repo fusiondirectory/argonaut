@@ -3,39 +3,32 @@
 
 argonaut-fuse.conf - Configuration file for FUSE/TFTP supplicant targeted to work with LDAP entries written by FusionDirectory
 
-
 =head1 DESCRIPTION
 
-The argonaut-fuse.conf file defines all parameter arogonaut-fuse needs for running. It is normally located in the /etc/argonaut-fuse directory and 
-is generated automatically by the argonaut-fuse(1) program during installation. 
-
+The argonaut-fuse.conf file defines all parameter needed for argonaut-fuse to run. It is normally located in the /etc/argonaut-fuse directory.
+ 
 =head1 DIRECTIVES
 
-
-=head2 [General]
+=head2 [basic]
 
 =over 4
 
-=item dflt_init = install
+=item default_mode = install
 
 Defines the default argonaut-fuse initialisation mode.
 
-=item logfile = /var/log/argonaut/argonaut-fuse.log
+=item logdir = /var/log/argonaut/
 
-Define the location of the logfile.
+Define the location of the logdir.
 
 =item pid-file = /var/run/argonaut-fuse.pid
 
 Defines the location for the pid file.
 
-=item loglevel=5
-
-Define the default loglevel
-
 =back
 
 
-=head2 [TFTP]
+=head2 [tftp]
 
 =over 2
 
@@ -50,15 +43,15 @@ Define the location for directory containing files that should be present in "px
 =back
 
 
-=head2 [LDAP]
+=head2 [ldap]
 
 =over 6
 
-=item auth_dn =
+=item dn =
 
 Define the bind dn for the connection to the ldap server
 
-=item auth_pwd =
+=item password =
 
 Define the bind password for the connection to the ldap server
 
@@ -66,16 +59,10 @@ Define the bind password for the connection to the ldap server
 
 Define where the ldap config is stored
 
-=item fork_idle = 300
-
-=item fork_max = 10
-
-=item fork_min = 2
-
 =back
 
 
-=head2  [FAI]
+=head2  [fai]
 
 =over 4
 
@@ -83,7 +70,7 @@ Define where the ldap config is stored
 
 Define the fai flags used by argonaut-fuse
 
-=item nfs_opts =
+=item nfs_opts = 
 
 Define the nfs options that can be passed to argonaut-fuse for fai
 

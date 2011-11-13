@@ -80,23 +80,23 @@ my ( $pidfile, $logfile );
 our( $ldap_conf, $ldap_dn, $ldap_pwd );
 our( $tftp_root, $tftp_static_root );
 our( $known_modules);
-our( $dflt_init );
+our( $default_mode );
 
 # All default values
 our %cfg_defaults = (
-  'General' => {
-    'pidfile'   => [ \$pidfile,   '/var/run/argonaut-fuse.pid' ],
-    'logdir'    => [ \$logdir,   '/var/log/argonaut/' ],
-    'dflt_init' => [ \$dflt_init, 'install' ], # 'install', 'fallback';;
+  'basic' => {
+    'pidfile'      => [ \$pidfile,   '/var/run/argonaut-fuse.pid' ],
+    'logdir'       => [ \$logdir,   '/var/log/argonaut/' ],
+    'default_mode' => [ \$default_mode, 'install' ], # 'install', 'fallback';;
   },
-  'LDAP' => {
+  'ldap' => {
     'config'    => [ \$ldap_conf, '/etc/ldap/ldap.conf' ],
-    'auth_dn'   => [ \$ldap_dn,   undef ],
-    'auth_pwd'  => [ \$ldap_pwd,  undef ],
+    'dn'        => [ \$ldap_dn,   undef ],
+    'password'  => [ \$ldap_pwd,  undef ],
   },
-  'TFTP' => {
-    'pxelinux_cfg'      => [ \$tftp_root, '/tftpboot/pxelinux.cfg' ],
-    'pxelinux_cfg_static'      => [ \$tftp_static_root, '/tftpboot/pxelinux.static' ],
+  'tftp' => {
+    'pxelinux_cfg'          => [ \$tftp_root, '/tftpboot/pxelinux.cfg' ],
+    'pxelinux_cfg_static'   => [ \$tftp_static_root, '/tftpboot/pxelinux.static' ],
   }
 );
 

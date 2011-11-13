@@ -42,7 +42,7 @@ my $cfg_defaults = {
   'nfs_root'  => [ \$nfs_root,  '/nfsroot' ],
   'nfs_opts'  => [ \$nfs_opts,  'nfs4' ],
   'fai_flags' => [ \$fai_flags, 'verbose,sshd,syslogd,createvt,reboot' ],
-  'union' => [ \$union, 'unionfs' ],
+  'union' => [ \$union, 'aufs' ],
 };
 
 my $log = Log::Handler->get_logger("argonaut-fuse");

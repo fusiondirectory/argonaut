@@ -46,7 +46,6 @@ my $admin;
 my $password;
 my $server;
 my $cfg_defaults = {
-  # 'dflt_init' => [ my $dflt_init, 'install' ], # 'install', 'fallback';;
   'server' => [ \$server, 'localhost' ],
 };
 
