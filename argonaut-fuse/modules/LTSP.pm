@@ -63,10 +63,7 @@ sub get_pxe_config {
   my $cmdline;
         my $result = undef;
 
-        # Extract MAC from PXE filename
-        my $mac = $filename;
-        $mac =~ tr/-/:/;
-        $mac = substr( $mac, -1*(5*3+2) );
+  my $mac = argonaut_get_mac_pxe($filename);
 
         # Prepare the ldap handle
 reconnect:
