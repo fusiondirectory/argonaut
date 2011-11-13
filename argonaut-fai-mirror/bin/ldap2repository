@@ -92,11 +92,11 @@ if ( $ldapinfos->{'ERROR'} > 0) {
   exit ($ldapinfos->{'ERROR'});
 }
     
-my $base = $ldapinfo->{BASE};
+my $base = $ldapinfos->{BASE};
 
-my $ldapuris = $ldapinfo->{URIS};
+my $ldapuris = $ldapinfos->{URIS};
 
-my $handle = $ldapinfo->{HANDLE};
+my $handle = $ldapinfos->{HANDLE};
 
 # find mac address of the host running ldap2repository
 $mac = argonaut_get_mac($interface);
