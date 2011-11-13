@@ -57,48 +57,6 @@ sub get_config_sections {
   return $cfg_defaults;
 }
 
-# Check if this module should handle this client
-# return 1 if this is the case, 0 otherwise
-sub has_pxe_config {
-        my ($filename) = shift || return undef;
-        my $result = 0;
-
-        $log->info("ch $$: got filename ${filename}");
-
-  my $mac = argonaut_get_mac_pxe($filename);
-  
-        # Prepare the ldap handle
-  reconnect:
-  return undef if( ! &main::prepare_ldap_handle_retry
-    ( 5 * $main::usec, -1, 0.5 * $main::usec, 1.2 ) );
-
-
-  # Search for the host to examine the FAI state
-  my $mesg = $main::ldap_handle->search(
-    base => "$main::ldap_base",
-    filter => "(&(macAddress=$mac)(objectClass=gotoTerminal))",
-    attrs => [ 'gotoTerminalPath', 'gotoBootKernel',
-    'gotoKernelParameters', 'gotoLdapServer', 'cn' ] );
-
-
-  if( 0 != $mesg->code ) {
-    goto reconnect if( 81 == $mesg->code );
-    $log->info("$mac - LDAP MAC lookup error $mesg->code : $mesg->error\n");
-
-    return undef;
-  }
-
-        if($mesg->count() == 1) {
-                $log->info("Found LTSP configuration for client with MAC ${mac}\n");
-                $result = 1;
-        } else {
-                $log->info("No LTSP configuration for client with MAC ${mac}\n");
-        }
-
-        return $result;
-}
-
-
 # Do everything that is needed, i.e. write the pxelinux.cfg file
 sub get_pxe_config {
         my ($filename) = shift || return undef;

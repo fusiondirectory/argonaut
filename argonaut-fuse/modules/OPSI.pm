@@ -63,44 +63,6 @@ sub get_config_sections {
   return $cfg_defaults;
 }
 
-# Check if this module should handle this client
-# return 1 if this is the case, 0 otherwise
-sub has_pxe_config {
-  # Initialize opsi stuff
-  my $opsi_url= "https://$admin:$password\@$server:4447/rpc";
-  my $opsi_client = new JSON::RPC::Client;
-
-  my ($filename) = shift || return undef;
-
-  $log->info("ch $$: got filename ${filename}\n");
-
-  my $mac = argonaut_get_mac_pxe($filename);
-
-  # Load actions
-  my $callobj = {
-    method  => 'getClientIdByMac',
-    params  => [$mac],
-    id  => 1,
-  };
-  my $res = $opsi_client->call($opsi_url, $callobj);
-  my $state= 0;
-
-  if($res) {
-    if($res->is_error) {
-      $log->error("ch $$: Error : $res->error_message\n");
-    } else {
-      my $client = $res->result;
-      $log->info("ch $$: Found OPSI configuration for client with MAC ${mac}\n");
-      return 1;
-    }
-  } else {
-    $log->error("ch $$: Error : $opsi_client->status_line\n");
-  }
-
-  # Move result
-  return 0;
-}
-
 # Do everything that is needed, i.e. write the pxelinux.cfg file
 sub get_pxe_config {
 # Initialize opsi stuff
