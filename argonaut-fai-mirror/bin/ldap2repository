@@ -129,7 +129,7 @@ usage: $0 [-hvnpejsglz] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a 
   -c    : LDAP config file (default: ${ldapconf})
   -d    : Output dir (default: ${outdir})
   -i    : Network interface (default: ${interface})
-  -j    : Create a new cron.d/argonaut-mirror
+  -j    : Create a new cron (default: ${crond_dir}/argonaut-mirror)
   -n    : Skip cleanup for mirrors
   -p    : Show progress in cronjob
   -r    : Server root (default ${srvdir})
