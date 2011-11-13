@@ -35,6 +35,8 @@ use Net::LDAP::Util qw(:escape);
 use JSON::RPC::Client;
 use Log::Handler;
 
+use Argonaut::Common qw(:file);
+
 use Exporter;
 @ISA = ("Exporter");
 
@@ -72,10 +74,7 @@ sub has_pxe_config {
 
   $log->info("ch $$: got filename ${filename}\n");
 
-  # Extract MAC from PXE filename      
-  my $mac = $filename;                 
-  $mac =~ tr/-/:/;
-  $mac = substr( $mac, -1*(5*3+2) ); 
+  my $mac = argonaut_get_mac_pxe($filename);
 
   # Load actions
   my $callobj = {

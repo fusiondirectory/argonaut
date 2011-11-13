@@ -35,6 +35,8 @@ use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 use Log::Handler;
 
+use Argonaut::Common qw(:file);
+
 use Exporter;
 @ISA = ("Exporter");
 
@@ -63,11 +65,8 @@ sub has_pxe_config {
 
         $log->info("ch $$: got filename ${filename}");
 
-        # Extract MAC from PXE filename
-        my $mac = $filename;
-        $mac =~ tr/-/:/;
-        $mac = substr( $mac, -1*(5*3+2) );
-
+  my $mac = argonaut_get_mac_pxe($filename);
+  
         # Prepare the ldap handle
   reconnect:
   return undef if( ! &main::prepare_ldap_handle_retry
