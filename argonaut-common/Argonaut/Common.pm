@@ -62,7 +62,6 @@ BEGIN
       &argonaut_file_write
       &argonaut_file_chown
       &argonaut_options_parse
-      &argonaut_get_pid_lock
       &argonaut_get_mac_pxe
       &argonaut_create_dir
     )],
@@ -741,55 +740,6 @@ sub argonaut_gen_random_str {
   my $randstr = join '',
     map @$symbolset[rand @$symbolset], 0..($strlen-1);
   return $randstr;
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# Get a lockfile and check for already running processes
-#
-# @param string $cmd: application name to check in proc
-# @param string $pidfile: lockfile name
-# @return undef, $errstr or LOCKFILE handle
-#
-sub argonaut_get_pid_lock {
-  my( $cmd, $pidfile ) = @_;
-  my( $LOCK_FILE, $pid );
-
-  # Check, if we are already running
-  if( open($LOCK_FILE, "<$pidfile") ) {
-    $pid = <$LOCK_FILE>;
-    if( defined $pid ) {
-      chomp( $pid );
-      if( -f "/proc/$pid/stat" ) {
-        my($stat) = `cat /proc/$pid/stat` =~ m/$pid \((.+)\).*/;
-        if( "$cmd" eq $stat ) {
-          close( $LOCK_FILE );
-          return( undef, "Already running" );
-        }
-      }
-    }
-    close( $LOCK_FILE );
-    unlink( $pidfile );
-  }
-
-  # Try to open PID file
-#  if (!sysopen($LOCK_FILE, $pidfile, O_WRONLY|O_CREAT|O_EXCL, 0644)) {
-  if (!sysopen($LOCK_FILE, $pidfile,0644)) {
-    my $msg = "Couldn't obtain lockfile '$pidfile': ";
-
-    if (open($LOCK_FILE, '<', $pidfile)
-     && ($pid = <$LOCK_FILE>))
-    {
-     chomp($pid);
-     $msg .= "PID $pid";
-    } else {
-      $msg .= $!;
-    }
-
-    return( undef, $msg );
-  }
-
-  return( $LOCK_FILE ); 
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
