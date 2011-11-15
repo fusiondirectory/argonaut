@@ -202,7 +202,6 @@ reconnect:
       $mesg .= "\n";  
 
       $log->info($mesg);
-      $main::last_log = $single_log;
       return undef;
     }
   } 

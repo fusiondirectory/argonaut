@@ -55,7 +55,6 @@ our $ldap_base;
 our @ldapuris;
 our $parse_uris;
 our $ldap_handle;
-our $last_log = '';
 
 our $config = '/etc/argonaut-fuse/argonaut-fuse.conf';
 our $filesystem;
