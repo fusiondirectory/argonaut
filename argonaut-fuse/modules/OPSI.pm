@@ -40,10 +40,6 @@ use Argonaut::Common qw(:file);
 use Exporter;
 @ISA = ("Exporter");
 
-sub get_module_info {
-  return "Automatic Windows Installation";
-};
-
 my $admin;
 my $password;
 my $server;
@@ -58,6 +54,10 @@ my $cfg_defaults = {
 };
 
 my $log = Log::Handler->get_logger("argonaut-fuse");
+
+sub get_module_info {
+  return "Automatic Windows Installation";
+};
 
 sub get_config_sections {
   return $cfg_defaults;
