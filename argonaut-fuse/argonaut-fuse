@@ -98,14 +98,6 @@ our %cfg_defaults = (
   }
 );
 
-sub INT_handler {
-
-  $pidfile->remove or warn "Could not remove $pidfile\n";
-  
-  exit(0);
-
-}
-
 # Read config file
 my $cfg;
 if( defined $config && (length($config) > 0) ) {
@@ -181,6 +173,14 @@ Fuse::main(
 );
 
 exit 0;
+
+sub INT_handler {
+
+  $pidfile->remove or warn "Could not remove $pidfile\n";
+  
+  exit(0);
+
+}
 
 ##############################
 #
