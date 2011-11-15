@@ -104,7 +104,7 @@ reconnect:
   if( (! defined($status)) || ("" eq $status) ) { 
 
     # Handle our default action 
-    if ($main::dflt_init eq 'fallback') {
+    if ($main::default_mode eq 'fallback') {
       # Remove PXE config and rely on 'default' fallback 
       if( -f "$main::tftp_root/$filename" ) { 
         if( ! $main::dry_run ) { 
