@@ -106,9 +106,6 @@ sub INT_handler {
 
 }
 
-# Scan for modules - these can set their own config sections.
-import_modules();
-
 # Read config file
 my $cfg;
 if( defined $config && (length($config) > 0) ) {
@@ -144,6 +141,9 @@ $log->add(
         newline  => 1,
     }
 );
+
+# Scan for modules - these can set their own config sections.
+import_modules();
 
 my $mountpoint = $tftp_root;
 
