@@ -36,7 +36,7 @@ use Log::Handler;
 use Argonaut::Common qw(:file);
 
 use Exporter;
-@ISA = ("Exporter");
+our @ISA = ("Exporter");
 
 use constant USEC => 1000000;
 

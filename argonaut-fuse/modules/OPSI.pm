@@ -38,7 +38,7 @@ use Log::Handler;
 use Argonaut::Common qw(:file);
 
 use Exporter;
-@ISA = ("Exporter");
+our @ISA = ("Exporter");
 
 my $admin;
 my $password;
