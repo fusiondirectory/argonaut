@@ -45,7 +45,7 @@ use Time::HiRes qw(gettimeofday usleep);
 use Net::LDAP;
 use Log::Handler;
 
-use Argonaut::Common qw(:ldap);
+use Argonaut::Common qw(:ldap :file);
 
 use constant USEC => 1000000;
 
