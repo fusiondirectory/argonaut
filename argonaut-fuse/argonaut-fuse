@@ -142,6 +142,8 @@ $log->add(
     }
 );
 
+$log->info("Argonaut-Fuse Started\n");
+
 # Scan for modules - these can set their own config sections.
 import_modules();
 
@@ -162,8 +164,6 @@ $filesystem= {
     content => {}
   }
 };
-
-my($starttime) = "Started on " . localtime time;
 
 # Open static directory
 my $tftp_static_root_handle;
