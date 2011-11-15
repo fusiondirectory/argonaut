@@ -34,6 +34,7 @@ use 5.008;
 use Net::LDAP;
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
+use File::Path;
 
 my $iptool = "ifconfig";
 
@@ -63,6 +64,7 @@ BEGIN
       &argonaut_options_parse
       &argonaut_get_pid_lock
       &argonaut_get_mac_pxe
+      &argonaut_create_dir
     )],
     'array' => [qw(
       &argonaut_array_find_and_remove
