@@ -42,10 +42,6 @@ use Exporter;
 
 use constant USEC => 1000000;
 
-sub get_module_info {
-  return "Linux Terminal Server Project";
-};
-
 my $admin;
 my $password;
 my $server;
@@ -54,6 +50,10 @@ my $cfg_defaults = {
 };
 
 my $log = Log::Handler->get_logger("argonaut-fuse");
+
+sub get_module_info {
+  return "Linux Terminal Server Project";
+};
 
 sub get_config_sections {
   return $cfg_defaults;
