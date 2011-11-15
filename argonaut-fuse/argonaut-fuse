@@ -74,7 +74,7 @@ my $logfile = "argonaut-fuse.log";
 my $logdir;
 
 # Predefined variables for config
-my ( $pidfile, $logfile );
+my $pidfile;
 our( $ldap_conf, $ldap_dn, $ldap_pwd );
 our( $tftp_root, $tftp_static_root );
 our( $known_modules);
