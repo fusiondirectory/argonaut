@@ -40,6 +40,8 @@ use Argonaut::Common qw(:file);
 use Exporter;
 @ISA = ("Exporter");
 
+use constant USEC => 1000000;
+
 sub get_module_info {
   return "Linux Terminal Server Project";
 };
@@ -68,7 +70,7 @@ sub get_pxe_config {
         # Prepare the ldap handle
 reconnect:
         return undef if( ! &main::prepare_ldap_handle_retry
-                ( 5 * $main::usec, -1, 0.5 * $main::usec, 1.2 ) );
+                ( 5 * USEC, -1, 0.5 * USEC, 1.2 ) );
 
 
         # Search for the host to examine the FAI state

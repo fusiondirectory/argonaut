@@ -52,7 +52,6 @@ use constant USEC => 1000000;
 use lib "/usr/lib/argonaut/modules";
 
 our $ldap_base;
-our $usec = USEC;
 our @ldapuris;
 our $parse_uris;
 our $ldap_handle;
