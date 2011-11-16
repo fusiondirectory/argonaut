@@ -137,6 +137,7 @@ $log->add(
 $log->info("Argonaut-Fuse Started\n");
 
 # Scan for modules - these can set their own config sections.
+
 import_modules();
 
 my $mountpoint = $tftp_root;
@@ -156,6 +157,8 @@ $filesystem= {
     content => {}
   }
 };
+
+$log->info("Argonaut-Fuse Mounting $tftp_static_root\n");
 
 # Open static directory
 my $tftp_static_root_handle;
