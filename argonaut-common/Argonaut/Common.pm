@@ -464,9 +464,9 @@ Create a directory
 =cut
 sub argonaut_create_dir
 {
-  my $dir = @_;
+  my ($dir) = @_;
   
-  mkpath($dir,0);# or die "Could not create logdir $logdir";
+  mkdir($dir,755);
 }
 #------------------------------------------------------------------------------
 #
