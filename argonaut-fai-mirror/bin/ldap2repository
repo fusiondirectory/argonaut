@@ -35,7 +35,7 @@ use Getopt::Std;
 use File::Path;
 use File::Copy;
 
-use Argonaut::Common qw(:ldap :file :array :misc);
+use Argonaut::Common qw(:ldap :file :array :net);
 
 use vars qw/ %opt /;
 
