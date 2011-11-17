@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-fuse
 Architecture: all
-Depends: ${misc:Depends}, libconfig-inifiles-perl, libproc-daemon-perl, adduser, ucf, po-debconf, libfuse-perl, libfile-pid-perl, fuse-utils
+Depends: ${misc:Depends}, argonaut-common, liblog-handler-perl, libconfig-inifiles-perl, ucf, libfuse-perl, libfile-pid-perl, libnet-ldap-perl, fuse-utils
 Recommends: tftpd | atftpd | tftpd-hpa
 Description: Modular TFTP/Fuse supplicant
  Argonaut-fuse is a modular fuse-tftp-supplicant written in perl which allows
@@ -26,5 +26,21 @@ Architecture: all
 Depends: ${misc:Depends}, libnet-ldap-perl, argonaut-fuse
 Description: LDAP FAI module for the TFTP/Fuse supplicant
  FAI module for argonaut-fuse which is using the LDAP backend in conjunction
+ with FusionDirectory and Argonaut to generate client configurations.
+ .
+
+Package: argonaut-fuse-opsi-json
+Architecture: all
+Depends: ${misc:Depends}, libjson-perl (>= 2.07-1), libjson-rpc-perl, argonaut-fuse
+Description: LDAP OPSI module for the TFTP/Fuse supplicant
+ OPSI module for argonaut-fuse which is using the opsi json-rpc backend in conjunction
+ with FusionDirectory and Argonaut to generate client configurations.
+ .
+ 
+Package: argonaut-fuse-ltsp-ldap
+Architecture: all
+Depends: ${misc:Depends}, libnet-ldap-perl, argonaut-fuse
+Description: LDAP LTSP module for the TFTP/Fuse supplicant
+ LTSP module for argonaut-fuse which is using the LDAP in conjunction
  with FusionDirectory and Argonaut to generate client configurations.
  .
