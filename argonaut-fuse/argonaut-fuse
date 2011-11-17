@@ -158,11 +158,13 @@ $filesystem= {
   }
 };
 
-$log->info("Argonaut-Fuse Mounting $tftp_static_root\n");
+$log->info("Argonaut-fuse opening $tftp_static_root");
 
 # Open static directory
 my $tftp_static_root_handle;
 opendir($tftp_static_root_handle, $tftp_static_root);
+
+$log->info("Argonaut-Fuse Mounting $mountpoint\n");
 
 # Mount FUSE Filesystem
 Fuse::main(

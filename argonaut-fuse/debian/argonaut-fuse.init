@@ -47,10 +47,6 @@ case "$1" in
   log_end_msg 0
   ;;
 
-  reload|force-reload)
-    restart
-  ;;
-
   status) 
     status=0
     pidofproc -p "${PIDFILE}" "${DAEMON}" >/dev/null || status="$?"
@@ -64,7 +60,7 @@ case "$1" in
     fi
   ;;
 
-  *)	echo "Usage: /etc/init.d/argonaut-fuse start|stop|restart|reload|force-reload|status" >&2
+  *)  echo "Usage: /etc/init.d/argonaut-fuse start|stop|restart|status" >&2
     exit 1 
   ;;
 esac
