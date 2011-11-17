@@ -28,7 +28,7 @@ use 5.008;
 
 use Config::IniFiles;
 
-use Argonaut::Common qw(misc);
+use Argonaut::Common qw(:net);
 use Argonaut::Packages qw(get_packages_info, store_packages_file, cleanup_and_extract);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
