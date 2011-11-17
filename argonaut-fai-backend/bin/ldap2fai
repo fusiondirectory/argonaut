@@ -55,6 +55,7 @@ my $release_var = 'FAIclientRelease';
 my $check_hostname;
 my $kernel;
 my $ldapinfos;
+my $mac;
 
 Getopt::Long::Configure ("bundling");
 
@@ -66,17 +67,20 @@ GetOptions( 'v|verbose' => \$verbose,
             'n|dry-run' => \$dry_run,
             'W|prompt-pwd' => \$prompt_pwd,
             'w|password=s' => \$bind_pwd,
-            'H|hostname=s' => \$check_hostname )
+            'H|hostname=s' => \$check_hostname,
+            'm|mac=s' => \$mac )
   or usage( 'Wrong parameters' );
 
 # If we use dry-run, be verbose
 $verbose = 1 if( $dry_run );
 
-# Get MAC from cmdline
-my $mac = shift @ARGV;
-$mac eq '' && usage( "MAC address not specified." );
-usage( "No valid MAC address specified." )
-  if( ! ($mac =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i) );
+if (! defined $mac) {
+  usage( "MAC address not specified." );
+}
+
+if (!($mac =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i)) {
+    usage( "MAC address not valid." );
+}
 
 # Is dump_dir a directory
 if( ! $dry_run ) {
