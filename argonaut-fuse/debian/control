@@ -21,7 +21,7 @@ Description: Modular TFTP/Fuse supplicant
  . 
  There is already written modules for FAI (Fully automated install).
 
-Package: argonaut-fuse-fai-ldap
+Package: argonaut-fuse-fai
 Architecture: all
 Depends: ${misc:Depends}, libnet-ldap-perl, argonaut-fuse
 Description: LDAP FAI module for the TFTP/Fuse supplicant
@@ -29,7 +29,7 @@ Description: LDAP FAI module for the TFTP/Fuse supplicant
  with FusionDirectory and Argonaut to generate client configurations.
  .
 
-Package: argonaut-fuse-opsi-json
+Package: argonaut-fuse-opsi
 Architecture: all
 Depends: ${misc:Depends}, libjson-perl (>= 2.07-1), libjson-rpc-perl, argonaut-fuse
 Description: LDAP OPSI module for the TFTP/Fuse supplicant
@@ -37,7 +37,7 @@ Description: LDAP OPSI module for the TFTP/Fuse supplicant
  with FusionDirectory and Argonaut to generate client configurations.
  .
  
-Package: argonaut-fuse-ltsp-ldap
+Package: argonaut-fuse-ltsp
 Architecture: all
 Depends: ${misc:Depends}, libnet-ldap-perl, argonaut-fuse
 Description: LDAP LTSP module for the TFTP/Fuse supplicant
