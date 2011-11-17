@@ -164,17 +164,18 @@ sub usage
   (@_) && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
- usage: $0 [-hnvW] [-c config] [-D bind_dn ] [-w bind password] [-d dump_dir] [-H hostname] <MAC>
+ usage: $0 [-hnvW] [-c config] [-D bind_dn ] [-w bind password] [-d dump_dir] [-H hostname] -m mac_address
 
-  -h         : this (help) message
-  -n         : dry run (includes verbose)
-  -v         : be verbose
-  -c         : LDAP config file (default: ${ldap_conf})
-  -d         : dump dir (default: ${dump_dir})
-  -D         : bind dn 
-  -W         : prompt for password
-  -w         : read password from command line
-  -H <name>  : check hostname
+  -h  : this (help) message
+  -n  : dry run (includes verbose)
+  -v  : be verbose
+  -c  : LDAP config file (default: ${ldap_conf})
+  -d  : dump dir (default: ${dump_dir})
+  -D  : bind dn 
+  -W  : prompt for password
+  -w  : read password from command line
+  -H  : check hostname
+  -m  : mac address       
 
 EOF
   exit -1;
