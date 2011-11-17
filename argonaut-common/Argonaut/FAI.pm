@@ -33,7 +33,7 @@ use Net::LDAP;
 use File::Path;
 use Switch;
 
-use Argonaut::Common qw(:ldap :misc :string :file);
+use Argonaut::Common qw(:ldap :string :file);
 
 BEGIN
 {
