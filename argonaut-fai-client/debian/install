@@ -1,7 +1,7 @@
 bin/ldap2fai                		usr/sbin
 bin/fai-softupdate          		usr/sbin
-fai-lib/get-config-dir-argonaut 	usr/lib/fai
-nfsroot-hooks/argonaut-fai-backend	etc/fai/nfsroot-hooks
+lib/get-config-dir-argonaut	 	usr/lib/fai
+nfsroot-hooks/argonaut-fai-client	etc/fai/nfsroot-hooks
 nfsroot-templates/initramfs.conf       	etc/fai/nfsroot-templates
 nfsroot-templates/update-initramfs.conf	etc/fai/nfsroot-templates
 nfsroot-templates/usplash.conf         	etc/fai/nfsroot-templates

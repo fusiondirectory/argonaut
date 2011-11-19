@@ -23,7 +23,7 @@
 #######################################################################
 
 msg() {
-  echo "nfsroot-hooks/fusiondirectory: $1"
+  echo "nfsroot-hooks/argonaut-fai-client: $1"
 }
 
 # Make sysconfig a real directory
