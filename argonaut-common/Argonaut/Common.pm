@@ -216,6 +216,8 @@ sub argonaut_ldap_init {
     return \%results;
   }
 
+  $results{ 'ERROR' } = 0;
+  
   return \%results;
 }
 
