@@ -35,29 +35,37 @@ stop_server() {
   start-stop-daemon --stop --retry 5 --quiet --pidfile ${PIDFILE_SERVER} --name ${SERVER}
 }
 
-
 case "$1" in
- start)  log_daemon_msg "Starting Argonaut Server"
+ start)
   if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
+    log_daemon_msg "Starting Argonaut Server"
     log_progress_msg "done"
     start_server
-  fi
     log_end_msg $?
+  else
+    log_daemon_msg "To start put START_SERVER to 1 in /etc/default/argonaut-server\n"
+  fi
   ;;
-stop)   log_daemon_msg "Stopping Argonaut Server"
+stop)
   if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
+    log_daemon_msg "Stopping Argonaut Server"
     log_progress_msg "done"
     stop_server
-  fi
     log_end_msg $?
+  else
+    log_daemon_msg "Argonaut-server was not started, doing nothing\n"
+  fi
 ;;
-restart) log_daemon_msg "Restarting Argonaut Server" 
+restart)
   if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
+    log_daemon_msg "Restarting Argonaut Server" 
     log_progress_msg "done"
     stop_server
     start_server
+    log_end_msg $?
+  else
+     log_daemon_msg "Argonaut-server was not started, doing nothing\n" 
   fi
-  log_end_msg $?
 ;;
 status)
   if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
