@@ -40,6 +40,7 @@ use JSON;
 use Config::IniFiles;
 use File::Path;
 use Log::Handler;
+use File::Pid;
 
 use Argonaut::Common qw(:ldap :file);
 use Argonaut::Packages qw(get_packages_info store_packages_file);
@@ -55,6 +56,8 @@ my ($ldap_configfile,$ldap_dn,$ldap_password,$server_port,$client_port,$iptool,$
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-server.log";
 my $protocol = "http://";
+my $piddir = "/var/run/argonaut";
+my $pidfile = "argonaut-server.pid";
 
 readConfig();
 
@@ -70,6 +73,14 @@ $log->add(
         newline  => 1,
     }
 );
+
+argonaut_create_dir($piddir);
+
+my $pid = File::Pid->new({
+    file => "$piddir/$pidfile",
+  });
+
+ $pid->write;
 
 =pod
 =item readConfig
@@ -714,6 +725,7 @@ POE::Session->create(
                 }
                 close(DUMP); 
             }
+            $pid->remove;
         },
         sigchild => sub {
             $log->notice("child process exiting…");
@@ -721,6 +733,7 @@ POE::Session->create(
         },
         _stop => sub {
             $log->notice("_stop");
+            $pid->remove;
         },
     },
 );
