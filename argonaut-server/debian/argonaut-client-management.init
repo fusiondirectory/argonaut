@@ -1,5 +1,5 @@
 #!/bin/sh
-# Start/stop the argonaut client host management.
+# Start/stop the argonaut management client.
 #
 ### BEGIN INIT INFO
 # Provides:          argonaut-client-management
@@ -7,16 +7,17 @@
 # Required-Stop:     $network $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Argonaut client hosts Management
-# Description:       Argonaut client communicate with server by json rpc.
-#                    Those clients get or send json-rpc messages following
+# Short-Description: Argonaut management client
+# Description:       Argonaut management client communication with 
+#                    argonaut server.
+#                    The client get json-rpc messages and execute
 #                    the actions demanded
 ### END INIT INFO
 
-# variables for the argonaut client.
+# variables for the argonaut client management.
 CLIENT="argonaut-client-management"
 DAEMON_CLIENT="/usr/sbin/${CLIENT}"
-RUN_DIRECTORY="/var/run/${CLIENT}"
+RUN_DIRECTORY="/var/run/argonaut"
 PIDFILE_CLIENT="$RUN_DIRECTORY/${CLIENT}.pid"
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin"
@@ -24,60 +25,55 @@ PATH="/sbin:/usr/sbin:/bin:/usr/bin"
 # Load LSB support functions
 . /lib/lsb/init-functions
 
-#if [ ! -d "/var/run/goto-si" ]; then
-#	mkdir $RUN_DIRECTORY
-#fi
+# Read argonaut-server basic variables
+. /etc/default/argonaut-client-management
 
 start_client() {
-	start-stop-daemon --start --quiet --pidfile ${PIDFILE_CLIENT} --name ${CLIENT} --startas ${DAEMON_CLIENT}
+  start-stop-daemon --start --quiet --pidfile ${PIDFILE_CLIENT} --exec ${DAEMON_CLIENT} --startas ${DAEMON_CLIENT}
 }
 
 stop_client() {
-	start-stop-daemon --stop --retry 5 --quiet --pidfile ${PIDFILE_CLIENT} --name ${CLIENT}
+  start-stop-daemon --stop --retry 5 --quiet --pidfile ${PIDFILE_CLIENT} --exec ${DAEMON_CLIENT}
 }
 
-
 case "$1" in
- start)  log_daemon_msg "Starting Argonaut Client"
-	if [ "$START_SERVER" = "1" -a -x ${DAEMON_CLIENT} ]; then
-		log_progress_msg "client"
-		start_client
-	fi
-		log_end_msg $?
-	;;
-stop)   log_daemon_msg "Stopping Argonaut Client"
-	if [ "$START_SERVER" = "1" -a -x ${DAEMON_CLIENT} ]; then
-		log_progress_msg "client"
-		stop_client
-	fi
-		log_end_msg $?
-;;
-reload|force-reload|restart) log_daemon_msg "Restarting Argonaut Client" 
-	if [ "$START_SERVER" = "1" -a -x ${DAEMON_CLIENT} ]; then
-		stop_client
-		start_client
-	fi
-	log_progress_msg "done"
-	log_end_msg $?
+ start)
+  if [ "$START_CLIENT" = "1" ]; then
+    log_daemon_msg "Starting Argonaut Client Management"
+    log_progress_msg "done"
+    start_client
+    log_end_msg $?
+  else
+    log_daemon_msg "To start put START_CLIENT to 1 in /etc/default/argonaut-client-management\n"
+  fi
+  ;;
+stop)
+  if [ "$START_CLIENT" = "1" ]; then
+    log_daemon_msg "Stopping Argonaut Client Management"
+    log_progress_msg "done"
+    stop_client
+    log_end_msg $?
+  else
+    log_daemon_msg "Argonaut Client Management was not started, doing nothing\n"
+  fi
 ;;
 status)
-	if [ "$START_SERVER" = "1" -a -x ${DAEMON_CLIENT} ]; then
-		status=0
-		pidofproc -p "${PIDFILE_CLIENT}" "${DAEMON_CLIENT}" >/dev/null || status="$?"
-		log_daemon_msg "Status of Argonaut" "${NAME}"
-		if [ "$status" = 0 ]; then
-			log_progress_msg "is running"
-			log_end_msg 0
-		else
-			log_progress_msg "is not running"
-			log_end_msg $status
-		fi
-	fi
+  if [ "$START_CLIENT" = "1" ]; then
+    status=0
+    pidofproc -p "${PIDFILE_CLIENT}" "${DAEMON_CLIENT}" >/dev/null || status="$?"
+    log_daemon_msg "Status of Argonaut" "${NAME}"
+    if [ "$status" = 0 ]; then
+      log_progress_msg "is running"
+      log_end_msg 0
+    else
+      log_progress_msg "is not running"
+      log_end_msg $status
+    fi
+  fi
 ;;
 
-*)	log_action_msg "Usage: /etc/init.d/argonaut-client {start|stop|restart|reload|force-reload|status}"
+*)  log_action_msg "Usage: /etc/init.d/argonaut-client-management {start|stop|status}"
         exit 2
         ;;
 esac
 exit 0
-

@@ -28,7 +28,7 @@ PATH="/sbin:/usr/sbin:/bin:/usr/bin"
 . /etc/default/argonaut-server
 
 start_server() {
-  start-stop-daemon --start --quiet --pidfile ${PIDFILE_SERVER} --name ${SERVER} --startas ${DAEMON_SERVER} --background
+  start-stop-daemon --start --quiet --pidfile ${PIDFILE_SERVER} --name ${SERVER} --startas ${DAEMON_SERVER}
 }
 
 stop_server() {
@@ -56,17 +56,6 @@ stop)
     log_daemon_msg "Argonaut-server was not started, doing nothing\n"
   fi
 ;;
-restart)
-  if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
-    log_daemon_msg "Restarting Argonaut Server" 
-    log_progress_msg "done"
-    stop_server
-    start_server
-    log_end_msg $?
-  else
-     log_daemon_msg "Argonaut-server was not started, doing nothing\n" 
-  fi
-;;
 status)
   if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
     status=0
@@ -82,7 +71,7 @@ status)
   fi
 ;;
 
-*)  log_action_msg "Usage: /etc/init.d/argonaut-server {start|stop|restart|status}"
+*)  log_action_msg "Usage: /etc/init.d/argonaut-server {start|stop|status}"
         exit 2
         ;;
 esac
