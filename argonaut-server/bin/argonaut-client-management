@@ -40,6 +40,10 @@ my $logfile = "argonaut-client-management.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-client-management.pid";
 
+$SIG{TERM}=\&sig_int_handler;
+
+$SIG{INT}=\&sig_int_handler;
+
 readConfig();
 
 argonaut_create_dir($logdir);
@@ -69,7 +73,7 @@ if ($pidrunning) {
   die "Argonaut Management is already running $pidrunning\n";
 }
 
- $pid->write;
+$pid->write;
 
 =pod
 This just launch a JSONRPC server with ClientDaemon.pm methods.
@@ -93,6 +97,19 @@ sub readConfig {
     $client_port            =   $config->val( network => "client_port"          ,8081);
     $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
 }
+
+=pod
+
+=item sig_int_handler
+Get the sigint signals, remove the pid and exit
+=cut
+
+sub sig_int_handler {
+
+    $pid->remove;
+    exit(0);
+}
+
 
 __END__
 
