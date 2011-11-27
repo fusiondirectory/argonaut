@@ -39,7 +39,6 @@ case "$1" in
  start)
   if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
     log_daemon_msg "Starting Argonaut Server"
-    log_progress_msg "done"
     start_server
     if [ $? = 0 ]; then
       log_progress_msg "done"
@@ -54,7 +53,6 @@ case "$1" in
 stop)
   if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
     log_daemon_msg "Stopping Argonaut Server"
-    log_progress_msg "done"
     stop_server
     if [ $? = 0 ]; then
       log_progress_msg "done"
@@ -70,7 +68,7 @@ status)
   if [ "$START_SERVER" = "1" -a -x ${DAEMON_SERVER} ]; then
     status=0
     pidofproc -p "${PIDFILE_SERVER}" "${DAEMON_SERVER}" >/dev/null || status="$?"
-    log_daemon_msg "Status of Argonaut" "${NAME}"
+    log_daemon_msg "Status of ${CLIENT}"
     if [ "$status" = 0 ]; then
       log_progress_msg "is running"
       log_end_msg 0

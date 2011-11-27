@@ -40,7 +40,6 @@ case "$1" in
  start)
   if [ "$START_CLIENT" = "1" ]; then
     log_daemon_msg "Starting Argonaut Client Management"
-    log_progress_msg "done"
     start_client
     if [ $? = 0 ]; then
       log_progress_msg "done"
@@ -55,7 +54,6 @@ case "$1" in
 stop)
   if [ "$START_CLIENT" = "1" ]; then
     log_daemon_msg "Stopping Argonaut Client Management"
-    log_progress_msg "done"
     stop_client
     if [ $? = 0 ]; then
       log_progress_msg "done"
@@ -71,7 +69,7 @@ status)
   if [ "$START_CLIENT" = "1" ]; then
     status=0
     pidofproc -p "${PIDFILE_CLIENT}" "${DAEMON_CLIENT}" >/dev/null || status="$?"
-    log_daemon_msg "Status of Argonaut" "${NAME}"
+    log_daemon_msg "Status of ${CLIENT}"
     if [ "$status" = 0 ]; then
       log_progress_msg "is running"
       log_end_msg 0
