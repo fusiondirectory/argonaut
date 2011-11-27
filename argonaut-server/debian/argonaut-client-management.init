@@ -42,7 +42,12 @@ case "$1" in
     log_daemon_msg "Starting Argonaut Client Management"
     log_progress_msg "done"
     start_client
-    log_end_msg $?
+    if [ $? = 0 ]; then
+      log_progress_msg "done"
+      log_end_msg 0
+    else
+      log_end_msg $?
+    fi
   else
     log_daemon_msg "To start put START_CLIENT to 1 in /etc/default/argonaut-client-management\n"
   fi
@@ -52,7 +57,12 @@ stop)
     log_daemon_msg "Stopping Argonaut Client Management"
     log_progress_msg "done"
     stop_client
-    log_end_msg $?
+    if [ $? = 0 ]; then
+      log_progress_msg "done"
+      log_end_msg 0
+    else
+      log_end_msg $?
+    fi
   else
     log_daemon_msg "Argonaut Client Management was not started, doing nothing\n"
   fi
