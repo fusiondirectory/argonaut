@@ -99,9 +99,9 @@ No parameters needed
 sub readConfig {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    $server_port            =   $config->val( network => "server_port"          ,8080);
-    $client_port            =   $config->val( network => "client_port"          ,8081);
-    $iptool                 =   $config->val( network => "iptool"               ,"/sbin/ifconfig");
+    $server_port            =   $config->val( server => "server_port"          ,8080);
+    $client_port            =   $config->val( client => "client_port"          ,8081);
+    $iptool                 =   $config->val( programs => "iptool"               ,"/sbin/ifconfig");
     $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
     $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     $ldap_password          =   $config->val( ldap => "password"                ,"");

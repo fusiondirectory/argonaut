@@ -34,9 +34,9 @@ use Argonaut::Packages qw(get_packages_info, store_packages_file, cleanup_and_ex
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-my $servpath                =   $config->val( repository => "path"                  ,"/srv/www/debian");
-my $interface               =   $config->val( repository => "interface"             ,"eth0");
-my $iptool                  =   $config->val( network => "iptool"                   ,"/sbin/ifconfig");
+my $servpath                =   $config->val( crawler => "path"                  ,"/srv/www/debian");
+my $interface               =   $config->val( crawler => "interface"             ,"eth0");
+my $iptool                  =   $config->val( programs => "iptool"               ,"/sbin/ifconfig");
 
 argonaut_get_mac($interface);
 

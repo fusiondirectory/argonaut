@@ -38,8 +38,8 @@ my $protocol = "http://";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-my $server_port                     =   $config->val( network => "server_port"        ,8080);
-my $server_ip                       =   $config->val( network => "server_ip"          ,"");
+my $server_port                     =   $config->val( server => "server_port"        ,8080);
+my $server_ip                       =   $config->val( server => "server_ip"          ,"");
 
 my $file                            =   $config->val( client => "file"                ,"/tmp/argonaut");
 my $logdir                          =   $config->val( log => "logdir"                 ,"/var/log/argonaut/");

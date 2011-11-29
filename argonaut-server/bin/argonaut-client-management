@@ -94,7 +94,7 @@ No parameters needed
 sub readConfig {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    $client_port            =   $config->val( network => "client_port"          ,8081);
+    $client_port            =   $config->val( client => "client_port"          ,8081);
     $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
 }
 

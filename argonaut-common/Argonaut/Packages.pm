@@ -51,8 +51,8 @@ my $configfile = "/etc/argonaut/argonaut.conf";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-my $arch            =   $config->val( repository => "arch"                ,"i386");
-my $packages_folder =   $config->val( repository => "packages_folder"     ,"/var/cache/argonaut/packages");
+my $arch            =   $config->val( crawler => "arch"                ,"i386");
+my $packages_folder =   $config->val( crawler => "packages_folder"     ,"/var/cache/argonaut/packages");
 
 =pod
 =item get_repolines
