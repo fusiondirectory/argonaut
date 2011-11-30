@@ -34,83 +34,73 @@ use MIME::Base64;
 use Getopt::Std;
 use File::Path;
 use File::Copy;
+use Log::Handler;
+use Config::IniFiles;
 
 use Argonaut::Common qw(:ldap :file :array :net);
 
-use vars qw/ %opt /;
-
 use lib "/usr/lib/argonaut";
 
-my $ldapconf = "/etc/ldap/ldap.conf";
-my $outdir = "/etc/argonaut/fai";
-my $crond_dir= "/etc/cron.d";
-my $interface = "eth0";
-my $verbose = 0;
-my $newcrond = 0;
-my $opt_string = 'hvnpejsglzc:d:r:i:a:P';
-my $hostname;
-my $srvdir = "/srv/www";
-my $progress = "";
-my $nocleanup = "";
-my $small_errors = "";
-my $arch = "i386";
-my $proxy = "";
-my $nosource ="";
-my $releasegpg = "";
-my $diff = "";
-my $contents = "";
-my $installer = "";
-my $iptool = "/sbin/ifconfig";
+my ($ldap_configfile,$ldap_dn,$ldap_password,$interface,$arch,$mirrordir,$proxy);
+my ($cleanup,$verbose,$errors,$source,$gpgcheck,$contents,$pdiff,$hostname);
+my ($iptool,$logdir);
 my $result;
 my $mac;
 my $ldapinfos;
 
-getopts( "$opt_string", \%opt ) or usage("Wrong parameters");
-usage("ldap2repository - creating debian repositories cronjob for the Argonaut deployment system.") if $opt{h};
+my $configfile = "/etc/argonaut/argonaut.conf";
+my $outdir = "/etc/argonaut/fai";
+my $crond_dir= "/etc/cron.d";
+my $logfile = "ldap2repository.log";
 
-$verbose   = $opt{v} ? 1 : 0;
-$newcrond  = $opt{j} ? 1 : 0;
-$outdir    = $opt{d} ? $opt{d} : $outdir;
-$ldapconf  = $opt{c} ? $opt{c} : $ldapconf;
-$interface = $opt{i} ? $opt{i} : $interface;
-$nocleanup = $opt{n} ? "--nocleanup" : "";
-$srvdir    = $opt{r} ? $opt{r} : $srvdir;
-$progress  = $opt{p} ? "--progress" : "";
-$arch      = $opt{a} ? $opt{a} : $arch;
-$small_errors = $opt{e} ? "--ignore-small-errors" : "";
-$proxy     = $opt{P} ? "--proxy=".$opt{P} : "";
-$nosource  = $opt{s} ? "--nosource" : "";
-$releasegpg = $opt{g} ? "--ignore-release-gpg" : "";
-$diff = $opt{z} ? "--diff" : "";
-$contents = $opt{l} ? "--getcontents" : "";
-$installer = $opt{y} ? ",main/debian-installer" : "";
+readConfig($configfile);
 
-$ldapinfos = argonaut_ldap_init($ldapconf);
+argonaut_create_dir($logdir);
+
+my $log = Log::Handler->create_logger("ldap2repository");
+
+$log->add(
+    file => {
+        filename => "$logdir/$logfile",
+        maxlevel => "debug",
+        minlevel => "emergency",
+        newline  => 1,
+    }
+);
+
+$log->info ("ldap2repository started\n");
+
+$ldapinfos = argonaut_ldap_init($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
 
 if ( $ldapinfos->{'ERROR'} > 0) {
   print ( $ldapinfos->{'ERRORMSG'}."\n" );
   exit ($ldapinfos->{'ERROR'});
 }
-    
-my $base = $ldapinfos->{BASE};
 
-my $ldapuris = $ldapinfos->{URIS};
+my $base = $ldapinfos->{'BASE'};
 
-my $handle = $ldapinfos->{HANDLE};
+my $ldapuris = $ldapinfos->{'URIS'};
+
+my $handle = $ldapinfos->{'HANDLE'};
 
 # find mac address of the host running ldap2repository
 $mac = argonaut_get_mac($interface);
 
-# create the outdir if it doesn't exist
--d "$outdir" 
-or mkpath "$outdir" 
-or warn "WARNING: Can't create subdir $outdir: $!\n";
+argonaut_create_dir($outdir);
 
-# tell us if outdir is not a directory
--d "$outdir" || usage("'$outdir' is not a directory.\n");
+  if( $verbose eq "yes" ) {
+    my $host = $hostname -f;
+    print "Generating sources.list and debmirror cronjob for server\n"
+      . "Host:   ${host}\n"
+      . "Base:   ${base}\n"
+      . "Outdir: ${outdir}\n\n";
+  }
+  
+#generate the cronjob script
+generate_cronjob_script();
 
-#generate the cronjob
-generate_cronjob();
+#generate the cronjob daily
+generate_cronjob_daily();
 
 # take down ldap session
 $handle->unbind;
@@ -118,153 +108,153 @@ $handle->disconnect;
 
 exit 0;
 
-sub usage
-{
-  (@_) && print STDERR "\n@_\n\n";
+sub readConfig {
+  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-  print STDERR << "EOF";
-usage: $0 [-hvnpejsglz] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
+  $interface              =   $config->val( ldap2repository => "interface"    ,"eth0");
+  $arch                   =   $config->val( ldap2repository => "arch"         ,"i386");
+  $mirrordir              =   $config->val( ldap2repository => "mirrordir"    ,"/srv/www/");
+  $proxy                  =   $config->val( ldap2repository => "proxy"        ,"");
+  $cleanup                =   $config->val( ldap2repository => "cleanup"      ,"no");
+  $errors                 =   $config->val( ldap2repository => "errors"       ,"yes");
+  $source                 =   $config->val( ldap2repository => "source"       ,"no");
+  $gpgcheck               =   $config->val( ldap2repository => "gpgcheck"     ,"no");
+  $contents               =   $config->val( ldap2repository => "contents"     ,"no");
+  $verbose                =   $config->val( ldap2repository => "verbose"      ,"no");
+  $hostname               =   $config->val( programs => "hostname"            ,"/bin/hostname");
+  $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
 
-  -h    : This (help) message
-  -c    : LDAP config file (default: ${ldapconf})
-  -d    : Output dir (default: ${outdir})
-  -i    : Network interface (default: ${interface})
-  -j    : Create a new cron (default: ${crond_dir}/argonaut-mirror)
-  -n    : Skip cleanup for mirrors
-  -p    : Show progress in cronjob
-  -r    : Server root (default ${srvdir})
-  -v    : Be verbose on generate
-  -P    : Proxy (default: ${proxy})
-  -e    : Ignore small errors
-  -a    : Processor architecture (default: ${arch})
-  -s    : Don't mirror source packages
-  -g    : Don't check gpg signature on release file
-  -l    : Download Contents.arch.gz files
-  -z    : Use diff files
-EOF
-  exit -1;
+  if ($cleanup eq "no") {
+    $cleanup = "--nocleanup";
+  } else {
+    $cleanup = "";
+  }
+    
+  if ($errors eq "yes") {
+    $errors = "--ignore-small-errors";
+  } else {
+    $errors = "";
+  }
+    
+  if ($source eq "no") {
+    $source = "--nosource";
+  } else {
+    $source = "";
+  }
+
+  if ($gpgcheck eq "no") {
+    $gpgcheck = "--ignore-release-gpg";
+  } else {
+    $gpgcheck = "";
+  }
+
+  if ($contents eq "yes") {
+    $contents = "--getcontents";
+  } else {
+    $contents = "";
+  }
 }
 
-sub generate_cronjob {
+sub generate_cronjob_daily {
+  # generate new /etc/cron.d/argonaut-mirror
+  open (CROND, ">${crond_dir}/argonaut-mirror")
+    || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
+
+  print CROND "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
+  print CROND "\@daily root $outdir/mirror-update-cronjob\n";
+  close (CROND);
+}
+  
+sub generate_cronjob_script {
   my ($mesg,$entry,$par_mesg,$par_entry,@entries);
   my ($line,@deblines,@modsections,@rdns,%saw,$debline);
-
-  my $hostname = `hostname -f`;
-  $hostname = $1 if ( $hostname =~ m/([a-z0-9\.\-]+).*/g );
-
-  if( $verbose ) {
-    print "Generating sources.list and debmirror cronjob for server\n"
-      . "Host:   ${hostname}\n"
-      . "Base:   ${base}\n"
-      . "Outdir: ${outdir}\n\n";
-  }
-
-  open (SOURCES,">${outdir}/sources.list")
-    || die "Can't create ${outdir}/sources.list: $!\n";
+  
   open (CRON, ">${outdir}/mirror-update-cronjob")
     || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
-
-  # generate new /etc/cron.d/argonaut-mirror if asked
-  # this option allows to add option neccessary
-  # to the got-fai-backend cron
-  if( $newcrond ) {
-    open (CROND, ">${crond_dir}/argonaut-mirror")
-      || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
-
-    print CROND "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
-    print CROND "\@reboot root  ldap2repository $progress $nocleanup $releasegpg $nosource $small_errors $diff $contents -i $interface -a $arch $proxy;  [ -f $outdir/mirror-update-cronjob ] && sh 
-$outdir/mirror-update-cronjob\n";
-    print CROND "\@daily  root  ldap2repository $progress $nocleanup $releasegpg $nosource $small_errors $diff $contents -i $interface -a $arch $proxy;  [ -f $outdir/mirror-update-cronjob ] && sh 
-$outdir/mirror-update-cronjob\n";
-
-    close (CROND);
+    
+  my $reposerver = argonaut_search_repo_server($handle, $base, $mac);
+  if (0 == $reposerver->count) {
+    print( "Server $hostname doesn't contain software repositories\n" );
+    $log->info ("Server $hostname doesn't contain software repositories\n");
+    close (CRON);
+    unlink "${outdir}/mirror-update-cronjob";
+    exit 0;
   }
- 
+
   # Write cron script
   print CRON "#!/bin/sh\n";
-
-  my $reposerver = argonaut_search_repo_server($handle, $base, $mac);
-  if( 0 == $reposerver->count ) {
-      print( "Server object doesn't contain software repositories\n" );
-      exit 0;
-  }
-
+  
   @entries = $reposerver->entries;
 
   $entry = $entries[0];
   my ($newbase) = $entry->dn() =~ m/.*ou=systems,(.*)/;
-  if( "$base" ne "$newbase" ) {
-    print( "Switching base: $newbase\n" ) if( $verbose );
+  if ("$base" ne "$newbase") {
+    print ("Switching base: $newbase\n") if($verbose eq "yes");
+    $log->info ("Switching base: $newbase\n");
     $base = $newbase;
   }
+  
   foreach my $repoline ($entry->get_value('FAIrepository')){
     my (@items) = split('\|',${repoline});
     my $uri = $items[0];
     my ($dir) = $uri =~ m%.*://[^/]+/(.*)%;
-    my ($localuri) = $uri =~ s%://[^/]+%://localhost%;
+    my ($localuri) = $uri;
     my $parent_or_opts = $items[1];
     my $dist = $items[2];
     my $sections = $items[3];
     my (@section_list) = split(',',$items[3]);
 
+    open (SOURCES, ">${outdir}/sources.list");
     print SOURCES "deb $uri $dist @section_list\n";
-    print " +S  $dist ($sections) via $uri\n" if( $verbose );
-
+    print " +S  $dist ($sections) via $uri\n" if( $verbose eq "yes" );
+  
     if ("" eq "$parent_or_opts") {
       print( "No parent for '$repoline'\n" );
+      $log->info ("No parent for '$repoline'\n");
       next;
     }
 
-    if (":" eq substr($parent_or_opts,0,1)) {
-        # No FusionDirectory internal mirror or too complicated: write as additional options
-        print CRON "debmirror ${releasegpg} ${nosource} ${small_errors} ${diff} ${contents} -a ${arch} --dist=${dist} --sections=${sections}" 
-          . substr($parent_or_opts,1) . "${installer} ${proxy} ${srvdir}/${dist}\n";
-        print " +Cc ${dist} (${sections})\n" if( $verbose );
+    # Check repository release
+    my (@rdns);
+
+    @rdns = split(',',$base);
+
+    $par_entry = argonaut_search_parent_repo_server( $handle, $base, "${parent_or_opts}" );
+    if (0 == $par_entry) {
+      print( "Couldn't find parent repository server for '$repoline'\n" );
+      $log->info ("Couldn't find parent repository server for '$repoline'\n");
+      next;
     }
-    else {
-      # Check repository release
-      my (@rdns,$search_base);
 
-      @rdns = split(',',$base);
-
-      $par_entry = argonaut_search_parent_repo_server( $handle, $base, "${parent_or_opts}" );
-      if( 0 == $par_entry ) {
-        print( "Couldn't find parent repository server for '$repoline'\n" );
-        next;
+    foreach my $par_repoline ($par_entry->get_value('FAIrepository')){
+      my (@par_items) = split('\|',${par_repoline});
+      my ($method,$host,$root);
+      if ($par_items[0] =~ m#([^:]+)://([^/]+)(.*)#) {
+        $method = $1;
+        $host = $2;
+        $root = $3;
       }
 
-      foreach my $par_repoline ($par_entry->get_value('FAIrepository')){
-        my (@par_items) = split('\|',${par_repoline});
-        my ($method,$host,$root);
-        if ($par_items[0] =~ m#([^:]+)://([^/]+)(.*)#) {
-          $method = $1;
-          $host = $2;
-          $root = $3;
+      my $par_dist = $par_items[2];
+      my @outline = ();
+      if ("$dist" eq "$par_dist") {
+        my (@par_section_list) = split(',', $items[3]);
+        foreach my $section (@par_section_list) {
+          if (argonaut_array_find_and_remove( \@section_list, ${section})) {
+            push (@outline, $section);
+            last if (0 == scalar @section_list);
+          }
         }
 
-        my $par_dist = $par_items[2];
-        my @outline = ();
-        if ("$dist" eq "$par_dist") {
-          my (@par_section_list) = split(',', $items[3]);
-          foreach my $section (@par_section_list) {
-            if (argonaut_array_find_and_remove( \@section_list, ${section})) {
-              push( @outline, $section );
-              last if (0 == scalar @section_list);
-            }
-          }
-
-          if (0 != scalar @{outline}) {
-              print CRON "\ndebmirror ${progress} ${nocleanup} ${releasegpg} ${nosource} ${small_errors} ${diff} ${contents} -a ${arch} --dist=${dist} --section=" . join(",", @{outline}) 
-              . "${installer} --method=${method} --host=${host} --root=${root} ${proxy} ${srvdir}/${dir}\n";
-            print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose );
-          }
-          last if (0 == scalar @section_list);
+        if (0 != scalar @{outline}) {
+          print CRON "\ndebmirror ${cleanup} ${gpgcheck} ${source} ${errors} ${contents} -a ${arch} --dist=${dist} --section=" . join(",", @{outline}) 
+                    . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/${dir}\n";
+          print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose eq "yes" );
         }
+        last if (0 == scalar @section_list);
       }
     }
   }
-
-  close (SOURCES);
   close (CRON);
 }
 
@@ -276,47 +266,13 @@ ldap2repository - creating debian repositories cronjob for the Argonaut deployme
 
 =head1 SYNOPSIS
 
-ldap2repository [-hvnpejsglz] [-c config] [-d outdir] [-r srvroot] [-i interface] [-a arch] [-P proxy]
+ldap2repository 
 
 =head1 DESCRIPTION
 
 ldap2repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
 
-=over 14
-
-=item B<-c>        LDAP config file (default: /etc/ldap/ldap.conf)
-
-=item B<-d>        Output dir (default: /etc/argonaut/fai)
-
-=item B<-h>        Display this help and exit
-
-=item B<-n>        Skip cleanup for mirrors
-
-=item B<-p>        Show progress in cronjob
-
-=item B<-v>        Be verbose
-
-=item B<-i>        Network interface (default: eth0)
-
-=item B<-j>        Create a new /etc/cron.d/argonaut-mirror
-
-=item B<-r>        Server root (default: /srv/www)
-
-=item B<-e>        Ignore small errors
-
-=item B<-a>        Processor architecture (default: i386)
-
-=item B<-P>        proxy (default: none)
-
-=item B<-s>        Don't mirror source packages
-
-=item B<-g>        Don't check gpg signature on release file
-
-=item B<-l>        Download Contents.arch.gz files
-
-=item B<-z>        Update Packages.gz and Sources.gz with diff files
-
-=back
+The configuration is read from the argonaut.conf file
 
 =head1 BUGS 
 
