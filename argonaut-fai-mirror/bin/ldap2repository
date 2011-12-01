@@ -89,7 +89,7 @@ $mac = argonaut_get_mac($interface);
 argonaut_create_dir($outdir);
 
   if( $verbose eq "yes" ) {
-    my $host = $hostname -f;
+    my $host = `$hostname -f`;
     print "Generating sources.list and debmirror cronjob for server\n"
       . "Host:   ${host}\n"
       . "Base:   ${base}\n"
