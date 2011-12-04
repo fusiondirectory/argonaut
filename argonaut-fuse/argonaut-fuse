@@ -38,7 +38,6 @@ use Fuse;
 
 use Data::Dumper;
 use File::Pid;
-use Getopt::Long;
 use Config::IniFiles;
 use Storable qw(freeze thaw);
 use Time::HiRes qw(gettimeofday usleep);
@@ -49,77 +48,32 @@ use Argonaut::Common qw(:ldap :file);
 
 use constant USEC => 1000000;
 
-use lib "/usr/lib/argonaut/modules";
-
-our $ldap_base;
-our @ldapuris;
-our $parse_uris;
-our $ldap_handle;
-
-our $config = '/etc/argonaut-fuse/argonaut-fuse.conf';
-our $filesystem;
-our $last_attred_file;
-
-# Parse options and allow '-vvv'
-Getopt::Long::Configure( 'bundling' );
-GetOptions( 'h|help' => \&usage,
-            'c|config=s' => \$config)
-  or usage( '', 1 );
+use lib "/usr/share/perl5/Argonaut/Fuse";
 
 #where to look for modules files
-my $modules_path= "/usr/lib/argonaut/modules";
-
-# logfile name and dir
-my $logfile = "argonaut-fuse.log";
-my $logdir;
+my $modules_path= "/usr/share/perl5/Argonaut/Fuse";
 
 # Predefined variables for config
-my $pidfile;
-our( $ldap_conf, $ldap_dn, $ldap_pwd );
-our( $tftp_root, $tftp_static_root );
-our( $known_modules);
-our( $default_mode );
+our ($default_mode, $tftp_root, $tftp_static_root, $fai_flags, $nfs_opts, $nfs_root, $union);
+our ($opsiserver, $admin, $password, $lang);
+our ($ltspserver);
+our ($ldap_configfile, $ldap_dn, $ldap_password, $base, $ldap_handle, $ldapuris, $ldapinfos);
 
-# All default values
-our %cfg_defaults = (
-  'basic' => {
-    'pidfile'      => [ \$pidfile,   '/var/run/argonaut-fuse.pid' ],
-    'logdir'       => [ \$logdir,   '/var/log/argonaut/' ],
-    'default_mode' => [ \$default_mode, 'install' ], # 'install', 'fallback';;
-  },
-  'ldap' => {
-    'config'    => [ \$ldap_conf, '/etc/ldap/ldap.conf' ],
-    'dn'        => [ \$ldap_dn,   undef ],
-    'password'  => [ \$ldap_pwd,  undef ],
-  },
-  'tftp' => {
-    'pxelinux_cfg'          => [ \$tftp_root, '/tftpboot/pxelinux.cfg' ],
-    'pxelinux_cfg_static'   => [ \$tftp_static_root, '/tftpboot/pxelinux.static' ],
-  }
-);
+our $filesystem;
+our $last_attred_file;
+our ($known_modules);
 
-# Read config file
-my $cfg;
-if( defined $config && (length($config) > 0) ) {
-  if( -r $config )
-    { $cfg = Config::IniFiles->new( -file => $config ); }
-  else { die("Couldn't read config file: $config"); }
-}
-else { $cfg = Config::IniFiles->new(); }
+my $configfile = "/etc/argonaut/argonaut-fuse.conf";
+my $logfile = "argonaut-fuse.log";
+my $piddir = "/var/run/argonaut";
+my $pidfile = "argonaut-fuse.pid";
+my $logdir;
 
-# "Parse" config into values
-foreach my $section (keys %cfg_defaults) {
-  foreach my $param (keys %{$cfg_defaults{ $section }}) {
-    my $pinfo = $cfg_defaults{ $section }{ $param };
-    ${@$pinfo[ 0 ]} = $cfg->val( $section, $param, @$pinfo[ 1 ] );
-  }
-}
+$SIG{TERM}=\&sig_int_handler;
 
-# Parse LDAP configuration
-  ($ldap_base,$parse_uris) = argonaut_ldap_parse_config( $ldap_conf );
-  die ( "Couldn't find LDAP base in config!" ) if( ! defined $ldap_base );
-  die ( "Couldn't find LDAP URI in config!" ) if( ! defined $parse_uris );
-  @ldapuris = ( @$parse_uris );
+$SIG{INT}=\&sig_int_handler;
+
+readConfig();
 
 argonaut_create_dir($logdir);
 
@@ -134,22 +88,34 @@ $log->add(
     }
 );
 
+$ldapinfos = argonaut_ldap_init($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+
+if ( $ldapinfos->{'ERROR'} > 0) {
+  print ( $ldapinfos->{'ERRORMSG'}."\n" );
+  exit ($ldapinfos->{'ERROR'});
+} else {
+  $ldap_handle = $ldapinfos->{'HANDLE'};
+  $base = $ldapinfos->{'BASE'};
+  $ldapuris = $ldapinfos->{'URIS'};
+}
+
 $log->info("Argonaut-Fuse Started\n");
 
 # Scan for modules - these can set their own config sections.
-
 import_modules();
 
-my $mountpoint = $tftp_root;
+argonaut_create_dir($piddir);
 
-# Create the PID object
-# Ensure you put a name that won't clobber
-#   another program's PID file
 my $pid = File::Pid->new({
-   file  => $pidfile,
-});
+    file => "$piddir/$pidfile",
+  });
 
-# Write the PID file
+my $pidrunning = $pid->running;
+
+if ($pidrunning) {
+  die "Argonaut Server is already running $pidrunning\n";
+}
+
 $pid->write;
 
 $filesystem= {
@@ -164,11 +130,11 @@ $log->info("Argonaut-fuse opening $tftp_static_root");
 my $tftp_static_root_handle;
 opendir($tftp_static_root_handle, $tftp_static_root);
 
-$log->info("Argonaut-Fuse Mounting $mountpoint\n");
+$log->info("Argonaut-Fuse Mounting $tftp_root\n");
 
 # Mount FUSE Filesystem
 Fuse::main(
-  mountpoint=>$mountpoint,
+  mountpoint=>$tftp_root,
   mountopts => "nonempty,allow_other",
   getattr => \&getattr,
   read => \&read,
@@ -179,13 +145,84 @@ Fuse::main(
 
 exit 0;
 
-sub INT_handler {
+sub sig_int_handler {
 
-  $pidfile->remove or warn "Could not remove $pidfile\n";
-  
+  $pidfile->remove;
   exit(0);
-
 }
+
+#===  FUNCTION  ================================================================
+#         NAME:  readConfig
+#   PARAMETERS:  none
+#      RETURNS:  nothing
+#  DESCRIPTION:  read the config file and put everything needed into the
+#                corresponding variables
+#===============================================================================
+
+sub readConfig 
+{
+    my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+    $default_mode           =   $config->val( basic => "default_mode"           ,"install");
+    $tftp_root              =   $config->val( tftp => "pxelinux_cfg"            ,"/srv/tftp/pxelinux.cfg");
+    $tftp_static_root       =   $config->val( tftp => "pxelinux_cfg_static"     ,"/srv/tftp/pxelinux.static");
+    $fai_flags              =   $config->val( fai => "fai_flags"               ,"verbose,sshd,syslogd,createvt,reboot");
+    $nfs_opts               =   $config->val( fai => "nfs_opts"     ,"");
+    $nfs_root               =   $config->val( fai => "nfs_root"     ,"/srv/fai/nfsroot");
+    $union                  =   $config->val( fai => "union"     ,"aufs");
+    $opsiserver             =   $config->val( opsi => "server"     ,"");                    
+    $admin                  =   $config->val( opsi => "admin"     ,"");                    
+    $password               =   $config->val( opsi => "password"     ,"");
+    $lang                   =   $config->val( opsi => "lang"     ,"");
+    $ltspserver             =   $config->val( opsi => "server"     ,"");                            
+    $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+    $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+    $ldap_password          =   $config->val( ldap => "password"                ,"");
+    $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
+}
+
+#===  FUNCTION  ================================================================
+#         NAME:  import_modules
+#   PARAMETERS:  module_path - string - abs. path to the directory the modules 
+#                are stored
+#      RETURNS:  nothing
+#  DESCRIPTION:  each file in module_path which ends with '.pm' and activation 
+#                state is on is imported by "require 'file';"
+#===============================================================================
+
+sub import_modules {
+  if (not -e $modules_path) {
+    $log->error("Cannot find directory or directory is not readable: $modules_path\n");
+  }
+
+  opendir (DIR, $modules_path) or die "ERROR while loading modules from directory $modules_path : $!\n";
+  while (defined (my $file = readdir (DIR))) {
+    if (not $file =~ /(\S*?).pm$/) {
+      next;
+    }
+    my $mod_name = $1;
+
+    eval { require $file; };
+    if ($@) {
+      $log->error("argonaut-fuse could not load module $file");
+      $log->error("$@");
+    } else {
+      my $info = eval($mod_name.'::get_module_info()');
+      # Only load module if get_module_info() returns a non-null object
+      if ($info) {
+        $known_modules->{$mod_name} = $info;
+        
+        # Load additional configuration values
+        $log->info("Loaded Module $mod_name\n");
+        #$cfg_defaults{$mod_name}= eval($mod_name.'::get_config_sections')
+        #  if(eval($mod_name.'::get_config_sections'));
+      }
+    }
+  }
+
+  close (DIR);
+}
+
 
 ##############################
 #
@@ -197,25 +234,25 @@ sub prepare_ldap_handle {
   my $mesg;
 
   # Get an ldap handle, if we don't have one
-  $ldap_handle = Net::LDAP->new( \@main::ldapuris )
-    if( ! defined $ldap_handle );
-  if( ! defined $ldap_handle ) {
+  $ldap_handle = Net::LDAP->new(\@main::ldapuris)
+    if (! defined $ldap_handle);
+  if(! defined $ldap_handle) {
     $log->error("ch $$: Net::LDAP constructor failed: $!\n");
     return 0;
   }
 
   # Bind to ldap server - eventually authenticate
-  if( defined $ldap_dn ) {
-    if( defined $ldap_pwd )
-      { $mesg = $ldap_handle->bind( $ldap_dn, password => $ldap_pwd ); }
-    else { $mesg = $ldap_handle->bind( $ldap_dn ); }
-  }
-  else {
-    $mesg = $ldap_handle->bind();
-  }
+  if (defined $ldap_dn) {
+    if (defined $ldap_password) {
+      $mesg = $ldap_handle->bind($ldap_dn, password => $ldap_password);
+    } else {
+      $mesg = $ldap_handle->bind( $ldap_dn ); }
+    } else {
+      $mesg = $ldap_handle->bind();
+    }
 
-  if( 0 != $mesg->code ) {
-    undef( $ldap_handle ) if( 81 == $mesg->code );
+  if (0 != $mesg->code) {
+    undef($ldap_handle) if (81 == $mesg->code);
     $log->error("ch $$: LDAP bind: error $mesg->code - $mesg->error.\n");
     return 0;
   }
@@ -240,125 +277,69 @@ sub prepare_ldap_handle {
 #
 sub prepare_ldap_handle_retry {
 
-  my( $timeout, $retry, $sleep, $multiply, $add, $max ) = @_;
+  my ($timeout, $retry, $sleep, $multiply, $add, $max) = @_;
   my $valid_handle;
 
   # Some default fallbacks
-  $timeout = 0 if( ! defined $timeout );
-  $retry = -1 if( ! defined $retry );
-  $sleep = USEC if( ! defined $sleep );
-  $multiply = 1.0 if( ! defined $multiply );
-  $add = 0 if( ! defined $add );
-  $max = -1 if( ! defined $max );
+  $timeout = 0 if (! defined $timeout);
+  $retry = -1 if (! defined $retry);
+  $sleep = USEC if (! defined $sleep);
+  $multiply = 1.0 if (! defined $multiply);
+  $add = 0 if (! defined $add);
+  $max = -1 if (! defined $max);
 
   # Max time if we have a timeout
-  my( $epo_secs, $epo_msecs );
-  if( $timeout >= 0 ) {
-     ( $epo_secs, $epo_msecs ) = gettimeofday();
-     $timeout += $epo_secs * USEC + $epo_msecs;
+  my ($epo_secs, $epo_msecs);
+  if ($timeout >= 0) {
+    ($epo_secs, $epo_msecs) = gettimeofday();
+    $timeout += $epo_secs * USEC + $epo_msecs;
   }
 
   # Reminder!!!
   # last doesn't work with do {} while ()
-  while( 1 ) {
+  while (1) {
     $valid_handle = prepare_ldap_handle();
-    last if( $valid_handle );
-    $retry-- if( 0 < $retry );
+    last if ($valid_handle);
+    $retry-- if (0 < $retry);
 
-    if( $timeout >= 0 ) {
-      ( $epo_secs, $epo_msecs ) = gettimeofday();
+    if ($timeout >= 0) {
+      ($epo_secs, $epo_msecs) = gettimeofday();
       my $max_sleep = $timeout - $epo_secs * USEC - $epo_msecs;
-      if( $sleep > $max_sleep )
-        { $sleep = $max_sleep; }
+      if ($sleep > $max_sleep) {
+        $sleep = $max_sleep;
+      }
       last if( $sleep <= 0 );
     }
 
     my $secs = $sleep / USEC;
     $log->info( "ch $$: connection error - sleeping for $secs seconds.\n" );
-    usleep( $sleep );
+    usleep ($sleep);
 
-    if( (0 >= $max) || ($sleep < $max) ) {
+    if ((0 >= $max) || ($sleep < $max)) {
       $sleep *= $multiply;
       $sleep += $add;
-      if( (0 < $max) && ($sleep > $max) )
-        { $sleep = $max; }
+      if ((0 < $max) && ($sleep > $max)) {
+        $sleep = $max;
+      }
     }
 
-    last if( $valid_handle || (0 == $retry) );
+    last if ($valid_handle || (0 == $retry));
     my $sleep_sec = $sleep / 1000000;
     $log->info( "ch $$: next sleep: $sleep_sec seconds.\n" );
   }
 
   return $valid_handle;
 }
- 
-sub write_pxe_config_file {
-
-  my ($host,$file,$kernel,$append) = @_;
-
-  # Get IP address
-  my $ip_bytes = inet_aton( $host ) if($host);
-  my $ipaddr = (defined $ip_bytes) ? inet_ntoa( $ip_bytes ) : 'unknown';
-  if(not $host or "" eq $host) {
-    $host = $ipaddr;
-  }
-
-  my $file_content= "#generated by argonaut-fuse for host $host with IP $ipaddr\n";
-  $file_content.= "default argonaut-fuse-generated\n\n";
-  $file_content.= "label argonaut-fuse-generated\n";
-  $file_content.= "$kernel\n";
-  if($append) {
-    $file_content.= "append $append\n";
-  }
-
-  # store in hash
-  $filesystem->{'root'}->{'content'}->{$file}->{'type'}= 'file';
-  $filesystem->{'root'}->{'content'}->{$file}->{'content'}= $file_content;
-
-  return 0;
-}
 
 
 #===  FUNCTION  ================================================================
-#         NAME:  import_modules
-#   PARAMETERS:  module_path - string - abs. path to the directory the modules 
-#                are stored
-#      RETURNS:  nothing
-#  DESCRIPTION:  each file in module_path which ends with '.pm' and activation 
-#                state is on is imported by "require 'file';"
+#         NAME:  getattr
+#   PARAMETERS:  $filename - string - 
+#      RETURNS:  Returns a list, very similar to the 'stat' function (see perlfunc).
+#                On error, simply return a single numeric scalar value 
+#                (e.g. "return -ENOENT();").
+#  DESCRIPTION:  get attributes
 #===============================================================================
-sub import_modules {
-  if (not -e $modules_path) {
-    $log->error("Cannot find directory or directory is not readable: $modules_path\n");
-  }
-
-  opendir (DIR, $modules_path) or die "ERROR while loading modules from directory $modules_path : $!\n";
-  while (defined (my $file = readdir (DIR))) {
-    if (not $file =~ /(\S*?).pm$/) {
-      next;
-    }
-    my $mod_name = $1;
-
-    eval { require $file; };
-    if ($@) {
-      $log->error("argonaut-fuse could not load module $file");
-      $log->error("$@");
-    } else {
-      my $info = eval($mod_name.'::get_module_info()');
-      # Only load module if get_module_info() returns a non-null object
-      if( $info ) {
-        $known_modules->{$mod_name} = $info;
-        
-        # Load additional configuration values
-        $log->info("Adding additional config sections for Module $mod_name\n");
-        $cfg_defaults{$mod_name}= eval($mod_name.'::get_config_sections')
-          if(eval($mod_name.'::get_config_sections'));
-      }
-    }
-  }
-
-  close (DIR);
-}
 
 sub getattr {
   my ($filename) = @_;
@@ -368,11 +349,11 @@ sub getattr {
   my $bits = 0644;
 
   my $current = $filesystem->{'root'}->{'content'};
-  my @path_elements = split( '/', $filename );
+  my @path_elements = split('/',$filename);
   my $current_type = 'file';
 
   if ( @path_elements > 1 ) {
-    foreach my $path_element ( @path_elements[1..$#path_elements] ) {
+    foreach my $path_element (@path_elements[1..$#path_elements]) {
       if ($path_element =~ /^[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}$/i) {
         # Always generate a fresh config
         delete $current->{$path_element} if(exists($current->{$path_element}));
@@ -382,29 +363,29 @@ sub getattr {
           $log->info("Processing Module $module with argument ${path_element}\n");
           no strict "refs";
           my $answer = &{ $module."::get_pxe_config" }($path_element);
-          if(exists($current->{$path_element})) {
+          if (exists($current->{$path_element})) {
             last MODULE;
           }
-          if($@) {
+          if ($@) {
             $log->error("ERROR: Processing Module $module failed with $@\n");
           }
         }
       }
-      if (not defined( $current->{$path_element} ) ) {
-        if(-r $tftp_static_root.'/'.$path_element) { 
+      if (not defined($current->{$path_element})) {
+        if (-r $tftp_static_root.'/'.$path_element) { 
           return stat($tftp_static_root.'/'.$path_element);
         } else {
           return -1*ENOENT;
         }
       }
       $current_type = $current->{$path_element}->{'type'};
-      $last_attred_file = $current->{$path_element} if ( $current_type eq 'file' );
-      $current = $current->{$path_element}->{'content'} if ( $current_type eq 'dir' );
+      $last_attred_file = $current->{$path_element} if ($current_type eq 'file');
+      $current = $current->{$path_element}->{'content'} if ($current_type eq 'dir');
     }
   }
 
   # if directory, set type to dir and mode to 0755
-  if ( $filename eq '/' || $current_type eq 'dir' ) {
+  if ($filename eq '/' || $current_type eq 'dir') {
     $type = 0040;
     $bits = 0755;
   }
@@ -417,7 +398,7 @@ sub getattr {
   my $atime = time;
   my $size = 0;
 
-  if ( $current_type eq 'file' ) {
+  if ($current_type eq 'file') {
     $size = length( $last_attred_file->{'content'} ) if($last_attred_file->{'content'});
   }
 
@@ -430,7 +411,7 @@ sub getattr {
   my $dev = 0;
   my $ino = 0;
 
-  return ( $dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks );
+  return ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks);
 }
 
 sub read {
@@ -438,10 +419,10 @@ sub read {
   my $current= $filesystem->{'root'}->{'content'};
   my @path_elements= split('/', $pathname);
 
-  if(@path_elements > 1) {
+  if (@path_elements > 1) {
     foreach my $path_element (@path_elements[1..$#path_elements]) {
-      if(not defined($current->{$path_element})) {
-        if(-r $tftp_static_root.$pathname) {
+      if (not defined($current->{$path_element})) {
+        if (-r $tftp_static_root.$pathname) {
           # TODO: dies when file exceeds buffersize
           my ($content, $buffer);
           sysopen(FH, $tftp_static_root.$pathname, O_RDONLY) or return ( -1*ENOENT );
@@ -466,7 +447,7 @@ sub getdir {
   my @path_elements= split('/', $filename);
   my @result= ('.', '..');
 
-  if(@path_elements > 1) {
+  if (@path_elements > 1) {
     foreach my $path_element (@path_elements[1..$#path_elements]) {
       return(-1*ENOENT) if(not defined($current->{$path_element}));
       $current= $current->{$path_element}->{'content'};
@@ -475,7 +456,7 @@ sub getdir {
 
   push @result, keys(%{$current});
 
-  if(defined($tftp_static_root_handle)) {
+  if (defined($tftp_static_root_handle)) {
     foreach my $path_element(readdir($tftp_static_root_handle)) {
       next if($path_element eq '.');
       next if($path_element eq '..');
@@ -488,30 +469,41 @@ sub getdir {
   return @result;
 }
 
-#############################
-#
-# @brief Display error message and/or help text.
-#
-# In correspondence to previous GetOptions
-#
-# @param $text - string to print as error message
-# @param $help - set true, if you want to show usage help
-#
-sub usage
-{
-    print STDERR << "EOF";
+#===  FUNCTION  ================================================================
+#         NAME:  write_pxe_config_file
+#   PARAMETERS:  $host
+#                $file
+#                $kernel
+#                $append
+#      RETURNS:  0
+#  DESCRIPTION:  create the pxelinux.cfg file for a host 
+#===============================================================================
+ 
+sub write_pxe_config_file {
 
-  usage: $0 [-h] [-c config]
+  my ($host,$file,$kernel,$append) = @_;
 
-   -h        : this (help) message
-   -c <cfg>  : config file (default: ${config})
-   
-EOF
+  # Get IP address
+  my $ip_bytes = inet_aton($host) if ($host);
+  my $ipaddr = (defined $ip_bytes) ? inet_ntoa($ip_bytes) : 'unknown';
+  if (not $host or "" eq $host) {
+    $host = $ipaddr;
+  }
 
-  exit( -1 );
+  my $file_content= "#generated by argonaut-fuse for host $host with IP $ipaddr\n";
+  $file_content.= "default argonaut-fuse-generated\n\n";
+  $file_content.= "label argonaut-fuse-generated\n";
+  $file_content.= "$kernel\n";
+  if ($append) {
+    $file_content.= "append $append\n";
+  }
+
+  # store in hash
+  $filesystem->{'root'}->{'content'}->{$file}->{'type'}= 'file';
+  $filesystem->{'root'}->{'content'}->{$file}->{'content'}= $file_content;
+
+  return 0;
 }
-
-
 
 1;
 
@@ -524,20 +516,12 @@ argonaut-fuse - FUSE/TFTP supplicant targeted to work with LDAP entries written 
 
 =head1 SYNOPSIS
 
-argonaut-fuse [-h] [-c config] 
+argonaut-fuse
 
 =head1 DESCRIPTION
 
 B<argonaut-fuse> is a modular fuse-tftp-supplicant written in perl which allows one to create pxelinux configurations for different types of clients using external modules.
 There is already written modules for FAI (Fully automated install).
-
-=over 10
-
-=item B<-c> <cfg>  argonaut-fuse config file (default: /etc/argonaut-fuse/argonaut-fuse.conf)
-
-=item B<-h>        display this help and exit
-
-=back
 
 =head1 BUGS
 

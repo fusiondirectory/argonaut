@@ -1,2 +1,2 @@
 argonaut-fuse                         usr/sbin
-argonaut-fuse.conf                    usr/share/doc/argonaut-fuse
+argonaut-fuse.conf                    etc/argonaut

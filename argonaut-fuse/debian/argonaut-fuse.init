@@ -12,7 +12,7 @@
 NAME="argonaut-fuse"
 DAEMON="/usr/sbin/${NAME}"
 PIDFILE="/var/run/${NAME}.pid"
-CONFIG="/etc/argonaut-fuse/argonaut-fuse.conf"
+CONFIG="/etc/argonaut/argonaut-fuse.conf"
 PATH="/sbin:/bin:/usr/sbin:/usr/bin"
 
 . /lib/lsb/init-functions
