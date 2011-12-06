@@ -108,7 +108,7 @@ reconnect:
         return 0;       
       } else {
         # "Super"-Default is 'localboot' - just use the built in disc
-        $ldap_srv = $main::ldapuris[0] . '/' . $main::ldap_base;
+        $ldap_srv = $main::ldap_uris . '/' . $main::ldap_base;
         $status = 'localboot';
 
         $log->info("$filename - defaulting to localboot\n");

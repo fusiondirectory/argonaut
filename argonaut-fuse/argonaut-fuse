@@ -57,7 +57,7 @@ my $modules_path= "/usr/share/perl5/Argonaut/Fuse";
 our ($default_mode, $tftp_root, $tftp_static_root, $fai_flags, $nfs_opts, $nfs_root, $union);
 our ($opsiserver, $admin, $password, $lang);
 our ($ltspserver);
-our ($ldap_configfile, $ldap_dn, $ldap_password, $ldap_base, $ldap_handle, $ldapuris, $ldapinfos);
+our ($ldap_configfile, $ldap_dn, $ldap_password, $ldap_base, $ldap_handle, $ldap_uris, $ldapinfos);
 
 our $filesystem;
 our $last_attred_file;
@@ -96,7 +96,7 @@ if ( $ldapinfos->{'ERROR'} > 0) {
 } else {
   $ldap_handle = $ldapinfos->{'HANDLE'};
   $ldap_base = $ldapinfos->{'BASE'};
-  $ldapuris = $ldapinfos->{'URIS'};
+  $ldap_uris = $ldapinfos->{'URIS'};
 }
 
 $log->info("Argonaut-Fuse Started\n");
@@ -234,7 +234,7 @@ sub prepare_ldap_handle {
   my $mesg;
 
   # Get an ldap handle, if we don't have one
-  $ldap_handle = Net::LDAP->new(\@main::ldapuris)
+  $ldap_handle = Net::LDAP->new(\@main::ldap_uris)
     if (! defined $ldap_handle);
   if(! defined $ldap_handle) {
     $log->error("ch $$: Net::LDAP constructor failed: $!\n");
