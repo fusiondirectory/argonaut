@@ -85,7 +85,7 @@ fi
 # Copy initrd if present
 if [ -f "$NFSROOT/boot/initrd.img-$version" ]; then
   msg "installing initrd.img-install"
-  if [ -f "$TFTPROOT/initrd.img-install"]; then
+  if [ -f "$TFTPROOT/initrd.img-install" ]; then
     ln -s "$NFSROOT/boot/initrd.img-$version" "$TFTPROOT/initrd.img-install"
   else
     rm -f "$TFTPROOT/initrd.img-install"
