@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-fai-nfsroot
 Architecture: all
-Depends: ${misc:Depends}, argonaut-common (>= 1.0-1), fai-client (>= 3.2.8), libnet-ldap-perl, console-tools, debootstrap
+Depends: ${misc:Depends}, argonaut-common (>= 1.0), fai-client (>= 3.2.8), libnet-ldap-perl, console-tools, debootstrap
 Recommends: netcat
 Description: Hooks to use make FAI integrated with Argonaut
  Ensemble of FAI hooks to Integrate Argonaut in an FAI nfs chroot

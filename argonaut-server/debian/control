@@ -11,19 +11,22 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-server
 Architecture: all
-Depends: argonaut-common, libdatetime-perl, libnet-ldap-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl, libfile-pid-perl, libapp-daemon-perl, liblog-handler-perl, libconfig-inifiles-perl, libpoe-perl, libpoe-component-schedule-perl, libpoe-component-server-jsonrpc-perl, libpoe-component-server-simplehttp-perl
+Depends: argonaut-common (>=1.0), libdatetime-perl, libnet-ldap-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl, libfile-pid-perl, 
+libapp-daemon-perl, 
+liblog-handler-perl, libconfig-inifiles-perl, libpoe-perl, libpoe-component-schedule-perl, libpoe-component-server-jsonrpc-perl, libpoe-component-server-simplehttp-perl
 Description: argonaut json rpc server to manage deployment system
  .
 
 Package: argonaut-client-management
 Architecture: all
-Depends: argonaut-common, libconfig-inifiles-perl, liblog-handler-perl, libfile-pid-perl, libapp-daemon-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl
+Depends: argonaut-common (>=1.0), libconfig-inifiles-perl, liblog-handler-perl, libfile-pid-perl, libapp-daemon-perl, libjson-perl (>= 2.07-1), 
+libjson-rpc-perl
 Description: argonaut json rpc client to manage computers
  .
 
 Package: argonaut-client-fai
 Architecture: all
-Depends: argonaut-common, libconfig-inifiles-perl, liblog-handler-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl
+Depends: argonaut-common (>= 1.0), libconfig-inifiles-perl, liblog-handler-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl
 Description: argonaut json rpc client to manage fai installations
  .
 

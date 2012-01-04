@@ -12,6 +12,6 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-fai-mirror
 Architecture: all
-Depends: ${misc:Depends}, argonaut-common (>= 1.0-1), libnet-ldap-perl, debmirror, libwww-perl
+Depends: ${misc:Depends}, argonaut-common (>= 1.0), libnet-ldap-perl, debmirror, libwww-perl
 Description: Scripts to create a local fai mirror
  Ensemble script to create a local mirror for FAI from LDAP

@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-fai-progress
 Architecture: all
-Depends: ${perl:Depends}, ${misc:Depends}, libfile-tail-perl, fai-client, cdebconf, argonaut-common (>= 1.0-1)
+Depends: ${perl:Depends}, ${misc:Depends}, libfile-tail-perl, fai-client, cdebconf, argonaut-common (>= 1.0)
 Conflicts: fai-progress
 Description: Fully Automatic Installation progress bar
  FAI is a non-interactive system to install a Debian GNU/Linux operating

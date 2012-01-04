@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-fuse
 Architecture: all
-Depends: ${misc:Depends}, argonaut-common, argonaut-fuse-fai, liblog-handler-perl, libconfig-inifiles-perl, ucf, libfuse-perl, libfile-pid-perl, libnet-ldap-perl, fuse-utils
+Depends: ${misc:Depends}, argonaut-common (>= 1.0), argonaut-fuse-fai, liblog-handler-perl, libconfig-inifiles-perl, ucf, libfuse-perl, libfile-pid-perl, libnet-ldap-perl, fuse-utils
 Recommends: tftpd | atftpd | tftpd-hpa
 Description: Modular TFTP/Fuse supplicant
  Argonaut-fuse is a modular fuse-tftp-supplicant written in perl which allows
