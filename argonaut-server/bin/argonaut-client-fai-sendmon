@@ -65,6 +65,8 @@ my %progress_value = (
 
 argonaut_create_dir($logdir);
 
+my $log = Log::Handler->create_logger("argonaut-client-fai-sendmon");
+
 $log->add(
     file => {
         filename => "$logdir/$logfile",

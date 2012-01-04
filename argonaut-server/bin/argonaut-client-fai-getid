@@ -52,6 +52,8 @@ my $logdir                          =   $config->val( log => "logdir"           
 
 argonaut_create_dir($logdir);
 
+my $log = Log::Handler->create_logger("argonaut-client-fai-get-id");
+
 $log->add(
     file => {
         filename => "$logdir/$logfile",
