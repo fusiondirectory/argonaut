@@ -37,7 +37,7 @@ use Net::LDAP::Util qw(:escape);
 use Getopt::Long;
 use File::Path;
 
-use Argonaut::Common qw(:ldap :net);
+use Argonaut::Common qw(:ldap :net :array);
 use Argonaut::FAI qw(:flags);
 
 my $bind_dn;
