@@ -513,4 +513,74 @@ sub generate_kernel_packagelist {
 
 __END__
 
+=head1 NAME
+
+ldap2fai - read FAI config from LDAP and create config space.
+
+=head1 SYNOPSIS
+
+ldap2fai [-hnvW] [-c config] [-D bind_dn ] [-w bind password] [-d dump_dir] [-H hostname] -m <MAC>
+
+=head1 OPTIONS
+
+B<-h>, B<--help>
+    print out this help message
+
+B<-v>, B<--verbose>
+    be verbose (multiple v's will increase verbosity) 
+
+B<-n>, B<--foreground>
+    dry run (includes verbose)
+
+B<-c>
+    LDAP config file (default: /etc/ldap/ldap.conf)
+
+B<-d>
+    output dir (default: /var/lib/fai/config)
+
+B<-D>
+    bind dn
+
+B<-W>
+    prompt for password
+    
+B<-w>
+    read password from command line
+    
+B<-H>
+    check hostname
+    
+B<-m>
+    mac address 
+
+=head1 DESCRIPTION
+
+ldap2fai is a script to create read the fai config from LDAP and create fai config space.
+
+=head1 BUGS 
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (c) 2008 Landeshauptstadt München
+
+=item Copyright (C) 2007-2010 The GOsa project
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "LDAP2FAI 1"
-.TH LDAP2FAI 1 "2011-08-23" "Argonaut 1.0" "Argonaut Documentation"
+.TH LDAP2FAI 1 "2012-01-06" "Argonaut 1.0" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -133,29 +133,38 @@
 ldap2fai \- read FAI config from LDAP and create config space.
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-ldap2fai [\-hnvW] [\-c config] [\-D bind_dn ] [\-w bind password] [\-d dump_dir] [\-H hostname] <\s-1MAC\s0>
+ldap2fai [\-hnvW] [\-c config] [\-D bind_dn ] [\-w bind password] [\-d dump_dir] [\-H hostname] \-m <\s-1MAC\s0>
 .SH "OPTIONS"
 .IX Header "OPTIONS"
-.IP "\fB\-h\fR print out this help message" 14
-.IX Item "-h print out this help message"
-.PD 0
-.IP "\fB\-v\fR be verbose (multiple v's will increase verbosity)" 14
-.IX Item "-v be verbose (multiple v's will increase verbosity)"
-.IP "\fB\-n\fR dry run (includes verbose)" 14
-.IX Item "-n dry run (includes verbose)"
-.IP "\fB\-c\fR \s-1LDAP\s0 config file (default: /etc/ldap/ldap.conf)" 14
-.IX Item "-c LDAP config file (default: /etc/ldap/ldap.conf)"
-.IP "\fB\-d\fR output dir (default: /var/lib/fai/config)" 14
-.IX Item "-d output dir (default: /var/lib/fai/config)"
-.IP "\fB\-D\fR bind dn" 14
-.IX Item "-D bind dn"
-.IP "\fB\-W\fR prompt for password" 14
-.IX Item "-W prompt for password"
-.IP "\fB\-w\fR read password from command line" 14
-.IX Item "-w read password from command line"
-.IP "\fB\-H\fR check hostname" 14
-.IX Item "-H check hostname"
-.PD
+\&\fB\-h\fR, \fB\-\-help\fR
+    print out this help message
+.PP
+\&\fB\-v\fR, \fB\-\-verbose\fR
+    be verbose (multiple v's will increase verbosity)
+.PP
+\&\fB\-n\fR, \fB\-\-foreground\fR
+    dry run (includes verbose)
+.PP
+\&\fB\-c\fR
+    \s-1LDAP\s0 config file (default: /etc/ldap/ldap.conf)
+.PP
+\&\fB\-d\fR
+    output dir (default: /var/lib/fai/config)
+.PP
+\&\fB\-D\fR
+    bind dn
+.PP
+\&\fB\-W\fR
+    prompt for password
+.PP
+\&\fB\-w\fR
+    read password from command line
+.PP
+\&\fB\-H\fR
+    check hostname
+.PP
+\&\fB\-m\fR
+    mac address
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 ldap2fai is a script to create read the fai config from \s-1LDAP\s0 and create fai config space.
@@ -169,8 +178,8 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 .IP "Copyright (c) 2008 Landeshauptstadt MA\*~Xnchen" 3
 .IX Item "Copyright (c) 2008 Landeshauptstadt MA~Xnchen"
 .PD 0
-.IP "Copyright (c) 2008\-2010 \s-1GONICUS\s0 GmbH" 3
-.IX Item "Copyright (c) 2008-2010 GONICUS GmbH"
+.IP "Copyright (C) 2007\-2010 The GOsa project" 3
+.IX Item "Copyright (C) 2007-2010 The GOsa project"
 .IP "Copyright (C) 2011 FusionDirectory project" 3
 .IX Item "Copyright (C) 2011 FusionDirectory project"
 .PD
