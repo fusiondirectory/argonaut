@@ -70,7 +70,7 @@ echo "* waiting for LDAP configuration"
 while [ ! -f /etc/ldap/ldap.conf ]; do sleep 1; done
 
 # Create configuration space
-ldap2fai -v -d ${FAI} -H $HOSTNAME $MAC | tee $LOGDIR/ldap2fai.log
+ldap2fai -v -d ${FAI} -H $HOSTNAME -m $MAC | tee $LOGDIR/ldap2fai.log
 if [ 0 -ne $? ]; then
   task error 500 1 "$(< $LOGDIR/ldap2fai.log)\n\nPress enter to reboot." 15 60
 fi
