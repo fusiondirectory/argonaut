@@ -1,0 +1,15 @@
+# DEBIAN-MAIL-SERVER, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-MAIL-SERVER,ou=packages,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-MAIL-SERVER
+description: installation d'un serveur de mail
+FAIpackage: postgresql
+FAIpackage: postgresql-doc
+FAIpackage: postgresql-contrib
+FAIpackage: postgresql-client
+FAIdebianRelease: squeeze
+FAIdebianSection: main
+FAIinstallMethod: aptitude

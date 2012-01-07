@@ -1,0 +1,21 @@
+# DEBIAN-MAIL-SERVER, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-MAIL-SERVER,ou=packages,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-MAIL-SERVER
+description: installation d'un serveur de mail
+FAIpackage: procmail
+FAIpackage: qpopper
+FAIpackage: spamassassin
+FAIpackage: exim4
+FAIpackage: sa-exim
+FAIpackage: mailagent
+FAIpackage: exim4-daemon-light
+FAIpackage: mutt
+FAIpackage: exim4-config
+FAIpackage: uw-imapd
+FAIdebianRelease: squeeze
+FAIdebianSection: main
+FAIinstallMethod: aptitude

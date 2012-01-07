@@ -1,0 +1,29 @@
+# variables, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: ou=variables,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: variables
+
+# DEBIAN-BASE, variables, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-BASE,ou=variables,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIvariable
+cn: DEBIAN-BASE
+description:: dmFyaWFibGVzIA==
+
+# FAIdistributionBase, DEBIAN-BASE, variables, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=FAIdistributionBase,cn=DEBIAN-BASE,ou=variables,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+cn: FAIdistributionBase
+description: Set the origin distribution
+FAIvariableContent: squeeze
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIvariableEntry
+
+# MAXPACKAGES, DEBIAN-BASE, variables, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=MAXPACKAGES,cn=DEBIAN-BASE,ou=variables,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+cn: MAXPACKAGES
+FAIvariableContent: 10000
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIvariableEntry

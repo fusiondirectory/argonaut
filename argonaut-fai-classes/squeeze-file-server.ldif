@@ -1,0 +1,20 @@
+# DEBIAN-FILE-SERVER, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-FILE-SERVER,ou=packages,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-FILE-SERVER
+description: installation d'un serveur de fichiers
+FAIpackage: smbfs
+FAIpackage: netatalk
+FAIpackage: smbclient
+FAIpackage: swat
+FAIpackage: samba-doc
+FAIpackage: nfs-kernel-server
+FAIpackage: samba
+FAIpackage: winbind
+FAIpackage: smartmontools
+FAIdebianRelease: squeeze
+FAIdebianSection: main
+FAIinstallMethod: aptitude

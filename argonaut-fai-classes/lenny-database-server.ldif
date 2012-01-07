@@ -1,0 +1,15 @@
+# DEBIAN-REQUIRED, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-DATABASE-SERVER,ou=packages,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-DATABASE-SERVER
+description: tache database-server pour lenny
+FAIpackage: postgresql
+FAIpackage: postgresql-doc
+FAIpackage: postgresql-contrib
+FAIpackage: postgresql-client
+FAIdebianRelease: lenny
+FAIdebianSection: main
+FAIinstallMethod: aptitude

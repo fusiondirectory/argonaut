@@ -1,0 +1,26 @@
+# DEBIAN-LAPTOP, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-LAPTOP,ou=packages,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-LAPTOP
+description: installation des outils necesaires a un protable
+FAIpackage: wireless-tools
+FAIpackage: acpi-support
+FAIpackage: cpufrequtils
+FAIpackage: acpi
+FAIpackage: wpasupplicant
+FAIpackage: powertop
+FAIpackage: vbetool
+FAIpackage: acpid
+FAIpackage: apmd
+FAIpackage: pcmciautils
+FAIpackage: pm-utils
+FAIpackage: radeontool
+FAIpackage: anacron
+FAIpackage: avahi-autoipd
+FAIpackage: bluetooth
+FAIdebianRelease: squeeze
+FAIdebianSection: main
+FAIinstallMethod: aptitude
