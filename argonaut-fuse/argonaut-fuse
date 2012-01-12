@@ -362,7 +362,7 @@ sub getattr {
         MODULE: foreach my $module (keys %{$known_modules}) {
           $log->info("Processing Module $module with argument ${path_element}\n");
           no strict "refs";
-          my $answer = &{ $module."::get_pxe_config" }($path_element);
+          my $answer = &{ $module."::get_pxe_config" }($path_element, $nfs_root, $nfs_opts, $fai_flags, $union);
           if (exists($current->{$path_element})) {
             last MODULE;
           }

@@ -50,7 +50,7 @@ sub get_module_info {
 };
 
 sub get_pxe_config {
-  my ($filename) = shift || return undef;
+  my ($filename, $nfs_root, $nfs_opts, $fai_flags, $union) = @_;
   my $result = undef;
 
   my $mac = argonaut_get_mac_pxe($filename);
