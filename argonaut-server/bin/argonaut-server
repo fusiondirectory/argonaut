@@ -53,7 +53,7 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($ldap_configfile,$ldap_dn,$ldap_password,$server_port,$client_port,$iptool,$delete_finished_tasks,$interface,$logdir);
+my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,$server_port,$client_port,$iptool,$delete_finished_tasks,$interface,$logdir);
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-server.log";
 my $protocol = "http://";
@@ -93,21 +93,59 @@ $pid->write;
 
 =pod
 =item readConfig
-Read from the config file argonaut.conf all the informations
+Read config infos from the config file and erase them with LDAP infos
 No parameters needed
 =cut
 sub readConfig {
+  readConfigFile();
+  readLdapConfig();
+}
+
+=pod
+=item readConfigFile
+Read from the config file argonaut.conf all the informations
+No parameters needed
+=cut
+sub readConfigFile {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    $server_port            =   $config->val( server => "server_port"          ,8080);
-    $client_port            =   $config->val( client => "client_port"          ,8081);
-    $iptool                 =   $config->val( programs => "iptool"               ,"/sbin/ifconfig");
+    $server_ip              =   $config->val( server => "server_ip"             ,"");
+    $server_port            =   $config->val( server => "server_port"           ,8080);
+    $client_port            =   $config->val( client => "client_port"           ,8081);
+    $iptool                 =   $config->val( programs => "iptool"              ,"/sbin/ifconfig");
     $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
     $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     $ldap_password          =   $config->val( ldap => "password"                ,"");
     $delete_finished_tasks  =   $config->val( server => "delete_finished_tasks" ,1);
     $interface              =   $config->val( server => "interface"             ,"eth0");
     $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
+}
+
+=pod
+=item readLdapConfig
+Read config infos from the LDAP
+No parameters needed
+=cut
+sub readLdapConfig {
+    my ($ldap,$ldap_base) = bindLdap();
+    
+    my $filter;
+    if ($server_ip eq "") {
+      $filter = "objectClass=argonautServer";
+    } else {
+      $filter = "(&(objectClass=argonautServer)(ipHostNumber=$server_ip))";
+    }
+    
+    my $mesg = $ldap->search( # perform a search
+              base   => $ldap_base,
+              filter => $filter,
+                          attrs => [ 'argonautPort','argonautDeleteFinished' ]
+              );
+              
+    if(scalar($mesg->entries)==1) {
+      $server_port = ($mesg->entries)[0]->get_value("argonautPort");
+      $delete_finished_tasks = ($mesg->entries)[0]->get_value("argonautDeleteFinished");
+    }
 }
 
 =item bindLdap
@@ -403,7 +441,7 @@ POE::Session->create(
                 "detect_hardware"
                 ];
             #~ $_[KERNEL]->yield(add=>undef,undef,"job_trigger_action_halt",["00:11:22:33:44:55"],{timestamp=>1314107700});
-            $log->notice("argonaut launched");
+            $log->notice("Argonaut server launched on port $server_port");
             $_[HEAP]{crawler} = POE::Component::Schedule->add(
                 $_[SESSION],
                 packages_crawler => DateTime::Set->from_recurrence(
