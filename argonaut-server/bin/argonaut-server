@@ -578,7 +578,7 @@ POE::Session->create(
                 } else {
                     foreach my $target (@{$targets}) {
                         POE::Kernel->yield(schedule=>DateTime::Set->from_datetimes(dates => [ $date ]),
-                            $action,$target,$data);
+                            $action,lc($target),$data);
                     }
                 }
                 $log->info("action $action scheduled");
@@ -614,7 +614,7 @@ POE::Session->create(
             my ($macs) = @params;
             my $entries = [];
             while (my ($id,$entry) = each(%{$heap->{tasks}})) {
-                if((!defined $macs) || (grep {$_ eq $entry->{'target'}} $macs)) {
+                if((!defined $macs) || (grep {lc($_) eq $entry->{'target'}} $macs)) {
                     push @{$entries}, convert_entry($entry,$id);
                 }
             }
