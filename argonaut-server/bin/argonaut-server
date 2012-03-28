@@ -139,12 +139,18 @@ sub readLdapConfig {
     my $mesg = $ldap->search( # perform a search
               base   => $ldap_base,
               filter => $filter,
-                          attrs => [ 'argonautPort','argonautDeleteFinished' ]
+                          attrs => [  'argonautPort','argonautDeleteFinished',
+                                      'argonautClientPort','argonautIpTool',
+                                      'argonautWakeOnLanInterface','argonautLogDir' ]
               );
               
     if(scalar($mesg->entries)==1) {
-      $server_port = ($mesg->entries)[0]->get_value("argonautPort");
+      $server_port  = ($mesg->entries)[0]->get_value("argonautPort");
+      $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
+      $iptool       = ($mesg->entries)[0]->get_value("argonautIpTool");
       $delete_finished_tasks = ($mesg->entries)[0]->get_value("argonautDeleteFinished");
+      $interface    = ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface");
+      $logdir       = ($mesg->entries)[0]->get_value("argonautLogDir");
     }
 }
 
