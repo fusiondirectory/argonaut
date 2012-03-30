@@ -123,11 +123,11 @@ No parameters needed
 sub readLdapConfig {
   my $settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
   
-  $server_port            = $settings{'port'};
-  $iptool                 = $settings{'iptool'};
-  $delete_finished_tasks  = $settings{'delete_finished_tasks'};
-  $interface              = $settings{'interface'};
-  $logdir                 = $settings{'logdir'};
+  $server_port            = $settings->{'port'};
+  $iptool                 = $settings->{'iptool'};
+  $delete_finished_tasks  = $settings->{'delete_finished_tasks'};
+  $interface              = $settings->{'interface'};
+  $logdir                 = $settings->{'logdir'};
 }
 
 =item bindLdap

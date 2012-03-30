@@ -57,7 +57,7 @@ my $logdir        = $client_settings->{'logdir'};
 
 my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
   
-my $server_port   = $server_settings{'port'};
+my $server_port   = $server_settings->{'port'};
 
 argonaut_create_dir($logdir);
 
