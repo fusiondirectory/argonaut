@@ -189,44 +189,6 @@ sub getIpFromMac {
 }
 
 =pod
-=item getClientPort
-Search in LDAP for client port configured for this client
-Parameters : ip
-=cut
-sub getClientPort {
-  my ($ip) = @_;
-  
-  my ($ldap,$ldap_base) = bindLdap();
-    
-  my $mesg = $ldap->search( # perform a search
-            base   => $ldap_base,
-            filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
-            attrs => [ 'dn','argonautClientPort' ]
-            );
-            
-  my $client_port = 0;
-              
-  if(scalar($mesg->entries)==1) {
-      $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
-  } else {
-    my $dn = ($mesg->entries)[0]->get_value('dn');
-    $mesg = $ldap->search( # perform a search
-          base   => $ldap_base,
-          filter => "(&(objectClass=argonautClient)(member=$dn))",
-          attrs => [ 'argonautClientPort' ]
-          );
-    if(scalar($mesg->entries)==1) {
-      $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
-    } else {
-      $log->error("This computer ($ip) is not configured in LDAP to run an argonaut client.");
-      die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
-    }
-  }
-    
-  return $client_port;
-}
-
-=pod
 =item do_action
 Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
@@ -237,7 +199,8 @@ sub do_action { # if ip pings, send the request
   # this line is only needed when debugging stuff on localhost
   #$ip = "localhost";
   
-  my $client_port = getClientPort($ip);
+  my $settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$ip);
+  my $client_port = $settings->{'port'};
   
   my $client = new JSON::RPC::Client;
   $client->version('1.0');

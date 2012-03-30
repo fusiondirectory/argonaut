@@ -57,6 +57,7 @@ BEGIN
       &argonaut_ldap_init
       &argonaut_search_repo_server
       &argonaut_search_parent_repo_server
+      &argonaut_get_client_settings
     )],
     'file' => [qw(
       &argonaut_file_write
@@ -677,6 +678,61 @@ sub argonaut_ldap_fsearch {
   return( $mesg, ${search_base} );
 }
 
+#------------------------------------------------------------------------------
+# get client argonaut settings
+# 
+sub argonaut_get_client_settings {
+  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
+  
+  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+    
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
+            attrs => [ 'argonautClientPort','argonautTaskIdFile',
+                       'argonautWakeOnLanInterface','argonautLogDir' ]
+            );
+            
+  my $client_settings = {};
+              
+  if(scalar($mesg->entries)==1) {
+      $client_settings = {
+          'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
+          'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
+          'interface' => ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface"),
+          'logdir' => ($mesg->entries)[0]->get_value("argonautLogDir")
+          };
+  } else {
+    $mesg = $ldap->search( # perform a search
+              base   => $ldap_base,
+              filter => "ipHostNumber=$ip",
+              attrs => [ 'dn' ]
+              );
+    if(scalar($mesg->entries)!=1) {
+      die "multiple entries for this IP ($ip)";
+    }
+    my $dn = ($mesg->entries)[0]->dn();
+    $mesg = $ldap->search( # perform a search
+          base   => $ldap_base,
+          filter => "(&(objectClass=argonautClient)(member=$dn))",
+          attrs => [ 'argonautClientPort','argonautTaskIdFile',
+                     'argonautWakeOnLanInterface','argonautLogDir' ]
+          );
+    if(scalar($mesg->entries)==1) {
+      $client_settings = {
+          'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
+          'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
+          'interface' => ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface"),
+          'logdir' => ($mesg->entries)[0]->get_value("argonautLogDir")
+          };
+    } else {
+      die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
+    }
+  }
+    
+  return $client_settings;
+}
 
 #------------------------------------------------------------------------------
 #

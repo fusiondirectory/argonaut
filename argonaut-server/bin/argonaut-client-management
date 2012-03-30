@@ -32,7 +32,7 @@ use Log::Handler;
 use File::Pid;
 use App::Daemon qw(detach);
 
-use Argonaut::Common qw(:file);
+use Argonaut::Common qw(:ldap :file);
 
 use Argonaut::ClientDaemon ();
 
@@ -96,36 +96,15 @@ No parameters needed
 sub readConfig {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    my $client_mac             =   $config->val( client => "client_mac"            ,"");
+    my $client_ip              =   $config->val( client => "client_ip"            ,"");
     my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
     my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     my $ldap_password          =   $config->val( ldap => "password"                ,"");
     
-    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-    my $filter = "(&(objectClass=argonautClient)(macAddress=$client_mac))";
-    my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
-              base   => $ldapinfos->{'BASE'},
-              filter => $filter,
-              attrs => [  'dn','argonautClientPort','argonautLogDir' ]
-              );
-              
-    if(scalar($mesg->entries)==1) {
-        $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
-        $logdir       = ($mesg->entries)[0]->get_value("argonautLogDir");
-    } else {
-      my $dn = ($mesg->entries)[0]->get_value('dn');
-      $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
-            base   => $ldapinfos->{'BASE'},
-            filter => "(&(objectClass=argonautClient)(member=$dn))",
-            attrs => [  'argonautClientPort','argonautLogDir' ]
-            );
-      if(scalar($mesg->entries)==1) {
-        $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
-        $logdir       = ($mesg->entries)[0]->get_value("argonautLogDir");
-      } else {
-        die 'This computer is not configured in LDAP to run an argonaut client.';
-      }
-    }
+    my $settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+    
+    $client_port  = $settings->{'port'};
+    $logdir       = $settings->{'logdir'};
 }
 
 =pod
