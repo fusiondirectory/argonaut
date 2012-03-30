@@ -30,7 +30,7 @@ use JSON::RPC::Client;
 use Config::IniFiles;
 use Log::Handler;
 
-use Argonaut::Common qw(:net :file);
+use Argonaut::Common qw(:net :ldap :file);
 
 =pod
 This program ask the argonaut-server for the assigned taskid for the fai installation.
@@ -43,12 +43,21 @@ my $protocol = "http://";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-my $server_port                     =   $config->val( server => "server_port"        ,8080);
 my $server_ip                       =   $config->val( server => "server_ip"          ,"");
+my $client_ip                       =   $config->val( client => "client_ip"          ,"");
+my $ldap_configfile                 =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+my $ldap_dn                         =   $config->val( ldap => "dn"                      ,"");
+my $ldap_password                   =   $config->val( ldap => "password"                ,"");
 
-my $file                            =   $config->val( client => "file"                ,"/tmp/argonaut");
-my $interface                       =   $config->val( client => "interface"           ,"eth0");
-my $logdir                          =   $config->val( log => "logdir"                 ,"/var/log/argonaut/");
+my $client_settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+
+my $file          = $client_settings->{'taskidfile'};
+my $interface     = $client_settings->{'interface'};
+my $logdir        = $client_settings->{'logdir'};
+
+my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
+  
+my $server_port   = $server_settings{'port'};
 
 argonaut_create_dir($logdir);
 

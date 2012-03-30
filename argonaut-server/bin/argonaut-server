@@ -121,30 +121,13 @@ Read config infos from the LDAP
 No parameters needed
 =cut
 sub readLdapConfig {
-    my ($ldap,$ldap_base) = bindLdap();
-    
-    my $filter;
-    if ($server_ip eq "") {
-      $filter = "objectClass=argonautServer";
-    } else {
-      $filter = "(&(objectClass=argonautServer)(ipHostNumber=$server_ip))";
-    }
-    
-    my $mesg = $ldap->search( # perform a search
-              base   => $ldap_base,
-              filter => $filter,
-                          attrs => [  'argonautPort','argonautDeleteFinished',
-                                      'argonautClientPort','argonautIpTool',
-                                      'argonautWakeOnLanInterface','argonautLogDir' ]
-              );
-              
-    if(scalar($mesg->entries)==1) {
-      $server_port  = ($mesg->entries)[0]->get_value("argonautPort");
-      $iptool       = ($mesg->entries)[0]->get_value("argonautIpTool");
-      $delete_finished_tasks = ($mesg->entries)[0]->get_value("argonautDeleteFinished");
-      $interface    = ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface");
-      $logdir       = ($mesg->entries)[0]->get_value("argonautLogDir");
-    }
+  my $settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
+  
+  $server_port            = $settings{'port'};
+  $iptool                 = $settings{'iptool'};
+  $delete_finished_tasks  = $settings{'delete_finished_tasks'};
+  $interface              = $settings{'interface'};
+  $logdir                 = $settings{'logdir'};
 }
 
 =item bindLdap

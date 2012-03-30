@@ -58,6 +58,7 @@ BEGIN
       &argonaut_search_repo_server
       &argonaut_search_parent_repo_server
       &argonaut_get_client_settings
+      &argonaut_get_server_settings
     )],
     'file' => [qw(
       &argonaut_file_write
@@ -732,6 +733,43 @@ sub argonaut_get_client_settings {
   }
     
   return $client_settings;
+}
+
+#------------------------------------------------------------------------------
+# get server argonaut settings
+# 
+sub argonaut_get_server_settings {
+  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
+  
+  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+    
+  my $filter;
+  if ($ip eq "") {
+    $filter = "objectClass=argonautServer";
+  } else {
+    $filter = "(&(objectClass=argonautServer)(ipHostNumber=$ip))";
+  }
+  
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => $filter,
+            attrs => [  'argonautPort','argonautDeleteFinished',
+                        'argonautIpTool',
+                        'argonautWakeOnLanInterface','argonautLogDir' ]
+            );
+
+  if(scalar($mesg->entries)==1) {
+    return {
+      'port'                  => ($mesg->entries)[0]->get_value("argonautPort"),
+      'iptool'                => ($mesg->entries)[0]->get_value("argonautIpTool"),
+      'delete_finished_tasks' => ($mesg->entries)[0]->get_value("argonautDeleteFinished"),
+      'interface'             => ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface"),
+      'logdir'                => ($mesg->entries)[0]->get_value("argonautLogDir")
+    };
+  } else {
+    die 'Argonaut server ($ip) not found in LDAP';
+  }
 }
 
 #------------------------------------------------------------------------------
