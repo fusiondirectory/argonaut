@@ -53,7 +53,7 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,$server_port,$client_port,$iptool,$delete_finished_tasks,$interface,$logdir);
+my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,$server_port,$iptool,$delete_finished_tasks,$interface,$logdir);
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-server.log";
 my $protocol = "http://";
@@ -110,15 +110,9 @@ sub readConfigFile {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
     $server_ip              =   $config->val( server => "server_ip"             ,"");
-    $server_port            =   $config->val( server => "server_port"           ,8080);
-    $client_port            =   $config->val( client => "client_port"           ,8081);
-    $iptool                 =   $config->val( programs => "iptool"              ,"/sbin/ifconfig");
     $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
     $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     $ldap_password          =   $config->val( ldap => "password"                ,"");
-    $delete_finished_tasks  =   $config->val( server => "delete_finished_tasks" ,1);
-    $interface              =   $config->val( server => "interface"             ,"eth0");
-    $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
 }
 
 =pod
@@ -146,7 +140,6 @@ sub readLdapConfig {
               
     if(scalar($mesg->entries)==1) {
       $server_port  = ($mesg->entries)[0]->get_value("argonautPort");
-      $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
       $iptool       = ($mesg->entries)[0]->get_value("argonautIpTool");
       $delete_finished_tasks = ($mesg->entries)[0]->get_value("argonautDeleteFinished");
       $interface    = ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface");
@@ -196,6 +189,49 @@ sub getIpFromMac {
 }
 
 =pod
+=item getClientPort
+Search in LDAP for client port configured for this client
+Parameters : ip
+=cut
+sub getClientPort {
+  my ($ip) = @_;
+  
+  my ($ldap,$ldap_base) = bindLdap();
+    
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
+                        attrs => [ 'argonautClientInherit','dn','argonautClientPort' ]
+            );
+            
+  my $client_port = 0;
+            
+  if(scalar($mesg->entries)==1) {
+      my $dn = ($mesg->entries)[0]->get_value('dn');
+      if(($mesg->entries)[0]->get_value("argonautClientInherit")) {
+        $mesg = $ldap->search( # perform a search
+              base   => $ldap_base,
+              filter => "(&(objectClass=argonautClient)(member=$dn))",
+              attrs => [ 'argonautClientPort' ]
+              );
+        if(scalar($mesg->entries)==1) {
+          $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
+        } else {
+          $log->error("This computer ($ip) inherits from a group that is not configured to run an argonaut client.");
+          die "This computer ($ip) inherits from a group that is not configured to run an argonaut client.";
+        }
+      } else {
+        $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
+      }
+    } else {
+      $log->error("This computer ($ip) is not configured in LDAP to run an argonaut client.");
+      die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
+    }
+    
+    return $client_port;
+}
+
+=pod
 =item do_action
 Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
@@ -205,6 +241,8 @@ sub do_action { # if ip pings, send the request
   
   # this line is only needed when debugging stuff on localhost
   #$ip = "localhost";
+  
+  my $client_port = getClientPort($ip);
   
   my $client = new JSON::RPC::Client;
   $client->version('1.0');
