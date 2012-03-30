@@ -691,7 +691,7 @@ sub argonaut_get_client_settings {
             base   => $ldap_base,
             filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
             attrs => [ 'argonautClientPort','argonautTaskIdFile',
-                       'argonautWakeOnLanInterface','argonautLogDir' ]
+                       'argonautClientWakeOnLanInterface','argonautClientLogDir' ]
             );
             
   my $client_settings = {};
@@ -700,8 +700,8 @@ sub argonaut_get_client_settings {
       $client_settings = {
           'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
           'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
-          'interface' => ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface"),
-          'logdir' => ($mesg->entries)[0]->get_value("argonautLogDir")
+          'interface' => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
+          'logdir' => ($mesg->entries)[0]->get_value("argonautClientLogDir")
           };
   } else {
     $mesg = $ldap->search( # perform a search
@@ -717,14 +717,14 @@ sub argonaut_get_client_settings {
           base   => $ldap_base,
           filter => "(&(objectClass=argonautClient)(member=$dn))",
           attrs => [ 'argonautClientPort','argonautTaskIdFile',
-                     'argonautWakeOnLanInterface','argonautLogDir' ]
+                     'argonautClientWakeOnLanInterface','argonautClientLogDir' ]
           );
     if(scalar($mesg->entries)==1) {
       $client_settings = {
           'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
           'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
-          'interface' => ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface"),
-          'logdir' => ($mesg->entries)[0]->get_value("argonautLogDir")
+          'interface' => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
+          'logdir' => ($mesg->entries)[0]->get_value("argonautClientLogDir")
           };
     } else {
       die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
