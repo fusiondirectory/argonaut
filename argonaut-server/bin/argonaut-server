@@ -201,34 +201,29 @@ sub getClientPort {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
-                        attrs => [ 'argonautClientInherit','dn','argonautClientPort' ]
+            attrs => [ 'dn','argonautClientPort' ]
             );
             
   my $client_port = 0;
-            
+              
   if(scalar($mesg->entries)==1) {
-      my $dn = ($mesg->entries)[0]->get_value('dn');
-      if(($mesg->entries)[0]->get_value("argonautClientInherit")) {
-        $mesg = $ldap->search( # perform a search
-              base   => $ldap_base,
-              filter => "(&(objectClass=argonautClient)(member=$dn))",
-              attrs => [ 'argonautClientPort' ]
-              );
-        if(scalar($mesg->entries)==1) {
-          $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
-        } else {
-          $log->error("This computer ($ip) inherits from a group that is not configured to run an argonaut client.");
-          die "This computer ($ip) inherits from a group that is not configured to run an argonaut client.";
-        }
-      } else {
-        $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
-      }
+      $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
+  } else {
+    my $dn = ($mesg->entries)[0]->get_value('dn');
+    $mesg = $ldap->search( # perform a search
+          base   => $ldap_base,
+          filter => "(&(objectClass=argonautClient)(member=$dn))",
+          attrs => [ 'argonautClientPort' ]
+          );
+    if(scalar($mesg->entries)==1) {
+      $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
     } else {
       $log->error("This computer ($ip) is not configured in LDAP to run an argonaut client.");
       die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
     }
+  }
     
-    return $client_port;
+  return $client_port;
 }
 
 =pod

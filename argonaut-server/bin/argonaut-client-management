@@ -106,31 +106,25 @@ sub readConfig {
     my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
               base   => $ldapinfos->{'BASE'},
               filter => $filter,
-              attrs => [  'dn','argonautClientPort','argonautLogDir',
-                          'argonautClientInherit' ]
+              attrs => [  'dn','argonautClientPort','argonautLogDir' ]
               );
               
     if(scalar($mesg->entries)==1) {
-      my $dn = ($mesg->entries)[0]->get_value('dn');
-      if(($mesg->entries)[0]->get_value("argonautClientInherit")) {
-        $filter = "(&(objectClass=argonautClient)(member=$dn))";
-        $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
-              base   => $ldapinfos->{'BASE'},
-              filter => $filter,
-              attrs => [  'argonautClientPort','argonautLogDir' ]
-              );
-        if(scalar($mesg->entries)==1) {
-          $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
-          $logdir       = ($mesg->entries)[0]->get_value("argonautLogDir");
-        } else {
-          die 'This computer is not configured in LDAP to run an argonaut client.';
-        }
-      } else {
         $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
         $logdir       = ($mesg->entries)[0]->get_value("argonautLogDir");
-      }
     } else {
-      die 'This computer is not configured in LDAP to run an argonaut client.';
+      my $dn = ($mesg->entries)[0]->get_value('dn');
+      $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
+            base   => $ldapinfos->{'BASE'},
+            filter => "(&(objectClass=argonautClient)(member=$dn))",
+            attrs => [  'argonautClientPort','argonautLogDir' ]
+            );
+      if(scalar($mesg->entries)==1) {
+        $client_port  = ($mesg->entries)[0]->get_value("argonautClientPort");
+        $logdir       = ($mesg->entries)[0]->get_value("argonautLogDir");
+      } else {
+        die 'This computer is not configured in LDAP to run an argonaut client.';
+      }
     }
 }
 
