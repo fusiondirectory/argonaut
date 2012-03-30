@@ -32,6 +32,7 @@ use Net::LDAP;
 use Config::IniFiles;
 use File::Path;
 use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use LWP::Simple;
 
 use Argonaut::Common qw(:ldap);
@@ -281,31 +282,40 @@ sub store_packages_file {
     my @errors;
 
     foreach my $repo (@repos) {
-        my $repoline = $repo->get_value('FAIrepository');
+        my @repolines = $repo->get_value('FAIrepository');
         
-        my (@items) = split('\|',$repoline);
-        my $uri = $items[0];
-        my $dist = $items[2];
-        if(defined($release) && ($dist ne $release)) {
-            next;
-        }
-        
-        my (@section_list) = split(',',$items[3]);
-        
-        my $localmirror = ($items[5] eq "local");
-        
-        foreach my $section (@section_list) {
+        foreach my $repoline (@repolines) {
+            my (@items) = split('\|',$repoline);
+            my $uri = $items[0];
+            my $dist = $items[2];
+            if(defined($release) && ($dist ne $release)) {
+                next;
+            }
             
-            my $dir = $uri;
-            $dir =~ s/^http:\/\///;
-            my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
-            mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
-            my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
-            if(is_error($res)) {
-                push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
-            } else {
-                bunzip2 ($packages_file.".bz2" => $packages_file)
-                    or push @errors,"could not extract Packages file : $Bunzip2Error";
+            my (@section_list) = split(',',$items[3]);
+            
+            my $localmirror = ($items[5] eq "local");
+            
+            foreach my $section (@section_list) {
+                
+                my $dir = $uri;
+                $dir =~ s/^http:\/\///;
+                my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
+                mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
+                my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
+                if(is_error($res)) {
+                    my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".gz");
+                    if(is_error($res2)) {
+                        push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
+                        push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.gz : $res2";
+                    } else {
+                        gunzip ($packages_file.".gz" => $packages_file)
+                            or push @errors,"could not extract Packages file : $GunzipError";
+                    }
+                } else {
+                    bunzip2 ($packages_file.".bz2" => $packages_file)
+                        or push @errors,"could not extract Packages file : $Bunzip2Error";
+                }
             }
         }
     }
