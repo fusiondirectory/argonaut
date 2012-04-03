@@ -1,0 +1,139 @@
+#!/usr/bin/perl
+#######################################################################
+#
+# Ldap2Zone - write DNS Zone file from LDAP informations
+#
+# Copyright (C) 2011 FusionDirectory project
+#
+# Author: Come Bernigaud
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Config::IniFiles;
+use DNS::ZoneParse;
+
+use Argonaut::Common qw(:ldap);
+
+my $configfile = "/etc/argonaut/argonaut.conf";
+
+my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+my $ldap_password          =   $config->val( ldap => "password"                ,"");
+
+my $zone = undef;
+#~ my $default_ttl = 30;
+my @record_types = ('a','cname','mx','ns','ptr','txt');#,'srv','hinfo','rp','loc'
+my $file_output = undef;
+my $verbose = 0;
+
+sub print_usage
+{
+  print "Usage : ldap2zone [--verbose] --zone=ZONE [--output=FILE]\n";
+  exit(0);
+}
+
+foreach my $arg ( @ARGV ) {
+  if (lc($arg) eq "--verbose") {
+    $verbose = 1;
+  } elsif (lc($arg) =~ m/^--zone=(.*)/) {
+    $zone = $1;
+  } elsif (lc($arg) =~ m/^--output=(.*)/) {
+    $file_output = $1;
+  } else {
+    print_usage();
+  }
+}
+
+if(!$zone) {
+  print_usage();
+}
+
+my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+
+my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+
+my $mesg = $ldap->search( # perform a search
+          base   => $ldap_base,
+          filter => "zoneName=$zone",
+          #~ attrs => [ 'ipHostNumber' ]
+          );
+          
+$mesg->code && die "Error while searching DNS Zone '$zone' :".$mesg->error;
+
+print "Found ".scalar($mesg->entries())." results\n" if $verbose;
+
+my $zonefile = DNS::ZoneParse->new();
+
+my $records = {};
+foreach my $record (@record_types) {
+  $records->{$record} = $zonefile->$record();
+}
+
+foreach my $entry ($mesg->entries()) {
+  my $name = $entry->get_value("relativeDomainName");
+  if(!$name) { print "no name\n"; next; }
+  my $class = $entry->get_value("dnsClass");
+  if(!$class) { print "no class\n"; next; }
+  my $ttl = $entry->get_value("dNSTTL");
+  if(!$ttl) {
+    $ttl = "";#$default_ttl;
+  }
+  while(my ($type,$list) = each %{$records}){
+    my $value = $entry->get_value($type."Record");
+    if($value) {
+      push @{$list},{ name => $name, class => $class,
+                      host => $value, ttl => $ttl };
+      print "Added record $type $name $class $value $ttl\n" if $verbose;
+    }
+  }
+  my $soa = $entry->get_value("soaRecord");
+  if($soa) {
+    my $soa_record = $zonefile->soa();
+    my (@soa_fields) = split(' ',$soa);
+    $soa_record->{'primary'}  = $soa_fields[0];
+    $soa_record->{'email'}    = $soa_fields[1];
+    $soa_record->{'serial'}   = $soa_fields[2];
+    $soa_record->{'refresh'}  = $soa_fields[3];
+    $soa_record->{'retry'}    = $soa_fields[4];
+    $soa_record->{'expire'}   = $soa_fields[5];
+    $soa_record->{'minimumTTL'}  = $soa_fields[6];
+    
+    $soa_record->{'class'} = $class;
+    $soa_record->{'ttl'} = $ttl;
+    $soa_record->{'origin'} = $zone;
+    print "Added record SOA $name $class $soa $ttl\n" if $verbose;
+  }
+}
+
+# update the serial number
+#~ $zonefile->new_serial();
+
+# write the new zone file to disk 
+if ($file_output) {
+  my $newzone;
+  open($newzone, '>', $file_output) or die "error while trying to open $file_ouput";
+  print $newzone $zonefile->output();
+  close $newzone;
+} else {
+  print $zonefile->output()."\n";
+}
