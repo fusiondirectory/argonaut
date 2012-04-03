@@ -41,11 +41,10 @@ use Argonaut::Common qw(:ldap :file :array :net);
 
 use lib "/usr/lib/argonaut";
 
-my ($ldap_configfile,$ldap_dn,$ldap_password,$interface,$arch,$mirrordir,$proxy);
-my ($cleanup,$verbose,$errors,$source,$gpgcheck,$contents,$pdiff,$hostname);
-my ($iptool,$logdir);
+my ($ldap_configfile, $ldap_dn, $ldap_password);
+my ($archs,$mirrordir,$proxy,$mac,$client_ip);
+my ($cleanup,$verbose,$errors,$source,$gpgcheck,$contents,$pdiff,$logdir);
 my $result;
-my $mac;
 my $ldapinfos;
 
 my $configfile = "/etc/argonaut/argonaut.conf";
@@ -83,18 +82,14 @@ my $ldapuris = $ldapinfos->{'URIS'};
 
 my $handle = $ldapinfos->{'HANDLE'};
 
-# find mac address of the host running ldap2repository
-$mac = argonaut_get_mac($interface);
-
 argonaut_create_dir($outdir);
 
-  if( $verbose eq "yes" ) {
-    my $host = `$hostname -f`;
-    print "Generating sources.list and debmirror cronjob for server\n"
-      . "Host:   ${host}\n"
-      . "Base:   ${base}\n"
-      . "Outdir: ${outdir}\n\n";
-  }
+if( $verbose eq "TRUE" ) {
+  print "Generating sources.list and debmirror cronjob for server\n"
+    . "IP:     ${client_ip}\n"
+    . "Base:   ${base}\n"
+    . "Outdir: ${outdir}\n\n";
+}
   
 #generate the cronjob script
 generate_cronjob_script();
@@ -110,45 +105,52 @@ exit 0;
 
 sub readConfig {
   my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+  
+  $client_ip               =   $config->val( client => "client_ip" ,"");
+  $ldap_configfile         =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
+  $ldap_dn                 =   $config->val( ldap => "dn"          ,"");
+  $ldap_password           =   $config->val( ldap => "password"    ,"");
 
-  $interface              =   $config->val( ldap2repository => "interface"    ,"eth0");
-  $arch                   =   $config->val( ldap2repository => "arch"         ,"i386");
-  $mirrordir              =   $config->val( ldap2repository => "mirrordir"    ,"/srv/www/");
-  $proxy                  =   $config->val( ldap2repository => "proxy"        ,"");
-  $cleanup                =   $config->val( ldap2repository => "cleanup"      ,"no");
-  $errors                 =   $config->val( ldap2repository => "errors"       ,"yes");
-  $source                 =   $config->val( ldap2repository => "source"       ,"no");
-  $gpgcheck               =   $config->val( ldap2repository => "gpgcheck"     ,"no");
-  $contents               =   $config->val( ldap2repository => "contents"     ,"no");
-  $verbose                =   $config->val( ldap2repository => "verbose"      ,"no");
-  $hostname               =   $config->val( programs => "hostname"            ,"/bin/hostname");
+  my $settings = argonaut_get_ldap2repository_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+
+  $archs                  =   join(',',@{$settings->{'arch'}}); # archs comma-separated
+  $mirrordir              =   $settings->{'mirrordir'};
+  $proxy                  =   $settings->{'proxy'};
+  $cleanup                =   $settings->{'cleanup'};
+  $errors                 =   $settings->{'errors'};
+  $source                 =   $settings->{'source'};
+  $gpgcheck               =   $settings->{'gpgcheck'};
+  $contents               =   $settings->{'contents'};
+  $verbose                =   $settings->{'verbose'};
+  $mac                    =   $settings->{'mac'};
+  
   $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
 
-  if ($cleanup eq "no") {
+  if ($cleanup eq "FALSE") {
     $cleanup = "--nocleanup";
   } else {
     $cleanup = "";
   }
     
-  if ($errors eq "yes") {
+  if ($errors eq "TRUE") {
     $errors = "--ignore-small-errors";
   } else {
     $errors = "";
   }
     
-  if ($source eq "no") {
+  if ($source eq "FALSE") {
     $source = "--nosource";
   } else {
     $source = "";
   }
 
-  if ($gpgcheck eq "no") {
+  if ($gpgcheck eq "FALSE") {
     $gpgcheck = "--ignore-release-gpg";
   } else {
     $gpgcheck = "";
   }
 
-  if ($contents eq "yes") {
+  if ($contents eq "TRUE") {
     $contents = "--getcontents";
   } else {
     $contents = "";
@@ -174,8 +176,8 @@ sub generate_cronjob_script {
     
   my $reposerver = argonaut_search_repo_server($handle, $base, $mac);
   if (0 == $reposerver->count) {
-    print( "Server $hostname doesn't contain software repositories\n" );
-    $log->info ("Server $hostname doesn't contain software repositories\n");
+    print( "This server doesn't contain software repositories\n" );
+    $log->info ("This server doesn't contain software repositories\n");
     close (CRON);
     unlink "${outdir}/mirror-update-cronjob";
     exit 0;
@@ -189,7 +191,7 @@ sub generate_cronjob_script {
   $entry = $entries[0];
   my ($newbase) = $entry->dn() =~ m/.*ou=systems,(.*)/;
   if ("$base" ne "$newbase") {
-    print ("Switching base: $newbase\n") if($verbose eq "yes");
+    print ("Switching base: $newbase\n") if($verbose eq "TRUE");
     $log->info ("Switching base: $newbase\n");
     $base = $newbase;
   }
@@ -206,7 +208,7 @@ sub generate_cronjob_script {
 
     open (SOURCES, ">${outdir}/sources.list");
     print SOURCES "deb $uri $dist @section_list\n";
-    print " +S  $dist ($sections) via $uri\n" if( $verbose eq "yes" );
+    print " +S  $dist ($sections) via $uri\n" if( $verbose eq "TRUE" );
   
     if ("" eq "$parent_or_opts") {
       print( "No parent for '$repoline'\n" );
@@ -247,9 +249,9 @@ sub generate_cronjob_script {
         }
 
         if (0 != scalar @{outline}) {
-          print CRON "\ndebmirror ${cleanup} ${gpgcheck} ${source} ${errors} ${contents} -a ${arch} --dist=${dist} --section=" . join(",", @{outline}) 
+          print CRON "\ndebmirror ${cleanup} ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline}) 
                     . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/${dir}\n";
-          print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose eq "yes" );
+          print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose eq "TRUE" );
         }
         last if (0 == scalar @section_list);
       }

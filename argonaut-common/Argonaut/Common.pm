@@ -59,6 +59,8 @@ BEGIN
       &argonaut_search_parent_repo_server
       &argonaut_get_client_settings
       &argonaut_get_server_settings
+      &argonaut_get_crawler_settings
+      &argonaut_get_ldap2repository_settings
     )],
     'file' => [qw(
       &argonaut_file_write
@@ -691,7 +693,7 @@ sub argonaut_get_client_settings {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
-            attrs => [ 'argonautClientPort','argonautTaskIdFile',
+            attrs => [ 'macAddress','argonautClientPort','argonautTaskIdFile',
                        'argonautClientWakeOnLanInterface','argonautClientLogDir' ]
             );
             
@@ -699,6 +701,7 @@ sub argonaut_get_client_settings {
               
   if(scalar($mesg->entries)==1) {
       $client_settings = {
+          'mac' => ($mesg->entries)[0]->get_value("macAddress"),
           'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
           'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
           'interface' => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
@@ -722,17 +725,83 @@ sub argonaut_get_client_settings {
           );
     if(scalar($mesg->entries)==1) {
       $client_settings = {
-          'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
-          'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
-          'interface' => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
-          'logdir' => ($mesg->entries)[0]->get_value("argonautClientLogDir")
-          };
+        'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
+        'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
+        'interface' => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
+        'logdir' => ($mesg->entries)[0]->get_value("argonautClientLogDir")
+      };
     } else {
       die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
     }
   }
     
   return $client_settings;
+}
+
+#------------------------------------------------------------------------------
+# get ldap2repository argonaut settings
+# 
+sub argonaut_get_ldap2repository_settings {
+  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
+  
+  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+    
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
+            attrs => ['macAddress','argonautLdap2repArch','argonautLdap2repMirrorDir',
+                      'argonautLdap2repCleanup','argonautLdap2repErrors','argonautLdap2repSource','argonautLdap2repGPGCheck',
+                      'argonautLdap2repContents','argonautLdap2repVerbose','argonautLdap2repProxy']
+            );
+            
+  if(scalar($mesg->entries)==1) {
+    my $settings = {
+      'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
+      'arch'            => ($mesg->entries)[0]->get_value('argonautLdap2repArch',asref=>1),
+      'mirrordir'       => ($mesg->entries)[0]->get_value('argonautLdap2repMirrorDir'),
+      'cleanup'         => ($mesg->entries)[0]->get_value('argonautLdap2repCleanup'),
+      'errors'          => ($mesg->entries)[0]->get_value('argonautLdap2repErrors'),
+      'source'          => ($mesg->entries)[0]->get_value('argonautLdap2repSource'),
+      'gpgcheck'        => ($mesg->entries)[0]->get_value('argonautLdap2repGPGCheck'),
+      'contents'        => ($mesg->entries)[0]->get_value('argonautLdap2repContents'),
+      'verbose'         => ($mesg->entries)[0]->get_value('argonautLdap2repVerbose'),
+    };
+    if (($mesg->entries)[0]->get_value('argonautLdap2repProxy')) {
+      $settings->{'proxy'} = ($mesg->entries)[0]->get_value('argonautLdap2repProxy');
+    }
+    return $settings;
+  } else {
+    die "This computer ($ip) is not configured in LDAP to run ldap2repository (missing service argonautConfig).";
+  }
+}
+
+#------------------------------------------------------------------------------
+# get crawler argonaut settings
+# 
+sub argonaut_get_crawler_settings {
+  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
+  
+  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+    
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
+            attrs => ['macAddress','argonautCrawlerMirrorDir',
+                      'argonautCrawlerArch','argonautCrawlerPackagesFolder']
+            );
+            
+  if(scalar($mesg->entries)==1) {
+    return {
+      'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
+      'mirrordir'       => ($mesg->entries)[0]->get_value("argonautCrawlerMirrorDir"),
+      'arch'            => ($mesg->entries)[0]->get_value("argonautCrawlerArch",asref=>1),
+      'packagesfolder'  => ($mesg->entries)[0]->get_value("argonautCrawlerPackagesFolder")
+    };
+  } else {
+    die "This computer ($ip) is not configured in LDAP to run a debconf crawler (missing service argonautConfig).";
+  }
 }
 
 #------------------------------------------------------------------------------
@@ -754,13 +823,14 @@ sub argonaut_get_server_settings {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => $filter,
-            attrs => [  'argonautPort','argonautDeleteFinished',
+            attrs => [  'macAddress','argonautPort','argonautDeleteFinished',
                         'argonautIpTool',
                         'argonautWakeOnLanInterface','argonautLogDir' ]
             );
 
   if(scalar($mesg->entries)==1) {
     return {
+      'mac'                   => ($mesg->entries)[0]->get_value("macAddress"),
       'port'                  => ($mesg->entries)[0]->get_value("argonautPort"),
       'iptool'                => ($mesg->entries)[0]->get_value("argonautIpTool"),
       'delete_finished_tasks' => ($mesg->entries)[0]->get_value("argonautDeleteFinished"),

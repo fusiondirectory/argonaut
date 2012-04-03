@@ -47,13 +47,7 @@ BEGIN
   @EXPORT_OK = qw(get_repolines get_packages_info store_packages_file cleanup_and_extract);
 }
 
-
 my $configfile = "/etc/argonaut/argonaut.conf";
-
-my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-
-my $arch            =   $config->val( packages => "arch"                ,"i386");
-my $packages_folder =   $config->val( packages => "packages_folder"     ,"/var/cache/argonaut/packages");
 
 =pod
 =item get_repolines
@@ -107,7 +101,7 @@ If no mac is provided, all servers (for the specified release) in the ldap are c
 
 =cut
 sub get_packages_info {
-    my ($mac,$release,$attrs,$filters,$from,$to) = @_;
+    my ($packages_folder,$archs,$mac,$release,$attrs,$filters,$from,$to) = @_;
     
     if((defined $from) && ($from < 0)) {
         undef $from;
@@ -129,8 +123,7 @@ sub get_packages_info {
 
     my $package_indice = 0;
     my $distributions = {};
-    my $deb_filepath = "/var/cache/argonaut/tmp/argonaut-packages-tmp";
-    mkpath($deb_filepath);
+    mkpath($packages_folder);
     foreach my $repo (@repos) {
         my $repoline = $repo->get_value('FAIrepository');
         
@@ -153,104 +146,112 @@ sub get_packages_info {
         foreach my $section (@section_list) {
             my $localuri = $uri;
             $localuri =~ s/^http:\/\///;
-            my $packages_file = "$packages_folder/$localuri/dists/$dist/$section/binary-$arch/Packages";
-            open (PACKAGES, "<$packages_file") or next;
             if(!defined $distributions->{"$dist/$section"}) {
                 $distributions->{"$dist/$section"} = {};
             }
             my $packages = $distributions->{"$dist/$section"};
-            my $parsed = {};
-            while (<PACKAGES>) {
-                if (/^$/) {
-                    $package_indice++;
-                    if((! defined $from) || ($package_indice>$from)) {
-                        if($localmirror) {
-                            if (grep {uc($_) eq 'TEMPLATE'} @{$attrs}) {
-                                my $template = get("$uri/debconf.d/$dist/$section/".$parsed->{'PACKAGE'});
-                                if(defined $template) {
-                                    $parsed->{'TEMPLATE'} = $template;
+            foreach my $arch (@{$archs}) {
+                my $packages_file = "$packages_folder/$localuri/dists/$dist/$section/binary-$arch/Packages";
+                open (PACKAGES, "<$packages_file") or next;
+                my $parsed = {};
+                while (<PACKAGES>) {
+                    if (/^$/) {
+                        # Empty line means this package info lines are over
+                        $package_indice++;
+                        if((! defined $from) || ($package_indice>$from)) {
+                            if($localmirror) {
+                                # If it's a local mirror, it's supposed to run the debconf crawler and have the template extracted
+                                # So we just download it (if it's not there, we assume there is no template for this package)
+                                if (grep {uc($_) eq 'TEMPLATE'} @{$attrs}) {
+                                    my $template = get("$uri/debconf.d/$dist/$section/".$parsed->{'PACKAGE'});
+                                    if(defined $template) {
+                                        $parsed->{'HASTEMPLATE'} = 1;
+                                        $parsed->{'TEMPLATE'} = $template;
+                                    }
+                                } elsif (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}) {
+                                    if(head("$uri/debconf.d/$dist/$section/".$parsed->{'PACKAGE'})) {
+                                        $parsed->{'HASTEMPLATE'} = 1;
+                                    }
                                 }
-                            } elsif (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}) {
-                                if(head("$uri/debconf.d/$dist/$section/".$parsed->{'PACKAGE'})) {
-                                    $parsed->{'HASTEMPLATE'} = 1;
+                            } else {
+                                # If it's not a local mirror, we just download the package, we'll extract the template later
+                                if ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs})) {
+                                    my $filedir = $parsed->{'FILENAME'};
+                                    $filedir =~ s/[^\/]+$//;
+                                    mkpath($packages_folder."/".$filedir);
+                                    mirror("$uri/".$parsed->{'FILENAME'},$packages_folder."/".$parsed->{'FILENAME'});
                                 }
                             }
-                        } else {
-                            if ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs})) {
-                                my $filedir = $parsed->{'FILENAME'};
-                                $filedir =~ s/[^\/]+$//;
-                                mkpath($deb_filepath."/".$filedir);
-                                mirror("$uri/".$parsed->{'FILENAME'},$deb_filepath."/".$parsed->{'FILENAME'});
+                            if(defined $packages->{$parsed->{'PACKAGE'}}) {
+                                if(grep {uc($_) eq 'VERSION'} @{$attrs}) {
+                                    if(defined $packages->{$parsed->{'PACKAGE'}}->{'VERSION'}) {
+                                        $packages->{$parsed->{'PACKAGE'}}->{'VERSION'} .= ",".$parsed->{'VERSION'}; # FIXME : here we collected a lot of info we just not use, we should have stopped analysing after finding version, and we should not have treated templates
+                                    } else {
+                                        $packages->{$parsed->{'PACKAGE'}} = $parsed;
+                                    }
+                                }
+                            } else {
+                                $packages->{$parsed->{'PACKAGE'}} = $parsed;
                             }
                         }
-                        if(defined $packages->{$parsed->{'PACKAGE'}}) {
-                            if(grep {uc($_) eq 'VERSION'} @{$attrs}) {
-                                if(defined $packages->{$parsed->{'PACKAGE'}}->{'VERSION'}) {
-                                    $packages->{$parsed->{'PACKAGE'}}->{'VERSION'} .= ",".$parsed->{'VERSION'};
-                                } else {
-                                    $packages->{$parsed->{'PACKAGE'}} = $parsed;
-                                }
-                            }
+                        $parsed = {};
+                        if((! defined $to) || ($package_indice<$to)) {
+                            next;
                         } else {
-                            $packages->{$parsed->{'PACKAGE'}} = $parsed;
+                            last;
                         }
                     }
-                    $parsed = {};
-                    if((! defined $to) || ($package_indice<$to)) {
-                        next;
-                    } else {
-                        last;
-                    }
-                }
-                if (my ($key, $value) = m/^(.*): (.*)/) {
-                    if((defined $filters) && (uc($key) eq "PACKAGE")) {
-                        my $match = 0;
-                        foreach my $filter (@{$filters}) {
-                            if($value =~ /$filter/) {
-                                $match = 1;
-                                last;
-                            }
-                        }
-                        if($match == 0) {
-                            while(<PACKAGES>) {
-                                if (/^$/) {
+                    if (my ($key, $value) = m/^(.*): (.*)/) {
+                        if((defined $filters) && (uc($key) eq "PACKAGE")) {
+                            my $match = 0;
+                            foreach my $filter (@{$filters}) {
+                                if($value =~ /$filter/) {
+                                    $match = 1;
                                     last;
                                 }
                             }
-                            next;
+                            if($match == 0) {
+                                while(<PACKAGES>) {
+                                    if (/^$/) {
+                                        last;
+                                    }
+                                }
+                                next;
+                            }
+                        }
+                        if (grep {uc($_) eq uc($key)} @{$attrs}) {
+                            if(uc($key) eq 'DESCRIPTION') {
+                                $parsed->{'DESCRIPTION'} = encode_base64($value);
+                            } else {
+                                $parsed->{uc($key)} = $value;
+                            }
                         }
                     }
-                    if (grep {uc($_) eq uc($key)} @{$attrs}) {
-                        if(uc($key) eq 'DESCRIPTION') {
-                            $parsed->{'DESCRIPTION'} = encode_base64($value);
-                        } else {
-                            $parsed->{uc($key)} = $value;
+                    else {
+                        s/ //;
+                        s/^\.$//;
+                        my $body = $_;
+                        if(grep {uc($_) eq uc('BODY')} @{$attrs}) {
+                            $parsed->{'BODY'} .= $body;
                         }
                     }
                 }
-                else {
-                    s/ //;
-                    s/^\.$//;
-                    my $body = $_;
-                    if(grep {uc($_) eq uc('BODY')} @{$attrs}) {
-                        $parsed->{'BODY'} .= $body;
-                    }
-                }
+                close(PACKAGES);
             }
-            close(PACKAGES);
             if((defined $to) && ($package_indice>$to)) {
                 last;
             }
             if(!$localmirror && ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}))) {
+                # If it's not a local mirror and templates where asked, we still need to extract and store them
                 my $distribs = {};
                 my @tmp = values(%{$packages});
                 $distribs->{"$dist/$section"} = \@tmp;
-                cleanup_and_extract($deb_filepath,$distribs);
+                cleanup_and_extract($packages_folder,$distribs);
                 foreach my $key (keys(%{$packages})) {
                     if(defined $packages->{$key}->{'TEMPLATE'}) {
                         next;
                     }
-                    my $filename = $deb_filepath."/debconf.d/$dist/$section/".$packages->{$key}->{'PACKAGE'};
+                    my $filename = $packages_folder."/debconf.d/$dist/$section/".$packages->{$key}->{'PACKAGE'};
                     if(-f $filename) {
                         $packages->{$key}->{'HASTEMPLATE'} = 1;
                         if(grep {uc($_) eq 'TEMPLATE'} @{$attrs}) {
@@ -258,7 +259,7 @@ sub get_packages_info {
                         }
                     }
                 }
-                rmtree($deb_filepath."/debconf.d/");
+                rmtree($packages_folder."/debconf.d/");
             }
         }
     }
@@ -275,7 +276,7 @@ sub get_packages_info {
 Store and extract the Packages file from the repositories.
 =cut
 sub store_packages_file {
-    my ($mac,$release) = @_;
+    my ($packages_folder,$archs,$mac,$release) = @_;
     
     my @repos = get_repolines($mac);
 
@@ -300,21 +301,24 @@ sub store_packages_file {
                 
                 my $dir = $uri;
                 $dir =~ s/^http:\/\///;
-                my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
-                mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
-                my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
-                if(is_error($res)) {
-                    my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".gz");
-                    if(is_error($res2)) {
-                        push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
-                        push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.gz : $res2";
-                    } else {
-                        gunzip ($packages_file.".gz" => $packages_file)
-                            or push @errors,"could not extract Packages file : $GunzipError";
-                    }
-                } else {
-                    bunzip2 ($packages_file.".bz2" => $packages_file)
-                        or push @errors,"could not extract Packages file : $Bunzip2Error";
+                
+                foreach my $arch (@{$archs}) {
+                  my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
+                  mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
+                  my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
+                  if(is_error($res)) {
+                      my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".gz");
+                      if(is_error($res2)) {
+                          push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
+                          push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.gz : $res2";
+                      } else {
+                          gunzip ($packages_file.".gz" => $packages_file)
+                              or push @errors,"could not extract Packages file : $GunzipError";
+                      }
+                  } else {
+                      bunzip2 ($packages_file.".bz2" => $packages_file)
+                          or push @errors,"could not extract Packages file : $Bunzip2Error";
+                  }
                 }
             }
         }

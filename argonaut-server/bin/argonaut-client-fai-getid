@@ -54,6 +54,7 @@ my $client_settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ld
 my $file          = $client_settings->{'taskidfile'};
 my $interface     = $client_settings->{'interface'};
 my $logdir        = $client_settings->{'logdir'};
+my $myMac         = $client_settings->{'mac'};
 
 my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
   
@@ -70,8 +71,6 @@ $log->add(
         minlevel => "emergency"
     }
 );
-
-my $myMac = argonaut_get_mac($interface);
 
 my $client = new JSON::RPC::Client;
 $client->version('1.0');
