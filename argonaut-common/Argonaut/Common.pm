@@ -750,7 +750,7 @@ sub argonaut_get_ldap2repository_settings {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
-            attrs => ['macAddress','argonautLdap2repArch','argonautLdap2repMirrorDir',
+            attrs => ['macAddress','argonautMirrorDir','argonautMirrorArch',
                       'argonautLdap2repCleanup','argonautLdap2repErrors','argonautLdap2repSource','argonautLdap2repGPGCheck',
                       'argonautLdap2repContents','argonautLdap2repVerbose','argonautLdap2repProxy']
             );
@@ -758,8 +758,8 @@ sub argonaut_get_ldap2repository_settings {
   if(scalar($mesg->entries)==1) {
     my $settings = {
       'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
-      'arch'            => ($mesg->entries)[0]->get_value('argonautLdap2repArch',asref=>1),
-      'mirrordir'       => ($mesg->entries)[0]->get_value('argonautLdap2repMirrorDir'),
+      'mirrordir'       => ($mesg->entries)[0]->get_value('argonautMirrorDir'),
+      'arch'            => ($mesg->entries)[0]->get_value('argonautMirrorArch',asref=>1),
       'cleanup'         => ($mesg->entries)[0]->get_value('argonautLdap2repCleanup'),
       'errors'          => ($mesg->entries)[0]->get_value('argonautLdap2repErrors'),
       'source'          => ($mesg->entries)[0]->get_value('argonautLdap2repSource'),
@@ -788,15 +788,15 @@ sub argonaut_get_crawler_settings {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
-            attrs => ['macAddress','argonautCrawlerMirrorDir',
-                      'argonautCrawlerArch','argonautCrawlerPackagesFolder']
+            attrs => ['macAddress','argonautMirrorDir',
+                      'argonautMirrorArch','argonautCrawlerPackagesFolder']
             );
             
   if(scalar($mesg->entries)==1) {
     return {
       'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
-      'mirrordir'       => ($mesg->entries)[0]->get_value("argonautCrawlerMirrorDir"),
-      'arch'            => ($mesg->entries)[0]->get_value("argonautCrawlerArch",asref=>1),
+      'mirrordir'       => ($mesg->entries)[0]->get_value("argonautMirrorDir"),
+      'arch'            => ($mesg->entries)[0]->get_value("argonautMirrorArch",asref=>1),
       'packagesfolder'  => ($mesg->entries)[0]->get_value("argonautCrawlerPackagesFolder")
     };
   } else {
