@@ -61,6 +61,7 @@ BEGIN
       &argonaut_get_server_settings
       &argonaut_get_crawler_settings
       &argonaut_get_ldap2repository_settings
+      &argonaut_get_ldap2zone_settings
     )],
     'file' => [qw(
       &argonaut_file_write
@@ -826,6 +827,11 @@ sub argonaut_get_server_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
   
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+  
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
     
   my $filter;
@@ -854,6 +860,42 @@ sub argonaut_get_server_settings {
     };
   } else {
     die 'Argonaut server ($ip) not found in LDAP';
+  }
+}
+
+#------------------------------------------------------------------------------
+# get ldap2zone settings
+# 
+sub argonaut_get_ldap2zone_settings {
+  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
+  
+  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+  
+  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+   
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
+            attrs => ['macAddress','argonautLdap2zoneBindDir',
+                      'argonautLdap2zoneAllowNotify','argonautLdap2zoneAllowUpdate',
+                      'argonautLdap2zoneAllowTransfer','argonautLdap2zoneTTL']
+            );
+            
+  if(scalar($mesg->entries)==1) {
+    return {
+      'mac'           => ($mesg->entries)[0]->get_value("macAddress"),
+      'binddir'       => ($mesg->entries)[0]->get_value("argonautLdap2zoneBindDir"),
+      'allownotify'   => ($mesg->entries)[0]->get_value("argonautLdap2zoneAllowNotify"),
+      'allowupdate'   => ($mesg->entries)[0]->get_value("argonautLdap2zoneAllowUpdate"),
+      'allowtransfer' => ($mesg->entries)[0]->get_value("argonautLdap2zoneAllowTransfer"),
+      'ttl'           => ($mesg->entries)[0]->get_value("argonautLdap2zoneTTL")
+    };
+  } else {
+    die "This computer ($ip) is not configured in LDAP to run ldap2zone (missing service argonautConfig).";
   }
 }
 

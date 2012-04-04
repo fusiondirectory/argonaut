@@ -53,6 +53,16 @@ sub trigger_action_reboot : Public {
     return "rebooting";
 }
 
+=item ldap2bind
+launch ldap2bind on the computer and store the result in the right place
+=cut
+
+sub ldap2bind : Public {
+  my ($s, $args) = @_;
+    system("ldap2bind");
+    return "ldap2bind done";
+}
+
 =item manage_service
 execute an action on a service
 =cut
