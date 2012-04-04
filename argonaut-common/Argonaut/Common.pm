@@ -688,6 +688,11 @@ sub argonaut_get_client_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
   
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+  
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
     
   my $mesg = $ldap->search( # perform a search
@@ -745,6 +750,11 @@ sub argonaut_get_ldap2repository_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
   
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+  
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
     
   my $mesg = $ldap->search( # perform a search
@@ -783,6 +793,11 @@ sub argonaut_get_crawler_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
   
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+  
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
     
   my $mesg = $ldap->search( # perform a search

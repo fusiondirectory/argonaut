@@ -48,17 +48,20 @@ my $verbose = 0;
 
 sub print_usage
 {
-  print "Usage : ldap2zone [--verbose] --zone=ZONE [--output=FILE]\n";
+  print "Usage : ldap2zone [--verbose] [--output=FILE] ZONE\n";
   exit(0);
 }
+
+my $i_arg = 0;
 
 foreach my $arg ( @ARGV ) {
   if (lc($arg) eq "--verbose") {
     $verbose = 1;
-  } elsif (lc($arg) =~ m/^--zone=(.*)/) {
-    $zone = $1;
   } elsif (lc($arg) =~ m/^--output=(.*)/) {
     $file_output = $1;
+  } elsif ($i_arg==0) {
+    $zone = $arg;
+    $i_arg++;
   } else {
     print_usage();
   }
@@ -69,6 +72,10 @@ if(!$zone) {
 }
 
 my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  
+if ( $ldapinfos->{'ERROR'} > 0) {
+  die $ldapinfos->{'ERRORMSG'}."\n";
+}
 
 my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 
@@ -131,7 +138,7 @@ foreach my $entry ($mesg->entries()) {
 # write the new zone file to disk 
 if ($file_output) {
   my $newzone;
-  open($newzone, '>', $file_output) or die "error while trying to open $file_ouput";
+  open($newzone, '>', $file_output) or die "error while trying to open $file_output";
   print $newzone $zonefile->output();
   close $newzone;
 } else {
