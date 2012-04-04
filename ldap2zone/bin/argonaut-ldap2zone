@@ -67,9 +67,15 @@ foreach my $arg ( @ARGV ) {
   }
 }
 
-if(!$zone) {
+if (!$zone) {
   print_usage();
 }
+
+if (substr($zone,-1) ne ".") { # If the end point is not there, add it
+  $zone = $zone.".";
+}
+
+print "Searching DNS Zone '$zone'\n" if $verbose;
 
 my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
   
