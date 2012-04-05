@@ -882,7 +882,8 @@ sub argonaut_get_ldap2zone_settings {
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
             attrs => ['macAddress','argonautLdap2zoneBindDir',
                       'argonautLdap2zoneAllowNotify','argonautLdap2zoneAllowUpdate',
-                      'argonautLdap2zoneAllowTransfer','argonautLdap2zoneTTL']
+                      'argonautLdap2zoneAllowTransfer','argonautLdap2zoneTTL',
+                      'argonautLdap2zoneRndc']
             );
             
   if(scalar($mesg->entries)==1) {
@@ -892,7 +893,8 @@ sub argonaut_get_ldap2zone_settings {
       'allownotify'   => ($mesg->entries)[0]->get_value("argonautLdap2zoneAllowNotify"),
       'allowupdate'   => ($mesg->entries)[0]->get_value("argonautLdap2zoneAllowUpdate"),
       'allowtransfer' => ($mesg->entries)[0]->get_value("argonautLdap2zoneAllowTransfer"),
-      'ttl'           => ($mesg->entries)[0]->get_value("argonautLdap2zoneTTL")
+      'ttl'           => ($mesg->entries)[0]->get_value("argonautLdap2zoneTTL"),
+      'rndc'          => ($mesg->entries)[0]->get_value("argonautLdap2zoneRndc")
     };
   } else {
     die "This computer ($ip) is not configured in LDAP to run ldap2zone (missing service argonautConfig).";

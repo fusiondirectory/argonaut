@@ -29,6 +29,8 @@ use 5.008;
 use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
 use Data::Dumper;
 
+use Argonaut::Ldap2zone qw(argonaut_ldap2zone);
+
 my $configfile = "/etc/argonaut/argonaut.conf";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
@@ -53,14 +55,15 @@ sub trigger_action_reboot : Public {
     return "rebooting";
 }
 
-=item ldap2bind
-launch ldap2bind on the computer and store the result in the right place
+=item ldap2zone
+launch ldap2zone on the computer and store the result in the right place
 =cut
 
-sub ldap2bind : Public {
+sub ldap2zone : Public {
   my ($s, $args) = @_;
-    system("ldap2bind");
-    return "ldap2bind done";
+  my ($zone) = @{$args};
+  argonaut_ldap2zone($zone);
+  return "ldap2zone done";
 }
 
 =item manage_service
