@@ -1,2 +1,2 @@
-bin/argonaut-ldap2zone		/usr/sbin
-
+bin/argonaut-ldap2zone    /usr/sbin
+Argonaut/Ldap2zone.pm     /usr/share/perl5/Argonaut
