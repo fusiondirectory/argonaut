@@ -2,7 +2,7 @@
 
 #######################################################################
 #
-# argonaut-fuse -- fuse-supplicant which allows one to create pxelinux 
+# argonaut-fuse -- fuse-supplicant which allows one to create pxelinux
 #                  configurations for different types of clients using
 #                  external modules.
 #
@@ -159,34 +159,38 @@ sub sig_int_handler {
 #                corresponding variables
 #===============================================================================
 
-sub readConfig 
+sub readConfig
 {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    $default_mode           =   $config->val( basic => "default_mode"           ,"install");
-    $tftp_root              =   $config->val( tftp => "pxelinux_cfg"            ,"/srv/tftp/pxelinux.cfg");
-    $tftp_static_root       =   $config->val( tftp => "pxelinux_cfg_static"     ,"/srv/tftp/pxelinux.static");
-    $fai_flags              =   $config->val( fai => "fai_flags"               ,"verbose,sshd,syslogd,createvt,reboot");
-    $nfs_opts               =   $config->val( fai => "nfs_opts"     ,"");
-    $nfs_root               =   $config->val( fai => "nfs_root"     ,"/srv/fai/nfsroot");
-    $union                  =   $config->val( fai => "union"     ,"aufs");
-    $opsiserver             =   $config->val( opsi => "server"     ,"");                    
-    $admin                  =   $config->val( opsi => "admin"     ,"");                    
-    $password               =   $config->val( opsi => "password"     ,"");
-    $lang                   =   $config->val( opsi => "lang"     ,"");
-    $ltspserver             =   $config->val( opsi => "server"     ,"");                            
-    $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-    $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-    $ldap_password          =   $config->val( ldap => "password"                ,"");
-    $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
+    my $client_ip                       =   $config->val( client => "client_ip" ,"");
+    my $ldap_configfile                 =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
+    my $ldap_dn                         =   $config->val( ldap => "dn"          ,"");
+    my $ldap_password                   =   $config->val( ldap => "password"    ,"");
+
+    my $settings = argonaut_get_fuse_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+
+    $default_mode           =   $settings->{"default_mode"};
+    $tftp_root              =   $settings->{"pxelinux_cfg"};
+    $tftp_static_root       =   $settings->{"pxelinux_cfg_static"};
+    $fai_flags              =   $settings->{"fai_flags"};
+    $nfs_opts               =   "";
+    $nfs_root               =   $settings->{"nfs_root"};
+    $union                  =   "aufs";
+    $opsiserver             =   $settings->{"opsi_server"};
+    $admin                  =   $settings->{"opsi_admin"};
+    $password               =   $settings->{"opsi_password"};
+    $lang                   =   $settings->{"opsi_lang"};
+    $ltspserver             =   $settings->{"ltsp_server"};
+    $logdir                 =   $settings->{"logdir"};
 }
 
 #===  FUNCTION  ================================================================
 #         NAME:  import_modules
-#   PARAMETERS:  module_path - string - abs. path to the directory the modules 
+#   PARAMETERS:  module_path - string - abs. path to the directory the modules
 #                are stored
 #      RETURNS:  nothing
-#  DESCRIPTION:  each file in module_path which ends with '.pm' and activation 
+#  DESCRIPTION:  each file in module_path which ends with '.pm' and activation
 #                state is on is imported by "require 'file';"
 #===============================================================================
 
@@ -211,7 +215,7 @@ sub import_modules {
       # Only load module if get_module_info() returns a non-null object
       if ($info) {
         $known_modules->{$mod_name} = $info;
-        
+
         # Load additional configuration values
         $log->info("Loaded Module $mod_name\n");
         #$cfg_defaults{$mod_name}= eval($mod_name.'::get_config_sections')
@@ -334,9 +338,9 @@ sub prepare_ldap_handle_retry {
 
 #===  FUNCTION  ================================================================
 #         NAME:  getattr
-#   PARAMETERS:  $filename - string - 
+#   PARAMETERS:  $filename - string -
 #      RETURNS:  Returns a list, very similar to the 'stat' function (see perlfunc).
-#                On error, simply return a single numeric scalar value 
+#                On error, simply return a single numeric scalar value
 #                (e.g. "return -ENOENT();").
 #  DESCRIPTION:  get attributes
 #===============================================================================
@@ -372,7 +376,7 @@ sub getattr {
         }
       }
       if (not defined($current->{$path_element})) {
-        if (-r $tftp_static_root.'/'.$path_element) { 
+        if (-r $tftp_static_root.'/'.$path_element) {
           return stat($tftp_static_root.'/'.$path_element);
         } else {
           return -1*ENOENT;
@@ -407,7 +411,7 @@ sub getattr {
 
   my $blksize = 1024;
   my $blocks = 1;
-  
+
   my $dev = 0;
   my $ino = 0;
 
@@ -476,9 +480,9 @@ sub getdir {
 #                $kernel
 #                $append
 #      RETURNS:  0
-#  DESCRIPTION:  create the pxelinux.cfg file for a host 
+#  DESCRIPTION:  create the pxelinux.cfg file for a host
 #===============================================================================
- 
+
 sub write_pxe_config_file {
 
   my ($host,$file,$kernel,$append) = @_;
