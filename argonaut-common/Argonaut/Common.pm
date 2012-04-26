@@ -90,13 +90,13 @@ BEGIN
 # $interface     = name of the interface
 #
 # Returns the mac of the interface
-# 
+#
 sub argonaut_get_mac {
     my ($interface) = @_;
-    
+
     my $mac = `LANG=C $iptool $interface | awk '/$interface/{ print \$5 }'`;
     chomp ($mac);
-    
+
     return $mac;
 }
 
@@ -106,15 +106,15 @@ sub argonaut_get_mac {
 # $filename     = name of the pxe file
 #
 # Returns the mac of the interface
-# 
+#
 sub argonaut_get_mac_pxe {
   my ($filename) = @_;
-  
-  my $mac = $filename;                 
+
+  my $mac = $filename;
   $mac =~ tr/-/:/;
-  $mac = substr( $mac, -1*(5*3+2) ); 
+  $mac = substr( $mac, -1*(5*3+2) );
   chomp ($mac);
-  
+
   return $mac;
 }
 
@@ -140,10 +140,10 @@ sub argonaut_get_mac_pxe {
 #  'ERRORMSG' => Error Message
 #
 # These values are just filled, if they weren't provided,
-# i.e. 
+# i.e.
 #
 sub argonaut_ldap_init {
-  my( $ldap_conf, $prompt_dn, $bind_dn, 
+  my( $ldap_conf, $prompt_dn, $bind_dn,
       $prompt_pwd, $bind_pwd, $obfuscate_pwd ) = @_;
   my %results;
 
@@ -222,7 +222,7 @@ sub argonaut_ldap_init {
   }
 
   $results{ 'ERROR' } = 0;
-  
+
   return \%results;
 }
 
@@ -234,11 +234,11 @@ sub argonaut_ldap_parse_config
   # Try to guess the location of the ldap.conf - file
   $ldap_config = $ENV{ 'LDAPCONF' }
     if (!defined $ldap_config && exists $ENV{ 'LDAPCONF' });
-  $ldap_config = "/etc/ldap/ldap.conf" 
+  $ldap_config = "/etc/ldap/ldap.conf"
     if (!defined $ldap_config);
-  $ldap_config = "/etc/openldap/ldap.conf" 
+  $ldap_config = "/etc/openldap/ldap.conf"
     if (!defined $ldap_config);
-  $ldap_config = "/etc/ldap.conf" 
+  $ldap_config = "/etc/ldap.conf"
     if (!defined $ldap_config);
 
   # Read LDAP
@@ -263,7 +263,7 @@ sub argonaut_ldap_parse_config
         if ( $server =~ /^((ldap[si]?:\/\/)([^\/:\s]+)?(:([0-9]+))?\/?)$/ ) {
           my $ldap_server = $3 ? $1 : $2.'localhost';
           $ldap_server =~ s/\/\/127\.0\.0\.1/\/\/localhost/;
-          push @ldap_uris, $ldap_server 
+          push @ldap_uris, $ldap_server
           if ( ! grep { $_ =~ /^$ldap_server$/ } @ldap_uris );
         }
       }
@@ -350,7 +350,7 @@ sub argonaut_ldap_parse_config_multi
   if( ! defined $ldap_config ) {
 
     # Check the local and users LDAP config name
-    my $ldaprc = ( exists $ENV{ 'LDAPRC' } ) 
+    my $ldaprc = ( exists $ENV{ 'LDAPRC' } )
                ? basename( $ENV{ 'LDAPRC' } ) : 'ldaprc';
 
     # First check current directory
@@ -380,7 +380,7 @@ sub argonaut_ldap_parse_config_multi
 
 config_open:
   # Read LDAP file if it's < 100kB
-  return if( (-s "${ldap_config}" > 100 * 1024) 
+  return if( (-s "${ldap_config}" > 100 * 1024)
           || (! open( LDAPCONF, "<${ldap_config}" )) );
 
   my @content = <LDAPCONF>;
@@ -431,7 +431,7 @@ sub argonaut_search_repo_server {
       base => "$base",
       filter => "(&(objectClass=FAIrepositoryServer)(macAddress=${mac}))",
       attrs => \@attrs );
-  return ( $sresult ); 
+  return ( $sresult );
 }
 
 #------------------------------------------------------------------------------
@@ -462,7 +462,7 @@ sub argonaut_file_chown
   my ($uid,$gid);
   $uid = getpwnam($owner[0]);
   $gid = getgrnam($owner[1]);
-  
+
   chown $uid, $gid, $filename;
 }
 
@@ -472,7 +472,7 @@ Create a directory
 sub argonaut_create_dir
 {
   my ($dir) = @_;
-  
+
   mkdir($dir,755);
 }
 #------------------------------------------------------------------------------
@@ -554,7 +554,7 @@ sub argonaut_ldap_rsearch {
       undef( $sbase );
       }
     else {
-      $search_base = join( ',', @rdns ); 
+      $search_base = join( ',', @rdns );
       shift(@rdns);
       $search_base .= $sbase;
       }
@@ -564,7 +564,7 @@ sub argonaut_ldap_rsearch {
     my %opts = ( 'filter' => $filter );
 
     # Set searchbase
-    if( defined $subbase && $subbase ) 
+    if( defined $subbase && $subbase )
       { $opts{ 'base' } = "${subbase},${search_base}" }
     else { $opts{ 'base' } = "${search_base}" }
 
@@ -626,7 +626,7 @@ NEXT_REFERRAL:
 #   ou=do,ou=very,ou=well
 #   ou=do,ou=me,ou=very,ou=well
 #   ou=do,ou=test,ou=me,ou=very,ou=well
-# 
+#
 sub argonaut_ldap_fsearch {
   use Switch;
 
@@ -662,7 +662,7 @@ sub argonaut_ldap_fsearch {
     my %opts = ( 'filter' => $filter );
 
     # Set searchbase
-    if( defined $subbase && $subbase ) 
+    if( defined $subbase && $subbase )
       { $opts{ 'base' } = "${subbase},${search_base}"; }
     else { $opts{ 'base' } = "${search_base}"; }
 
@@ -684,27 +684,27 @@ sub argonaut_ldap_fsearch {
 
 #------------------------------------------------------------------------------
 # get client argonaut settings
-# 
+#
 sub argonaut_get_client_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
-  
+
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-  
+
   if ( $ldapinfos->{'ERROR'} > 0) {
     die $ldapinfos->{'ERRORMSG'}."\n";
   }
-  
+
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-    
+
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
             attrs => [ 'macAddress','argonautClientPort','argonautTaskIdFile',
                        'argonautClientWakeOnLanInterface','argonautClientLogDir' ]
             );
-            
+
   my $client_settings = {};
-              
+
   if(scalar($mesg->entries)==1) {
       $client_settings = {
           'mac' => ($mesg->entries)[0]->get_value("macAddress"),
@@ -740,24 +740,24 @@ sub argonaut_get_client_settings {
       die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
     }
   }
-    
+
   return $client_settings;
 }
 
 #------------------------------------------------------------------------------
 # get ldap2repository argonaut settings
-# 
+#
 sub argonaut_get_ldap2repository_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
-  
+
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-  
+
   if ( $ldapinfos->{'ERROR'} > 0) {
     die $ldapinfos->{'ERRORMSG'}."\n";
   }
-  
+
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-    
+
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
@@ -765,7 +765,7 @@ sub argonaut_get_ldap2repository_settings {
                       'argonautLdap2repCleanup','argonautLdap2repErrors','argonautLdap2repSource','argonautLdap2repGPGCheck',
                       'argonautLdap2repContents','argonautLdap2repVerbose','argonautLdap2repProxy']
             );
-            
+
   if(scalar($mesg->entries)==1) {
     my $settings = {
       'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
@@ -789,25 +789,25 @@ sub argonaut_get_ldap2repository_settings {
 
 #------------------------------------------------------------------------------
 # get crawler argonaut settings
-# 
+#
 sub argonaut_get_crawler_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
-  
+
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-  
+
   if ( $ldapinfos->{'ERROR'} > 0) {
     die $ldapinfos->{'ERRORMSG'}."\n";
   }
-  
+
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-    
+
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
             attrs => ['macAddress','argonautMirrorDir',
                       'argonautMirrorArch','argonautCrawlerPackagesFolder']
             );
-            
+
   if(scalar($mesg->entries)==1) {
     return {
       'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
@@ -822,25 +822,25 @@ sub argonaut_get_crawler_settings {
 
 #------------------------------------------------------------------------------
 # get server argonaut settings
-# 
+#
 sub argonaut_get_server_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
-  
+
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-  
+
   if ( $ldapinfos->{'ERROR'} > 0) {
     die $ldapinfos->{'ERRORMSG'}."\n";
   }
-  
+
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-    
+
   my $filter;
   if ($ip eq "") {
     $filter = "objectClass=argonautServer";
   } else {
     $filter = "(&(objectClass=argonautServer)(ipHostNumber=$ip))";
   }
-  
+
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => $filter,
@@ -865,18 +865,18 @@ sub argonaut_get_server_settings {
 
 #------------------------------------------------------------------------------
 # get ldap2zone settings
-# 
+#
 sub argonaut_get_ldap2zone_settings {
   my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
-  
+
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-  
+
   if ( $ldapinfos->{'ERROR'} > 0) {
     die $ldapinfos->{'ERRORMSG'}."\n";
   }
-  
+
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-   
+
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
@@ -885,7 +885,7 @@ sub argonaut_get_ldap2zone_settings {
                       'argonautLdap2zoneAllowTransfer','argonautLdap2zoneTTL',
                       'argonautLdap2zoneRndc']
             );
-            
+
   if(scalar($mesg->entries)==1) {
     return {
       'mac'           => ($mesg->entries)[0]->get_value("macAddress"),
@@ -902,11 +902,56 @@ sub argonaut_get_ldap2zone_settings {
 }
 
 #------------------------------------------------------------------------------
+# get fuse settings
+#
+sub argonaut_get_fuse_settings {
+  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
+
+  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+
+  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(objectClass=argonautFuseConfig)(ipHostNumber=$ip))",
+            attrs => ['macAddress','argonautFuseDefaultMode','argonautFuseLogDir',
+                      'argonautFusePxelinuxCfg','argonautFusePxelinuxCfgStatic',
+                      'argonautFuseFaiFlags','argonautFuseNfsRoot',
+                      'argonautFuseOpsiAdmin','argonautFuseOpsiPassword',
+                      'argonautFuseOpsiServer','argonautFuseOpsiLang',
+                      'argonautFuseLtspServer']
+            );
+
+  if(scalar($mesg->entries)==1) {
+    return {
+      'mac'           => ($mesg->entries)[0]->get_value("macAddress"),
+      'default_mode'        => ($mesg->entries)[0]->get_value("argonautFuseDefaultMode"),
+      'logdir'              => ($mesg->entries)[0]->get_value("argonautFuseLogDir"),
+      'pxelinux_cfg'        => ($mesg->entries)[0]->get_value("argonautFusePxelinuxCfg"),
+      'pxelinux_cfg_static' => ($mesg->entries)[0]->get_value("argonautFusePxelinuxCfgStatic"),
+      'fai_flags'           => ($mesg->entries)[0]->get_value("argonautFuseFaiFlags"),
+      'nfs_root'            => ($mesg->entries)[0]->get_value("argonautFuseNfsRoot"),
+      'opsi_admin'          => ($mesg->entries)[0]->get_value("argonautFuseOpsiAdmin"),
+      'opsi_password'       => ($mesg->entries)[0]->get_value("argonautFuseOpsiPassword"),
+      'opsi_server'         => ($mesg->entries)[0]->get_value("argonautFuseOpsiServer"),
+      'opsi_lang'           => ($mesg->entries)[0]->get_value("argonautFuseOpsiLang"),
+      'ltsp_server'         => ($mesg->entries)[0]->get_value("argonautFuseLtspServer"),
+    };
+  } else {
+    die "This computer ($ip) is not configured in LDAP to run fuse (missing service argonautFuseConfig).";
+  }
+}
+
+#------------------------------------------------------------------------------
 #
 # $search_result = Net::LDAP::Serach
 # $get_entry     = boolean
 #
-# if $get_entry == true,  return $entry 
+# if $get_entry == true,  return $entry
 #               == false, return 1
 #
 # returns 0 on failure
@@ -915,8 +960,8 @@ sub argonaut_ldap_is_single_result {
   my ($search_result,$get_entry) = @_;
   my $result = 0;
   if( (defined $search_result)
-      && (0 == $search_result->code) 
-      && (1 == $search_result->count()) ) 
+      && (0 == $search_result->code)
+      && (1 == $search_result->count()) )
   {
     if( defined $get_entry && $get_entry )
       { $result = ($search_result->entries())[ 0 ]; }
