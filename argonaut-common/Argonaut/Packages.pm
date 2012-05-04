@@ -56,14 +56,14 @@ Get repolines from ldap
 =cut
 sub get_repolines {
     my ($mac) = @_;
-    
+
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
     my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
     my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
     my $ldap_password          =   $config->val( ldap => "password"                ,"");
-    
+
     my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-    
+
     if ( $ldapinfos->{'ERROR'} > 0) {
       print ( $ldapinfos->{'ERRORMSG'}."\n" );
       exit ($ldapinfos->{'ERROR'});
@@ -71,9 +71,9 @@ sub get_repolines {
 
     my $ldap = $ldapinfos->{'HANDLE'};
     my $ldap_base = $ldapinfos->{'BASE'};
-    
+
     my $mesg;
-    
+
     if(defined $mac) {
         $mesg = $ldap->search(
             base => $ldap_base,
@@ -85,12 +85,17 @@ sub get_repolines {
             filter => "objectClass=FAIrepositoryServer",
             attrs => [ 'FAIrepository', 'cn' ] );
     }
-    
+
     $mesg->code && die "Error while searching repositories :".$mesg->error;
- 
+
     $ldap->unbind();
- 
-    return $mesg->entries;
+
+    my @repolines = ();
+    foreach my $entry ($mesg->entries()) {
+      push @repolines, $entry->get_value('FAIrepository');
+    }
+
+    return @repolines;
 }
 
 
@@ -102,7 +107,7 @@ If no mac is provided, all servers (for the specified release) in the ldap are c
 =cut
 sub get_packages_info {
     my ($packages_folder,$archs,$mac,$release,$attrs,$filters,$from,$to) = @_;
-    
+
     if((defined $from) && ($from < 0)) {
         undef $from;
     }
@@ -115,18 +120,16 @@ sub get_packages_info {
     } else {
         undef $filters;
     }
-    
+
     push @{$attrs},'PACKAGE' if (not (grep {uc($_) eq 'PACKAGE'} @{$attrs}));
     #~ push @{$attrs},'VERSION' if (not (grep {uc($_) eq 'VERSION'} @{$attrs}));
-    
-    my @repos = get_repolines($mac);
+
+    my @repolines = get_repolines($mac);
 
     my $package_indice = 0;
     my $distributions = {};
     mkpath($packages_folder);
-    foreach my $repo (@repos) {
-        my $repoline = $repo->get_value('FAIrepository');
-        
+    foreach my $repoline (@repolines) {
         my (@items) = split('\|',$repoline);
         my ($uri,$parent_or_opts,$dist) = @items;
         my ($dir) = $uri =~ m%.*://[^/]+/(.*)%;
@@ -135,14 +138,14 @@ sub get_packages_info {
         if(defined($release) && ($dist ne $release)) {
             next;
         }
-        
+
         my (@section_list) = split(',',$items[3]);
-        
+
         my $localmirror = ($items[5] eq "local");
         if(!$localmirror && ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}))) {
             push @{$attrs},'FILENAME' if (not (grep {uc($_) eq 'FILENAME'} @{$attrs}));
         }
-        
+
         foreach my $section (@section_list) {
             my $localuri = $uri;
             $localuri =~ s/^http:\/\///;
@@ -263,7 +266,7 @@ sub get_packages_info {
             }
         }
     }
-    
+
     foreach my $key (keys(%{$distributions})) {
         my @tmp = values(%{$distributions->{$key}});
         $distributions->{$key} = \@tmp;
@@ -277,53 +280,49 @@ Store and extract the Packages file from the repositories.
 =cut
 sub store_packages_file {
     my ($packages_folder,$archs,$mac,$release) = @_;
-    
-    my @repos = get_repolines($mac);
+
+    my @repolines = get_repolines($mac);
 
     my @errors;
 
-    foreach my $repo (@repos) {
-        my @repolines = $repo->get_value('FAIrepository');
-        
-        foreach my $repoline (@repolines) {
-            my (@items) = split('\|',$repoline);
-            my $uri = $items[0];
-            my $dist = $items[2];
-            if(defined($release) && ($dist ne $release)) {
-                next;
-            }
-            
-            my (@section_list) = split(',',$items[3]);
-            
-            my $localmirror = ($items[5] eq "local");
-            
-            foreach my $section (@section_list) {
-                
-                my $dir = $uri;
-                $dir =~ s/^http:\/\///;
-                
-                foreach my $arch (@{$archs}) {
-                  my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
-                  mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
-                  my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
-                  if(is_error($res)) {
-                      my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".gz");
-                      if(is_error($res2)) {
-                          push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
-                          push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.gz : $res2";
-                      } else {
-                          gunzip ($packages_file.".gz" => $packages_file)
-                              or push @errors,"could not extract Packages file : $GunzipError";
-                      }
+    foreach my $repoline (@repolines) {
+        my (@items) = split('\|',$repoline);
+        my $uri = $items[0];
+        my $dist = $items[2];
+        if(defined($release) && ($dist ne $release)) {
+            next;
+        }
+
+        my (@section_list) = split(',',$items[3]);
+
+        my $localmirror = ($items[5] eq "local");
+
+        foreach my $section (@section_list) {
+
+            my $dir = $uri;
+            $dir =~ s/^http:\/\///;
+
+            foreach my $arch (@{$archs}) {
+              my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
+              mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
+              my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
+              if(is_error($res)) {
+                  my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".gz");
+                  if(is_error($res2)) {
+                      push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
+                      push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.gz : $res2";
                   } else {
-                      bunzip2 ($packages_file.".bz2" => $packages_file)
-                          or push @errors,"could not extract Packages file : $Bunzip2Error";
+                      gunzip ($packages_file.".gz" => $packages_file)
+                          or push @errors,"could not extract Packages file : $GunzipError";
                   }
-                }
+              } else {
+                  bunzip2 ($packages_file.".bz2" => $packages_file)
+                      or push @errors,"could not extract Packages file : $Bunzip2Error";
+              }
             }
         }
     }
-    
+
     return \@errors;
 }
 
@@ -340,16 +339,16 @@ sub cleanup_and_extract {
         my $tmpdir = "/tmp";
         mkpath($outdir);
         mkpath($tmpdir);
-        
+
         foreach my $package (@{$packages}) {
             system( "dpkg -e '$servdir/".$package->{'FILENAME'}."' '$tmpdir/DEBIAN'" );
 
             if( -f "$tmpdir/DEBIAN/templates" ) {
                 my $tmpl = encode_base64(file("$tmpdir/DEBIAN/templates")->slurp());
-                
+
                 open (FILE, ">$outdir/".$package->{'PACKAGE'}) or die "cannot open file";
                 print FILE $tmpl;
-                close(FILE); 
+                close(FILE);
             }
             unlink("$tmpdir/DEBIAN/templates");
         }
