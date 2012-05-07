@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-ldap2zone
 Architecture: all
-Depends: ${misc:Depends}, ${shlibs:Depends}, argonaut-common, libconfig-inifiles-perl, libdns-zoneparse-perl
+Depends: ${misc:Depends}, ${shlibs:Depends}, argonaut-common, libconfig-inifiles-perl, libnet-ldap-perl, libdns-zoneparse-perl
 Description: Argonaut tool to extract DNS zones from LDAP trees
  This is a tool that reads info for a zone from LDAP and constructs
  a standard plain ascii zone file. The LDAP information has to be
