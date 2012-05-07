@@ -12,7 +12,7 @@ DM-Upload-Allowed: yes
 
 Package: argonaut-common
 Architecture: all
-Depends: ${misc:Depends}, ${perl:Depends}, coreutils (>= 6.10-1), ldap-utils, libio-socket-ssl-perl, libpath-class-perl
+Depends: ${misc:Depends}, ${perl:Depends}, coreutils (>= 6.10-1), ldap-utils, libio-socket-ssl-perl, libnet-ldap-perl, libpath-class-perl
 Description: Argonaut common functions and librairies
  Common shell and perl functions used by the Argonaut deployment system.
 
