@@ -6,7 +6,7 @@
 #
 # Copyright (c) 2005,2006 Jan-Marek Glogowski <glogow@fbihome.de>
 # Copyrignt (c) 2007,2009 The GOsa project <gosa-devel@oss.gonicus.de>
-# Copyright (C) 2011 FusionDirectory project
+# Copyright (C) 2011-2012 FusionDirectory project
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -265,17 +265,15 @@ __END__
 
 =head1 NAME
 
-ldap2repository - creating debian repositories cronjob for the Argonaut deployment system.
+argonaut-repository - creating debian repositories cronjob for the Argonaut deployment system.
 
 =head1 SYNOPSIS
 
-ldap2repository 
+argonaut-repository 
 
 =head1 DESCRIPTION
 
-ldap2repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
-
-The configuration is read from the argonaut.conf file
+argonaut-repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
 
 =head1 BUGS 
 
@@ -292,7 +290,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =item Copyright (C) 2007-2010 The GOsa project
 
-=item Copyright (C) 2011 FusionDirectory project
+=item Copyright (C) 2011-2012 FusionDirectory project
 
 =back
 
