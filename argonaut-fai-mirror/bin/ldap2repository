@@ -199,7 +199,6 @@ sub generate_cronjob_script {
   foreach my $repoline ($entry->get_value('FAIrepository')){
     my (@items) = split('\|',${repoline});
     my $uri = $items[0];
-    my ($dir) = $uri =~ m%.*://[^/]+/(.*)%;
     my ($localuri) = $uri;
     my $parent_or_opts = $items[1];
     my $dist = $items[2];
@@ -250,7 +249,7 @@ sub generate_cronjob_script {
 
         if (0 != scalar @{outline}) {
           print CRON "\ndebmirror ${cleanup} ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline}) 
-                    . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/${dir}\n";
+                    . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/\n";
           print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose eq "TRUE" );
         }
         last if (0 == scalar @section_list);
