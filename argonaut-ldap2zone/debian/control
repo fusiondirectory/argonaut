@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: FusionDirectory Packagers <fusiondirectory-packages@lists.fusiondirectory.org>
 Uploaders: Benoit Mortier <benoit.mortier@opensides.be>
 Standards-Version: 3.9.2
-Build-Depends: debhelper (>= 7.0.50~), libldap2-dev, ldap-utils
+Build-Depends: debhelper (>= 7.0.50~)
 Homepage: https://forge.fusiondirectory.org/projects/argonaut
 Vcs-Browser: http://git.fusiondirectory.org/code/main/argonaut.git
 Vcs-Git: http://git.fusiondirectory.org/main/argonaut.git
