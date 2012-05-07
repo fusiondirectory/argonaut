@@ -11,7 +11,7 @@ Vcs-Git: http://git.fusiondirectory.org/main/argonaut.git
 DM-Upload-Allowed: yes
 
 Package: argonaut-ldap2zone
-Architecture: any
+Architecture: all
 Depends: ${misc:Depends}, ${shlibs:Depends}, argonaut-common, libconfig-inifiles-perl, libdns-zoneparse-perl
 Description: Argonaut tool to extract DNS zones from LDAP trees
  This is a tool that reads info for a zone from LDAP and constructs
