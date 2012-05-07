@@ -195,7 +195,9 @@ sub generate_cronjob_script {
     $log->info ("Switching base: $newbase\n");
     $base = $newbase;
   }
-  
+
+  open (SOURCES, ">${outdir}/sources.list");
+
   foreach my $repoline ($entry->get_value('FAIrepository')){
     my (@items) = split('\|',${repoline});
     my $uri = $items[0];
@@ -205,7 +207,6 @@ sub generate_cronjob_script {
     my $sections = $items[3];
     my (@section_list) = split(',',$items[3]);
 
-    open (SOURCES, ">${outdir}/sources.list");
     print SOURCES "deb $uri $dist @section_list\n";
     print " +S  $dist ($sections) via $uri\n" if( $verbose eq "TRUE" );
   
@@ -256,6 +257,7 @@ sub generate_cronjob_script {
       }
     }
   }
+  close (SOURCES);
   close (CRON);
 }
 
