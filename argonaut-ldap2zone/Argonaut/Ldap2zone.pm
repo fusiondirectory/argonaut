@@ -94,7 +94,7 @@ sub argonaut_ldap2zone
     
   create_namedconf($zone,$reverse_zone,$BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER);
   
-  system("$RNDC reconfig && $RNDC freeze $zone && $RNDC reload $zone && $RNDC thaw $zone");
+  system("$RNDC reconfig && $RNDC freeze && $RNDC reload && $RNDC thaw");
 }
   
 =item zoneparse
