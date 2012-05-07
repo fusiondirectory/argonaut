@@ -1,2 +1,2 @@
-bin/ldap2repository         		usr/sbin
-bin/argonaut-debconf-crawler		usr/sbin
+bin/argonaut-repository         usr/sbin
+bin/argonaut-debconf-crawler    usr/sbin
