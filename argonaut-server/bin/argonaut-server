@@ -65,7 +65,7 @@ readConfig();
 argonaut_create_dir($logdir);
 
 my $log = Log::Handler->create_logger("argonaut-server");
-    
+
 $log->add(
     file => {
         filename => "$logdir/$logfile",
@@ -122,13 +122,13 @@ No parameters needed
 =cut
 sub readLdapConfig {
   my $settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
-  
+
   $server_port            = $settings->{'port'};
   $iptool                 = $settings->{'iptool'};
   $delete_finished_tasks  = $settings->{'delete_finished_tasks'};
   $interface              = $settings->{'interface'};
   $logdir                 = $settings->{'logdir'};
-  
+
   $archs                  = ["i386"];
   $packages_folder        = "/var/cache/argonaut/packages";
 }
@@ -148,9 +148,9 @@ Parameter : the mac address
 =cut
 sub getIpFromMac {
   my ($mac) = @_;
-  
+
   my ($ldap,$ldap_base) = bindLdap();
-    
+
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "macAddress=$mac",
@@ -163,14 +163,14 @@ sub getIpFromMac {
     $log->error("Multiple IPs were found for the Mac address $mac!");
     die "Multiple IPs were found for the Mac address $mac!";
   } elsif(scalar($mesg->entries)<1) {
-    $log->error("No IPs were found for the Mac address $mac!");    
+    $log->error("No IPs were found for the Mac address $mac!");
     die "No IPs were found for the Mac address $mac!";
   }
 
   my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
 
   $mesg = $ldap->unbind;   # take down session
-  
+
   return $ip;
 }
 
@@ -181,13 +181,13 @@ Parameters : ip,action,params
 =cut
 sub do_action { # if ip pings, send the request
   my ($ip,$action,$params) = @_;
-  
+
   # this line is only needed when debugging stuff on localhost
   #$ip = "localhost";
-  
+
   my $settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$ip);
   my $client_port = $settings->{'port'};
-  
+
   my $client = new JSON::RPC::Client;
   $client->version('1.0');
 
@@ -220,7 +220,7 @@ sub do_action { # if ip pings, send the request
 sub flag {
     my ($target,$fai_state) = @_;
     my ($ldap,$ldap_base) = bindLdap();
-  
+
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "macAddress=$target"
@@ -239,7 +239,7 @@ sub flag {
 
   my $dn = ($mesg->entries)[0];
   my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
-    
+
   $mesg = $ldap->modify(
             $dn,
             replace => {
@@ -250,7 +250,7 @@ sub flag {
   $mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
 
   $mesg = $ldap->unbind;   # take down session
-    
+
   return $ip;
 }
 
@@ -267,11 +267,11 @@ sub handler_fai {
                 "trigger_action_reboot"     => "localboot",
                 "trigger_action_wake"       => "localboot"
                 };
-    
+
     my $need_reboot = ($action ne "trigger_action_wake");
-    
+
     my $ip = flag($target,$fai_state->{$action});
-    
+
     eval { # try
         if($need_reboot) {
             my $res = do_action($ip,"trigger_action_reboot");
@@ -330,7 +330,7 @@ sub wakeOnLan {
         # TODO : For FreeBSD, send to /dev/bpf ....
     } else { # degraded wol by UDP
         if ( eval { socket(SOCKET, PF_INET, SOCK_DGRAM, getprotobyname('udp')); }) {
-            my $magic_packet = 
+            my $magic_packet =
                 chr(0xFF) x 6 .
                 (pack('H12', $macaddress) x 16);
             my $sinbroadcast = sockaddr_in("9", inet_aton("255.255.255.255"));
@@ -392,13 +392,13 @@ When sigint received, write a json dump before quitting.
 POE::Session->create(
     inline_states => {
         _start => sub {
-            $_[KERNEL]->sig( INT => "sigint" );
-            $_[KERNEL]->sig( TERM => "sigint" );
-            $_[KERNEL]->sig( KILL => "sigint" );
+            $_[KERNEL]->sig( INT => "sigint", ("sigint"));
+            $_[KERNEL]->sig( TERM => "sigint", ("sigterm"));
+            $_[KERNEL]->sig( KILL => "sigint", ("sigkill"));
             $_[KERNEL]->sig( HUP => "sighup" );
             $_[HEAP]{tasks} = {};
             $_[HEAP]{id} = 0;
-            
+
             $_[HEAP]{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
                 Port    => $server_port,
                 Handler => {
@@ -462,9 +462,9 @@ POE::Session->create(
         id_of_mac => sub {
             my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL,HEAP, ARG0..$#_ ];
             my ($mac) = @params;
-                
+
             $log->info("searching taskid for $mac");
-                
+
             while (my ($taskid,$entry) = each(%{$heap->{tasks}})) {
                 if(($entry->{target} eq $mac)&&($entry->{status} eq "processing")) {
                     $heap->{tasks}->{$taskid}->{substatus} = "";
@@ -477,13 +477,13 @@ POE::Session->create(
         set_task_substatus => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($taskid,$substatus,$progress) = @params;
-            
+
             if(defined $progress) {
                 $log->info("setting task $taskid substatus to '$substatus' ($progress %)");
             } else {
                 $log->info("setting task $taskid substatus to '$substatus'");
             }
-            
+
             if(!defined $heap->{tasks}->{$taskid}) {
                 $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
             } else {
@@ -504,9 +504,9 @@ POE::Session->create(
         set_error => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($taskid,$error) = @params;
-            
+
             $log->info("setting task $taskid error to '$error'");
-            
+
             if(!defined $heap->{tasks}->{$taskid}) {
                 $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
             } else {
@@ -538,19 +538,19 @@ POE::Session->create(
         add => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($action,$targets,$data) = @params;
-            
+
             $log->info("adding action $action");
-            
-            if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) && 
-                (grep {$_ eq $action} @{$heap->{scheduled_only}})) { 
+
+            if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) &&
+                (grep {$_ eq $action} @{$heap->{scheduled_only}})) {
                 # If the action is scheduled_only and there is no timestamp
                 # We schedule it for now
-                $data->{timestamp} = time();                    
+                $data->{timestamp} = time();
             }
-            
+
             if(defined $data->{timestamp} && $data->{timestamp} ne "") {
                 $kernel->post( $jsonrpc => 'result' => $id, "OK" ); # asynchronous
-                
+
                 my $date = DateTime->from_epoch(epoch => $data->{timestamp});
                 if(defined $data->{periodic} && $data->{periodic} =~ /^(\d+)_(\w+)$/) {
                     my $periodic_nb = $1;
@@ -611,22 +611,22 @@ POE::Session->create(
         remove_entries => sub {
             my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP,ARG0..$#_ ];
             my ($ids) = @params;
-            
+
             foreach my $id (@{$ids}) {
                 delete $heap->{tasks}->{$id} if defined $id;
             }
-            
+
             $kernel->post( $jsonrpc => 'result' => $id, "ok");
         },
         process_entries => sub {
             my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP,ARG0..$#_ ];
             my ($ids) = @params;
-            
+
             my $errors = "";
             foreach my $id (@{$ids}) {
                 if ((defined $id) && (defined $heap->{tasks}->{$id})) {
                     delete $heap->{tasks}->{$id}->{handle};
-                    $kernel->yield(action => 
+                    $kernel->yield(action =>
                         $id,
                         $heap->{tasks}->{$id}->{action},
                         $heap->{tasks}->{$id}->{target},
@@ -645,10 +645,10 @@ POE::Session->create(
         },
         action => sub {
             my ($heap,$taskid,$action,$target,$data) = @_[HEAP,ARG0 .. $#_];
-            
+
             my $errors = "";
             my $res = 0;
-            
+
             eval { # try
                 my $action_client = $action;
                 if(defined $heap->{handlers}->{$action}) {
@@ -676,7 +676,7 @@ POE::Session->create(
                 }
                 return (0,$@);
             };
-            
+
             if((defined $taskid) && !(defined $data->{periodic})) {
                 $heap->{tasks}->{$taskid}->{error} = "";
                 if(grep {$_ eq $action} @{$heap->{scheduled_only}}) {
@@ -693,9 +693,9 @@ POE::Session->create(
         get_packages => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
             my ($release,$attrs,$filters,$from,$to) = @params;
-            
-            $log->info("get_packages($release,".join(',',@{$attrs}).",".join(',',@{$filters}).",$from,$to)");
-            
+
+            $log->info("get_packages($release,[".join(',',@{$attrs})."],[".join(',',@{$filters})."],$from,$to)");
+
             eval {
                 my $distributions = get_packages_info($packages_folder,$archs,undef,$release,$attrs,$filters,$from,$to);
                 $kernel->post( $jsonrpc => 'result' => $id, $distributions);
@@ -715,7 +715,7 @@ POE::Session->create(
         },
         load_dump => sub { # this function has not been tested
             my ($kernel,$filename) = @_[KERNEL,ARG0..$#_];
-            
+
             open (DUMP, $filename) or die "cannot open file";
             while (<DUMP>) {
                 my $task = from_json($_);
@@ -750,7 +750,8 @@ POE::Session->create(
             $kernel->sig_handled();
         },
         sigint => sub {
-            $log->notice("exiting because of sigint…");
+            my ($kernel,$heap,$signal) = @_[KERNEL,HEAP,ARG0..$#_];
+            $log->notice("exiting because of $signal…");
             #here, do something with waiting tasks
             if(scalar(keys(%{$_[HEAP]->{tasks}})) > 0) {
                 open (DUMP, ">dump_".time.".json") or die "cannot open file";
@@ -758,7 +759,7 @@ POE::Session->create(
                     delete $task->{handle};
                     print DUMP (to_json($task)."\n");
                 }
-                close(DUMP); 
+                close(DUMP);
             }
             $pid->remove;
         },
@@ -772,7 +773,7 @@ POE::Session->create(
         },
     },
 );
-        
+
 POE::Kernel->run();
 
 exit 0;

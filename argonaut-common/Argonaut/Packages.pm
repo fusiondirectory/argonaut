@@ -92,7 +92,8 @@ sub get_repolines {
 
     my @repolines = ();
     foreach my $entry ($mesg->entries()) {
-      push @repolines, $entry->get_value('FAIrepository');
+      my @entry_repolines = $entry->get_value('FAIrepository');
+      push @repolines, @entry_repolines;
     }
 
     return @repolines;
