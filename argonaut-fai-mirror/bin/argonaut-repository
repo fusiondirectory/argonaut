@@ -90,7 +90,7 @@ if( $verbose eq "TRUE" ) {
     . "Base:   ${base}\n"
     . "Outdir: ${outdir}\n\n";
 }
-  
+
 #generate the cronjob script
 generate_cronjob_script();
 
@@ -105,7 +105,7 @@ exit 0;
 
 sub readConfig {
   my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-  
+
   $client_ip               =   $config->val( client => "client_ip" ,"");
   $ldap_configfile         =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
   $ldap_dn                 =   $config->val( ldap => "dn"          ,"");
@@ -123,7 +123,7 @@ sub readConfig {
   $contents               =   $settings->{'contents'};
   $verbose                =   $settings->{'verbose'};
   $mac                    =   $settings->{'mac'};
-  
+
   $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
 
   if ($cleanup eq "FALSE") {
@@ -131,13 +131,13 @@ sub readConfig {
   } else {
     $cleanup = "";
   }
-    
+
   if ($errors eq "TRUE") {
     $errors = "--ignore-small-errors";
   } else {
     $errors = "";
   }
-    
+
   if ($source eq "FALSE") {
     $source = "--nosource";
   } else {
@@ -166,14 +166,14 @@ sub generate_cronjob_daily {
   print CROND "\@daily root $outdir/mirror-update-cronjob\n";
   close (CROND);
 }
-  
+
 sub generate_cronjob_script {
   my ($mesg,$entry,$par_mesg,$par_entry,@entries);
   my ($line,@deblines,@modsections,@rdns,%saw,$debline);
-  
+
   open (CRON, ">${outdir}/mirror-update-cronjob")
     || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
-    
+
   my $reposerver = argonaut_search_repo_server($handle, $base, $mac);
   if (0 == $reposerver->count) {
     print( "This server doesn't contain software repositories\n" );
@@ -185,7 +185,7 @@ sub generate_cronjob_script {
 
   # Write cron script
   print CRON "#!/bin/sh\n";
-  
+
   @entries = $reposerver->entries;
 
   $entry = $entries[0];
@@ -209,7 +209,7 @@ sub generate_cronjob_script {
 
     print SOURCES "deb $uri $dist @section_list\n";
     print " +S  $dist ($sections) via $uri\n" if( $verbose eq "TRUE" );
-  
+
     if ("" eq "$parent_or_opts") {
       print( "No parent for '$repoline'\n" );
       $log->info ("No parent for '$repoline'\n");
@@ -235,6 +235,7 @@ sub generate_cronjob_script {
         $method = $1;
         $host = $2;
         $root = $3;
+        $root =~ s|/$||; # Remove potential slash at the end
       }
 
       my $par_dist = $par_items[2];
@@ -249,7 +250,7 @@ sub generate_cronjob_script {
         }
 
         if (0 != scalar @{outline}) {
-          print CRON "\ndebmirror ${cleanup} ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline}) 
+          print CRON "\ndebmirror ${cleanup} ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline})
                     . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/\n";
           print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose eq "TRUE" );
         }
@@ -269,13 +270,13 @@ argonaut-repository - creating debian repositories cronjob for the Argonaut depl
 
 =head1 SYNOPSIS
 
-argonaut-repository 
+argonaut-repository
 
 =head1 DESCRIPTION
 
 argonaut-repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
 
-=head1 BUGS 
+=head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
 <https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
