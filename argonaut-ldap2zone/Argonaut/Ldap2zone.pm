@@ -46,7 +46,7 @@ Params : zone name, verbose flag
 sub argonaut_ldap2zone
 {
   my($zone,$verbose) = @_;
-  
+
   my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
   my $client_ip               =   $config->val( client => "client_ip" ,"");
@@ -66,7 +66,7 @@ sub argonaut_ldap2zone
   if(not -d $BIND_DIR) {
     die "$BIND_DIR does not exist";
   }
-  
+
   if($ALLOW_NOTIFY eq "FALSE") {
     $ALLOW_NOTIFY = "";
   }
@@ -78,7 +78,7 @@ sub argonaut_ldap2zone
   print "Searching DNS Zone '$zone'\n" if $verbose;
 
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-    
+
   if ( $ldapinfos->{'ERROR'} > 0) {
     die $ldapinfos->{'ERRORMSG'}."\n";
   }
@@ -91,12 +91,12 @@ sub argonaut_ldap2zone
   print "Reverse zone is $reverse_zone\n" if $verbose;
 
   zoneparse($ldap,$ldap_base,$reverse_zone,$BIND_DIR,$TTL,$verbose);
-    
+
   create_namedconf($zone,$reverse_zone,$BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER);
-  
+
   system("$RNDC reconfig && $RNDC freeze && $RNDC reload && $RNDC thaw");
 }
-  
+
 =item zoneparse
 Create a Zone file for a zone taken from the LDAP
 Params : ldap handle, ldap base, zone name, bind dir, TTL, verbose flag
@@ -110,7 +110,7 @@ sub zoneparse
           filter => "zoneName=$zone",
           #~ attrs => [ 'ipHostNumber' ]
           );
-          
+
   $mesg->code && die "Error while searching DNS Zone '$zone' :".$mesg->error;
 
   print "Found ".scalar($mesg->entries())." results\n" if $verbose;
@@ -157,7 +157,7 @@ sub zoneparse
       $soa_record->{'retry'}    = $soa_fields[4];
       $soa_record->{'expire'}   = $soa_fields[5];
       $soa_record->{'minimumTTL'}  = $soa_fields[6];
-      
+
       $soa_record->{'class'}    = $class;
       $soa_record->{'ttl'}      = $TTL;
       $soa_record->{'origin'}   = $name;
@@ -165,14 +165,14 @@ sub zoneparse
       $dn = $entry->dn();
     }
   }
-  
-  # write the new zone file to disk 
+
+  # write the new zone file to disk
   my $file_output = "$BIND_DIR/db.$zone";
   my $newzone;
   open($newzone, '>', $file_output) or die "error while trying to open $file_output";
   print $newzone $zonefile->output();
   close $newzone;
-  
+
   return $dn;
 }
 
@@ -185,14 +185,14 @@ sub get_reverse_zone
   my($ldap,$ldap_base,$zone_dn) = @_;
   my $mesg = $ldap->search( # Searching reverse zone name
           base   => $zone_dn,
-          filter => "zoneName=*",
+          filter => "(&(zoneName=*)(relativeDomainName=@))",
           scope => 'one',
           attrs => [ 'zoneName' ]
           );
-          
+
   $mesg->code && die "Error while searching DNS reverse zone :".$mesg->error;
 
-  die "Error : found ".scalar($mesg->entries())." results for reverse DNS zone\n" if (scalar($mesg->entries()) != 1);
+  die "Error : found ".scalar($mesg->entries())." results  (1 expected) for reverse DNS zone of dn $zone_dn\n" if (scalar($mesg->entries()) != 1);
 
   return ($mesg->entries)[0]->get_value("zoneName");
 }
@@ -200,7 +200,7 @@ sub get_reverse_zone
 =item create_namedconf
 Create file $BIND_DIR/named.conf.ldap2zone
 Params : zone name, reverse zone name
-Returns : 
+Returns :
 =cut
 sub create_namedconf
 {
@@ -223,7 +223,7 @@ sub create_namedconf
   } else {
     $ALLOW_TRANSFER = "";
   }
-  
+
   my $namedfile;
   open($namedfile, '>', "$BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $BIND_DIR/named.conf.ldap2zone.$zone";
   print $namedfile <<EOF;
@@ -243,7 +243,7 @@ zone "$reverse_zone" {
 };
 EOF
   close $namedfile;
-  
+
   open($namedfile, '>', "$BIND_DIR/named.conf.ldap2zone") or die "error while trying to open $BIND_DIR/named.conf.ldap2zone";
   opendir DIR, $BIND_DIR or die "Error while openning $BIND_DIR!";
   my @files = readdir DIR;
