@@ -29,7 +29,7 @@ use 5.008;
 use Config::IniFiles;
 
 use Argonaut::Common qw(:net);
-use Argonaut::Packages qw(get_packages_info, store_packages_file, cleanup_and_extract);
+use Argonaut::Packages qw(get_packages_info store_packages_file cleanup_and_extract);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
@@ -42,7 +42,6 @@ my $ldap_password           =   $config->val( ldap => "password"    ,"");
 my $settings = argonaut_get_crawler_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
 
 my $servpath                =   $settings->{'mirrordir'};
-my $archs                   =   $settings->{'arch'};
 my $packagesfolder          =   $settings->{'packagesfolder'};
 
 my $mymac                   =   $settings->{'macaddress'};
@@ -54,7 +53,7 @@ Templates are saved as $servdir/debconf.d/release/section/nameofthepackage
 
 =cut
 
-store_packages_file($packagesfolder,$archs,$mymac); # FIXME : should be replaced by an mv+extract (no getstore in this case). (we should avoid using http get to access a local file)
-cleanup_and_extract($servpath,get_packages_info($packagesfolder,$archs,$mymac,undef,["package","version","filename"]));
+store_packages_file($packagesfolder,$mymac); # FIXME : may be replaced by an mv+extract (no getstore in this case). (we should avoid using http get to access a local file)
+cleanup_and_extract($servpath,get_packages_info($packagesfolder,$mymac,undef,["package","version","filename"]));
 
 print "done\n";

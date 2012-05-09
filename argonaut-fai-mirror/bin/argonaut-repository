@@ -38,6 +38,7 @@ use Log::Handler;
 use Config::IniFiles;
 
 use Argonaut::Common qw(:ldap :file :array :net);
+use Argonaut::Packages qw(get_repolines);
 
 use lib "/usr/lib/argonaut";
 
@@ -113,7 +114,6 @@ sub readConfig {
 
   my $settings = argonaut_get_ldap2repository_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
 
-  $archs                  =   join(',',@{$settings->{'arch'}}); # archs comma-separated
   $mirrordir              =   $settings->{'mirrordir'};
   $proxy                  =   $settings->{'proxy'};
   $cleanup                =   $settings->{'cleanup'};
@@ -168,14 +168,12 @@ sub generate_cronjob_daily {
 }
 
 sub generate_cronjob_script {
-  my ($mesg,$entry,$par_mesg,$par_entry,@entries);
-  my ($line,@deblines,@modsections,@rdns,%saw,$debline);
-
   open (CRON, ">${outdir}/mirror-update-cronjob")
     || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
 
-  my $reposerver = argonaut_search_repo_server($handle, $base, $mac);
-  if (0 == $reposerver->count) {
+  my @repos = get_repolines($mac);
+
+  if (scalar(@repos) == 0) {
     print( "This server doesn't contain software repositories\n" );
     $log->info ("This server doesn't contain software repositories\n");
     close (CRON);
@@ -186,26 +184,17 @@ sub generate_cronjob_script {
   # Write cron script
   print CRON "#!/bin/sh\n";
 
-  @entries = $reposerver->entries;
-
-  $entry = $entries[0];
-  my ($newbase) = $entry->dn() =~ m/.*ou=systems,(.*)/;
-  if ("$base" ne "$newbase") {
-    print ("Switching base: $newbase\n") if($verbose eq "TRUE");
-    $log->info ("Switching base: $newbase\n");
-    $base = $newbase;
-  }
-
   open (SOURCES, ">${outdir}/sources.list");
 
-  foreach my $repoline ($entry->get_value('FAIrepository')){
-    my (@items) = split('\|',${repoline});
-    my $uri = $items[0];
+  foreach my $repo (@repos) {
+    my $uri = $repo->{'uri'};
     my ($localuri) = $uri;
-    my $parent_or_opts = $items[1];
-    my $dist = $items[2];
-    my $sections = $items[3];
-    my (@section_list) = split(',',$items[3]);
+    my $parent_or_opts = $repo->{'parent'};
+    my $dist = $repo->{'dist'};
+    my $sections = join(',',$repo->{'sections'});
+    my (@section_list) = $repo->{'sections'};
+    my $archs = join(',',$repo->{'archs'}); # archs comma-separated
+    my $repoline = $repo->{'line'};
 
     print SOURCES "deb $uri $dist @section_list\n";
     print " +S  $dist ($sections) via $uri\n" if( $verbose eq "TRUE" );
@@ -216,33 +205,26 @@ sub generate_cronjob_script {
       next;
     }
 
-    # Check repository release
-    my (@rdns);
-
-    @rdns = split(',',$base);
-
-    $par_entry = argonaut_search_parent_repo_server( $handle, $base, "${parent_or_opts}" );
-    if (0 == $par_entry) {
+    my @par_repos = get_repolines(undef,$parent_or_opts);
+    if (scalar(@par_repos) == 0) {
       print( "Couldn't find parent repository server for '$repoline'\n" );
       $log->info ("Couldn't find parent repository server for '$repoline'\n");
       next;
     }
 
-    foreach my $par_repoline ($par_entry->get_value('FAIrepository')){
-      my (@par_items) = split('\|',${par_repoline});
+    foreach my $par_repo (@par_repos) {
       my ($method,$host,$root);
-      if ($par_items[0] =~ m#([^:]+)://([^/]+)(.*)#) {
+      if ($par_repo->{'uri'} =~ m#([^:]+)://([^/]+)(.*)#) {
         $method = $1;
         $host = $2;
         $root = $3;
         $root =~ s|/$||; # Remove potential slash at the end
       }
 
-      my $par_dist = $par_items[2];
+      my $par_dist = $par_repo->{'dist'};
       my @outline = ();
       if ("$dist" eq "$par_dist") {
-        my (@par_section_list) = split(',', $items[3]);
-        foreach my $section (@par_section_list) {
+        foreach my $section ($par_repo->{'sections'}) {
           if (argonaut_array_find_and_remove( \@section_list, ${section})) {
             push (@outline, $section);
             last if (0 == scalar @section_list);

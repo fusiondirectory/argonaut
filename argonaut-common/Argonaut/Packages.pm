@@ -55,7 +55,7 @@ Get repolines from ldap
 
 =cut
 sub get_repolines {
-    my ($mac) = @_;
+    my ($mac,$cn) = @_;
 
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
     my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
@@ -77,13 +77,18 @@ sub get_repolines {
     if(defined $mac) {
         $mesg = $ldap->search(
             base => $ldap_base,
-            filter => "(&(objectClass=FAIrepositoryServer)(macAddress=$mac))",
-            attrs => [ 'FAIrepository', 'cn' ] );
+            filter => "(&(objectClass=argonautConfig)(objectClass=FAIrepositoryServer)(macAddress=$mac))",
+            attrs => [ 'FAIrepository', 'argonautMirrorArch' ] );
+    } elsif(defined $cn) {
+        $mesg = $ldap->search(
+            base => $ldap_base,
+            filter => "(&(objectClass=argonautConfig)(objectClass=FAIrepositoryServer)(cn=$cn))",
+            attrs => [ 'FAIrepository', 'argonautMirrorArch' ] );
     } else {
         $mesg = $ldap->search(
             base => $ldap_base,
-            filter => "objectClass=FAIrepositoryServer",
-            attrs => [ 'FAIrepository', 'cn' ] );
+            filter => "(&(objectClass=argonautConfig)(objectClass=FAIrepositoryServer))",
+            attrs => [ 'FAIrepository', 'argonautMirrorArch' ] );
     }
 
     $mesg->code && die "Error while searching repositories :".$mesg->error;
@@ -92,8 +97,21 @@ sub get_repolines {
 
     my @repolines = ();
     foreach my $entry ($mesg->entries()) {
-      my @entry_repolines = $entry->get_value('FAIrepository');
-      push @repolines, @entry_repolines;
+      my @entry_archs = $entry->get_value('argonautMirrorArch');
+      foreach my $repoline ($entry->get_value('FAIrepository')) {
+        my ($uri,$parent,$dist,$sections,$install,$local) = split('\|',$repoline);
+        $repo = {
+          'line'        => $repoline,
+          'uri'         => $uri,
+          'parent'      => $parent,
+          'dist'        => $dist,
+          'sections'    => split(',',$sections),
+          'installrepo' => $install,
+          'localmirror' => ($local eq "local"),
+          'archs'       => @entry_archs
+        }
+        push @repolines, $repo;
+      }
     }
 
     return @repolines;
@@ -107,7 +125,7 @@ If no mac is provided, all servers (for the specified release) in the ldap are c
 
 =cut
 sub get_packages_info {
-    my ($packages_folder,$archs,$mac,$release,$attrs,$filters,$from,$to) = @_;
+    my ($packages_folder,$mac,$release,$attrs,$filters,$from,$to) = @_;
 
     if((defined $from) && ($from < 0)) {
         undef $from;
@@ -130,31 +148,26 @@ sub get_packages_info {
     my $package_indice = 0;
     my $distributions = {};
     mkpath($packages_folder);
-    foreach my $repoline (@repolines) {
-        my (@items) = split('\|',$repoline);
-        my ($uri,$parent_or_opts,$dist) = @items;
-        my ($dir) = $uri =~ m%.*://[^/]+/(.*)%;
+    foreach my $repo (@repolines) {
+        my $dist = $repo->{'dist'};
+        my $uri = $repo->{'uri'};
         my $localuri = $uri;
-        $localuri =~ s%://[^/]+%://localhost%;
+        $localuri =~ s/^http:\/\///;
         if(defined($release) && ($dist ne $release)) {
             next;
         }
 
-        my (@section_list) = split(',',$items[3]);
-
-        my $localmirror = ($items[5] eq "local");
+        my $localmirror = $repo->{'localmirror'};
         if(!$localmirror && ((grep {uc($_) eq 'TEMPLATE'} @{$attrs}) || (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}))) {
             push @{$attrs},'FILENAME' if (not (grep {uc($_) eq 'FILENAME'} @{$attrs}));
         }
 
-        foreach my $section (@section_list) {
-            my $localuri = $uri;
-            $localuri =~ s/^http:\/\///;
+        foreach my $section ($repo->{'sections'}) {
             if(!defined $distributions->{"$dist/$section"}) {
                 $distributions->{"$dist/$section"} = {};
             }
             my $packages = $distributions->{"$dist/$section"};
-            foreach my $arch (@{$archs}) {
+            foreach my $arch ($repo->{'archs'}) {
                 my $packages_file = "$packages_folder/$localuri/dists/$dist/$section/binary-$arch/Packages";
                 open (PACKAGES, "<$packages_file") or next;
                 my $parsed = {};
@@ -280,30 +293,26 @@ sub get_packages_info {
 Store and extract the Packages file from the repositories.
 =cut
 sub store_packages_file {
-    my ($packages_folder,$archs,$mac,$release) = @_;
+    my ($packages_folder,$mac,$release) = @_;
 
     my @repolines = get_repolines($mac);
 
     my @errors;
 
-    foreach my $repoline (@repolines) {
-        my (@items) = split('\|',$repoline);
-        my $uri = $items[0];
-        my $dist = $items[2];
+    foreach my $repo (@repolines) {
+        my $uri = $repo->{'uri'};
+        my $dir = $uri;
+        $dir =~ s/^http:\/\///;
+        my $dist = $repo->{'dist'};
         if(defined($release) && ($dist ne $release)) {
             next;
         }
 
-        my (@section_list) = split(',',$items[3]);
+        my $localmirror = $repo->{'localmirror'};
 
-        my $localmirror = ($items[5] eq "local");
+        foreach my $section ($repo->{'sections'}) {
 
-        foreach my $section (@section_list) {
-
-            my $dir = $uri;
-            $dir =~ s/^http:\/\///;
-
-            foreach my $arch (@{$archs}) {
+            foreach my $arch ($repo->{'archs'}) {
               my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
               mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
               my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
@@ -335,11 +344,11 @@ Extract templates from packages.
 sub cleanup_and_extract {
     my ($servdir,$distribs) = @_;
 
+    my $tmpdir = "/tmp";
+    mkpath($tmpdir);
     while (my ($distsection,$packages) = each(%{$distribs})) {
         my $outdir = "$servdir/debconf.d/$distsection";
-        my $tmpdir = "/tmp";
         mkpath($outdir);
-        mkpath($tmpdir);
 
         foreach my $package (@{$packages}) {
             system( "dpkg -e '$servdir/".$package->{'FILENAME'}."' '$tmpdir/DEBIAN'" );
@@ -350,10 +359,11 @@ sub cleanup_and_extract {
                 open (FILE, ">$outdir/".$package->{'PACKAGE'}) or die "cannot open file";
                 print FILE $tmpl;
                 close(FILE);
+                unlink("$tmpdir/DEBIAN/templates");
             }
-            unlink("$tmpdir/DEBIAN/templates");
         }
     }
+    unlink("$tmpdir/DEBIAN");
 
   return;
 }

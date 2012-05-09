@@ -53,7 +53,7 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,$server_port,$iptool,$delete_finished_tasks,$interface,$logdir,$packages_folder,$archs);
+my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,$server_port,$iptool,$delete_finished_tasks,$interface,$logdir,$packages_folder);
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-server.log";
 my $protocol = "http://";
@@ -129,7 +129,6 @@ sub readLdapConfig {
   $interface              = $settings->{'interface'};
   $logdir                 = $settings->{'logdir'};
 
-  $archs                  = ["i386"];
   $packages_folder        = "/var/cache/argonaut/packages";
 }
 
@@ -697,7 +696,7 @@ POE::Session->create(
             $log->info("get_packages($release,[".join(',',@{$attrs})."],[".join(',',@{$filters})."],$from,$to)");
 
             eval {
-                my $distributions = get_packages_info($packages_folder,$archs,undef,$release,$attrs,$filters,$from,$to);
+                my $distributions = get_packages_info($packages_folder,undef,$release,$attrs,$filters,$from,$to);
                 $kernel->post( $jsonrpc => 'result' => $id, $distributions);
             };
             if($@) {
@@ -707,7 +706,7 @@ POE::Session->create(
         },
         packages_crawler => sub {
             $log->info("Getting Packages files from repositories");
-            my $errors = store_packages_file($packages_folder,$archs);
+            my $errors = store_packages_file($packages_folder);
             if(@{$errors} > 0) {
               $log->notice("Errors while getting Packages files : ".join(',',@{$errors}));
             }

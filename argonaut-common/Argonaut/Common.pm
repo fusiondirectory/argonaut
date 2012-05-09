@@ -55,8 +55,6 @@ BEGIN
       &argonaut_ldap_is_single_result
       &argonaut_ldap_split_dn
       &argonaut_ldap_init
-      &argonaut_search_repo_server
-      &argonaut_search_parent_repo_server
       &argonaut_get_client_settings
       &argonaut_get_server_settings
       &argonaut_get_crawler_settings
@@ -409,29 +407,6 @@ config_open:
   }
 
   return( $ldap_base, \@ldap_uris, $ldap_bind_dn, $ldap_config );
-}
-#----------------------------------------------------------------------------
-# search the parent(s) fai repo(s) declared in FusionDirectory
-sub argonaut_search_parent_repo_server {
-  my ($handle,$base,$cn) = @_;
-  my @attrs = ( 'FAIrepository' );
-  my ($sresult) = argonaut_ldap_rsearch( $handle, $base, '',
-      "(&(objectClass=FAIrepositoryServer)(cn=${cn}))",
-      "one", "ou=servers,ou=systems", \@attrs );
-  return argonaut_ldap_is_single_result( $sresult, 1 );
-}
-
-#----------------------------------------------------------------------------
-# search if there is a fai repo for the server mac address
-
-sub argonaut_search_repo_server {
-  my ($handle,$base,$mac) = @_;
-  my @attrs = ( 'FAIrepository', 'cn' );
-  my $sresult = $handle->search(
-      base => "$base",
-      filter => "(&(objectClass=FAIrepositoryServer)(macAddress=${mac}))",
-      attrs => \@attrs );
-  return ( $sresult );
 }
 
 #------------------------------------------------------------------------------
