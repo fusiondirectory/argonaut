@@ -780,6 +780,8 @@ sub argonaut_get_ldap2repository_settings {
     };
     if (($mesg->entries)[0]->get_value('argonautLdap2repProxy')) {
       $settings->{'proxy'} = ($mesg->entries)[0]->get_value('argonautLdap2repProxy');
+    } else {
+      $settings->{'proxy'} = "";
     }
     return $settings;
   } else {
