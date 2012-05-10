@@ -77,18 +77,18 @@ sub get_repolines {
     if(defined $mac) {
         $mesg = $ldap->search(
             base => $ldap_base,
-            filter => "(&(objectClass=argonautConfig)(objectClass=FAIrepositoryServer)(macAddress=$mac))",
-            attrs => [ 'FAIrepository', 'argonautMirrorArch' ] );
+            filter => "(&(objectClass=FAIrepositoryServer)(macAddress=$mac))",
+            attrs => [ 'FAIrepository' ] );
     } elsif(defined $cn) {
         $mesg = $ldap->search(
             base => $ldap_base,
-            filter => "(&(objectClass=argonautConfig)(objectClass=FAIrepositoryServer)(cn=$cn))",
-            attrs => [ 'FAIrepository', 'argonautMirrorArch' ] );
+            filter => "(&(objectClass=FAIrepositoryServer)(cn=$cn))",
+            attrs => [ 'FAIrepository' ] );
     } else {
         $mesg = $ldap->search(
             base => $ldap_base,
-            filter => "(&(objectClass=argonautConfig)(objectClass=FAIrepositoryServer))",
-            attrs => [ 'FAIrepository', 'argonautMirrorArch' ] );
+            filter => "(&(objectClass=FAIrepositoryServer))",
+            attrs => [ 'FAIrepository' ] );
     }
 
     $mesg->code && die "Error while searching repositories :".$mesg->error;
@@ -97,9 +97,8 @@ sub get_repolines {
 
     my @repolines = ();
     foreach my $entry ($mesg->entries()) {
-      my @entry_archs = $entry->get_value('argonautMirrorArch');
       foreach my $repoline ($entry->get_value('FAIrepository')) {
-        my ($uri,$parent,$dist,$sections,$install,$local) = split('\|',$repoline);
+        my ($uri,$parent,$dist,$sections,$install,$local,$archs) = split('\|',$repoline);
         my $repo = {
           'line'        => $repoline,
           'uri'         => $uri,
@@ -108,7 +107,7 @@ sub get_repolines {
           'sections'    => split(',',$sections),
           'installrepo' => $install,
           'localmirror' => ($local eq "local"),
-          'archs'       => @entry_archs
+          'archs'       => split(',',$archs)
         };
         push @repolines, $repo;
       }

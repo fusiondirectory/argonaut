@@ -736,7 +736,7 @@ sub argonaut_get_ldap2repository_settings {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
-            attrs => ['macAddress','argonautMirrorDir','argonautMirrorArch',
+            attrs => ['macAddress','argonautMirrorDir',
                       'argonautLdap2repErrors','argonautLdap2repSource','argonautLdap2repGPGCheck',
                       'argonautLdap2repContents','argonautLdap2repVerbose','argonautLdap2repProxy']
             );
@@ -745,7 +745,6 @@ sub argonaut_get_ldap2repository_settings {
     my $settings = {
       'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
       'mirrordir'       => ($mesg->entries)[0]->get_value('argonautMirrorDir'),
-      'arch'            => ($mesg->entries)[0]->get_value('argonautMirrorArch',asref=>1),
       'errors'          => ($mesg->entries)[0]->get_value('argonautLdap2repErrors'),
       'source'          => ($mesg->entries)[0]->get_value('argonautLdap2repSource'),
       'gpgcheck'        => ($mesg->entries)[0]->get_value('argonautLdap2repGPGCheck'),
@@ -781,14 +780,13 @@ sub argonaut_get_crawler_settings {
             base   => $ldap_base,
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
             attrs => ['macAddress','argonautMirrorDir',
-                      'argonautMirrorArch','argonautCrawlerPackagesFolder']
+                      'argonautCrawlerPackagesFolder']
             );
 
   if(scalar($mesg->entries)==1) {
     return {
       'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
       'mirrordir'       => ($mesg->entries)[0]->get_value("argonautMirrorDir"),
-      'arch'            => ($mesg->entries)[0]->get_value("argonautMirrorArch",asref=>1),
       'packagesfolder'  => ($mesg->entries)[0]->get_value("argonautCrawlerPackagesFolder")
     };
   } else {
