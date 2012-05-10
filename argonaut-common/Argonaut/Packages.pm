@@ -100,7 +100,7 @@ sub get_repolines {
       my @entry_archs = $entry->get_value('argonautMirrorArch');
       foreach my $repoline ($entry->get_value('FAIrepository')) {
         my ($uri,$parent,$dist,$sections,$install,$local) = split('\|',$repoline);
-        $repo = {
+        my $repo = {
           'line'        => $repoline,
           'uri'         => $uri,
           'parent'      => $parent,
@@ -109,7 +109,7 @@ sub get_repolines {
           'installrepo' => $install,
           'localmirror' => ($local eq "local"),
           'archs'       => @entry_archs
-        }
+        };
         push @repolines, $repo;
       }
     }
