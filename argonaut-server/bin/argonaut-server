@@ -53,10 +53,11 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,$server_port,$iptool,$delete_finished_tasks,$interface,$logdir,$packages_folder);
+my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,
+    $protocol,$server_port,$iptool,$delete_finished_tasks,
+    $interface,$logdir,$packages_folder);
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-server.log";
-my $protocol = "http://";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-server.pid";
 
@@ -123,6 +124,7 @@ No parameters needed
 sub readLdapConfig {
   my $settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
 
+  $protocol               = $settings->{'protocol'};
   $server_port            = $settings->{'port'};
   $iptool                 = $settings->{'iptool'};
   $delete_finished_tasks  = $settings->{'delete_finished_tasks'};

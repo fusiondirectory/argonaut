@@ -34,7 +34,6 @@ use Argonaut::Common qw(:ldap :file);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-client-fai-sendmon.log";
-my $protocol = "http://";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
@@ -50,8 +49,9 @@ my $file          = $client_settings->{'taskidfile'};
 my $logdir        = $client_settings->{'logdir'};
 
 my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
-  
+
 my $server_port   = $server_settings->{'port'};
+my $protocol      = $server_settings->{'protocol'};
 
 my $taskid;
 
@@ -100,12 +100,12 @@ while (my $var = <STDIN>) {
     my $errorcode = $3;
     if($keyword eq "TASKBEGIN") {
         print "[sendmon] Task $taskname begun\n";
-        
+
         my $progress = undef;
         if(defined $progress_value{$taskname}) {
             $progress = $progress_value{$taskname};
         }
-        
+
         my $client = new JSON::RPC::Client;
         $client->version('1.0');
 
@@ -127,7 +127,7 @@ while (my $var = <STDIN>) {
         }
     } elsif($keyword eq "TASKEND") {
         print "[sendmon] Task $taskname ended\n";
-        
+
         if($taskname eq "faiend") {
             my $client = new JSON::RPC::Client;
             $client->version('1.0');
@@ -151,7 +151,7 @@ while (my $var = <STDIN>) {
         }
     } elsif($keyword eq "TASKERROR") {
         print "[sendmon] Task error $taskname $errorcode\n";
-        
+
         my $client = new JSON::RPC::Client;
         $client->version('1.0');
 
@@ -159,7 +159,7 @@ while (my $var = <STDIN>) {
           method  => "set_error",
           params  => [$taskid,$taskname." ".$errorcode],
         };
-        
+
         my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
 
         if($res) {

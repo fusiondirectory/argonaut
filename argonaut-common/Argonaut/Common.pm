@@ -818,8 +818,8 @@ sub argonaut_get_server_settings {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => $filter,
-            attrs => [  'macAddress','argonautPort','argonautDeleteFinished',
-                        'argonautIpTool',
+            attrs => [  'macAddress','argonautProtocol','argonautPort',
+                        'argonautDeleteFinished','argonautIpTool',
                         'argonautWakeOnLanInterface','argonautLogDir' ]
             );
 
@@ -827,6 +827,7 @@ sub argonaut_get_server_settings {
     return {
       'mac'                   => ($mesg->entries)[0]->get_value("macAddress"),
       'port'                  => ($mesg->entries)[0]->get_value("argonautPort"),
+      'protocol'              => ($mesg->entries)[0]->get_value("argonautProtocol"),
       'iptool'                => ($mesg->entries)[0]->get_value("argonautIpTool"),
       'delete_finished_tasks' => ($mesg->entries)[0]->get_value("argonautDeleteFinished"),
       'interface'             => ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface"),

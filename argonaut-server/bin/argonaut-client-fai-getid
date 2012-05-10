@@ -39,7 +39,6 @@ It store the info into the file specified in the config file.
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-client-fai-getid.log";
-my $protocol = "http://";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
@@ -57,8 +56,9 @@ my $logdir        = $client_settings->{'logdir'};
 my $myMac         = $client_settings->{'mac'};
 
 my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
-  
+
 my $server_port   = $server_settings->{'port'};
+my $protocol      = $server_settings->{'protocol'};
 
 argonaut_create_dir($logdir);
 
