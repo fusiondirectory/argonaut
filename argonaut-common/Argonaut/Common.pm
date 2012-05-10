@@ -737,7 +737,7 @@ sub argonaut_get_ldap2repository_settings {
             base   => $ldap_base,
             filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
             attrs => ['macAddress','argonautMirrorDir','argonautMirrorArch',
-                      'argonautLdap2repCleanup','argonautLdap2repErrors','argonautLdap2repSource','argonautLdap2repGPGCheck',
+                      'argonautLdap2repErrors','argonautLdap2repSource','argonautLdap2repGPGCheck',
                       'argonautLdap2repContents','argonautLdap2repVerbose','argonautLdap2repProxy']
             );
 
@@ -746,7 +746,6 @@ sub argonaut_get_ldap2repository_settings {
       'mac'             => ($mesg->entries)[0]->get_value("macAddress"),
       'mirrordir'       => ($mesg->entries)[0]->get_value('argonautMirrorDir'),
       'arch'            => ($mesg->entries)[0]->get_value('argonautMirrorArch',asref=>1),
-      'cleanup'         => ($mesg->entries)[0]->get_value('argonautLdap2repCleanup'),
       'errors'          => ($mesg->entries)[0]->get_value('argonautLdap2repErrors'),
       'source'          => ($mesg->entries)[0]->get_value('argonautLdap2repSource'),
       'gpgcheck'        => ($mesg->entries)[0]->get_value('argonautLdap2repGPGCheck'),

@@ -44,7 +44,7 @@ use lib "/usr/lib/argonaut";
 
 my ($ldap_configfile, $ldap_dn, $ldap_password);
 my ($archs,$mirrordir,$proxy,$mac,$client_ip);
-my ($cleanup,$verbose,$errors,$source,$gpgcheck,$contents,$pdiff,$logdir);
+my ($verbose,$errors,$source,$gpgcheck,$contents,$pdiff,$logdir);
 my $result;
 my $ldapinfos;
 
@@ -116,7 +116,6 @@ sub readConfig {
 
   $mirrordir              =   $settings->{'mirrordir'};
   $proxy                  =   $settings->{'proxy'};
-  $cleanup                =   $settings->{'cleanup'};
   $errors                 =   $settings->{'errors'};
   $source                 =   $settings->{'source'};
   $gpgcheck               =   $settings->{'gpgcheck'};
@@ -125,12 +124,6 @@ sub readConfig {
   $mac                    =   $settings->{'mac'};
 
   $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
-
-  if ($cleanup eq "FALSE") {
-    $cleanup = "--nocleanup";
-  } else {
-    $cleanup = "";
-  }
 
   if ($errors eq "TRUE") {
     $errors = "--ignore-small-errors";
@@ -232,7 +225,7 @@ sub generate_cronjob_script {
         }
 
         if (0 != scalar @{outline}) {
-          print CRON "\ndebmirror ${cleanup} ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline})
+          print CRON "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline})
                     . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/\n";
           print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose eq "TRUE" );
         }
