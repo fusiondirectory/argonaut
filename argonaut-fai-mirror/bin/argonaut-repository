@@ -249,7 +249,7 @@ argonaut-repository
 
 =head1 DESCRIPTION
 
-argonaut-repository is a script to create the cronjob for the local debian repositories used by the argonaut deployement system.
+argonaut-repository is a program used to create the cronjob for the local debian repositories used by the argonaut deployement system.
 
 =head1 BUGS
 
