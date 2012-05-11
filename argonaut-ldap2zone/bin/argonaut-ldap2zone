@@ -56,3 +56,52 @@ if (!$zone_arg) {
 }
 
 argonaut_ldap2zone($zone_arg,$verbose_arg);
+
+__END__
+
+=head1 NAME
+
+argonaut-ldap2zone - creating bind zone files and refreshing the server
+
+=head1 SYNOPSIS
+
+argonaut-ldap2zone [--verbose] ZONE
+
+=head1 DESCRIPTION
+
+argonaut-ldap2zone is a program used to create bind zone files and refresh the bind service
+
+=head1 OPTIONS
+
+B<--verbose>
+    be verbose
+
+=head1 EXAMPLES
+
+ argonaut-ldap2zone --verbose fusiondirectory.org.
+ 
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2005-2006 Jan-Marek Glogowski
+
+=item Copyright (C) 2007-2010 The GOsa project
+
+=item Copyright (C) 2011-2012 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
