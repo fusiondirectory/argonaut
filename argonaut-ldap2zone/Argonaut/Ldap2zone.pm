@@ -206,19 +206,19 @@ sub create_namedconf
 {
   my($zone,$reverse_zone,$BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER) = @_;
 
-  if($ALLOW_NOTIFY) {
+  if($ALLOW_NOTIFY eq "TRUE") {
     $ALLOW_NOTIFY = "notify yes;";
   } else {
     $ALLOW_NOTIFY = "";
   }
 
-  if ($ALLOW_UPDATE) {
+  if ($ALLOW_UPDATE eq "TRUE") {
     $ALLOW_UPDATE = "allow-update {$ALLOW_UPDATE};";
   } else {
     $ALLOW_UPDATE = "";
   }
 
-  if ($ALLOW_TRANSFER) {
+  if ($ALLOW_TRANSFER eq "TRUE") {
     $ALLOW_TRANSFER = "allow-transfer {$ALLOW_TRANSFER};";
   } else {
     $ALLOW_TRANSFER = "";
