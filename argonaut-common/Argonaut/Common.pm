@@ -735,7 +735,7 @@ sub argonaut_get_ldap2repository_settings {
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
-            filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
+            filter => "(&(objectClass=argonautMirrorConfig)(ipHostNumber=$ip))",
             attrs => ['macAddress','argonautMirrorDir',
                       'argonautLdap2repErrors','argonautLdap2repSource','argonautLdap2repGPGCheck',
                       'argonautLdap2repContents','argonautLdap2repVerbose','argonautLdap2repProxy']
@@ -758,7 +758,7 @@ sub argonaut_get_ldap2repository_settings {
     }
     return $settings;
   } else {
-    die "This computer ($ip) is not configured in LDAP to run ldap2repository (missing service argonautConfig).";
+    die "This computer ($ip) is not configured in LDAP to run ldap2repository (missing service argonautMirrorConfig).";
   }
 }
 
@@ -778,7 +778,7 @@ sub argonaut_get_crawler_settings {
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
-            filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
+            filter => "(&(objectClass=argonautMirrorConfig)(ipHostNumber=$ip))",
             attrs => ['macAddress','argonautMirrorDir',
                       'argonautCrawlerPackagesFolder']
             );
@@ -790,7 +790,7 @@ sub argonaut_get_crawler_settings {
       'packagesfolder'  => ($mesg->entries)[0]->get_value("argonautCrawlerPackagesFolder")
     };
   } else {
-    die "This computer ($ip) is not configured in LDAP to run a debconf crawler (missing service argonautConfig).";
+    die "This computer ($ip) is not configured in LDAP to run a debconf crawler (missing service argonautMirrorConfig).";
   }
 }
 
@@ -854,7 +854,7 @@ sub argonaut_get_ldap2zone_settings {
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
-            filter => "(&(objectClass=argonautConfig)(ipHostNumber=$ip))",
+            filter => "(&(objectClass=argonautDNSConfig)(ipHostNumber=$ip))",
             attrs => ['macAddress','argonautLdap2zoneBindDir',
                       'argonautLdap2zoneAllowNotify','argonautLdap2zoneAllowUpdate',
                       'argonautLdap2zoneAllowTransfer','argonautLdap2zoneTTL',
@@ -872,7 +872,7 @@ sub argonaut_get_ldap2zone_settings {
       'rndc'          => ($mesg->entries)[0]->get_value("argonautLdap2zoneRndc")
     };
   } else {
-    die "This computer ($ip) is not configured in LDAP to run ldap2zone (missing service argonautConfig).";
+    die "This computer ($ip) is not configured in LDAP to run ldap2zone (missing service argonautDNSConfig).";
   }
 }
 
