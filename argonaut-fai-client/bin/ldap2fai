@@ -35,6 +35,8 @@ use 5.008;
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 use Getopt::Long;
+use Config::IniFiles;
+
 use File::Path;
 
 use Argonaut::Common qw(:ldap :net :array);
