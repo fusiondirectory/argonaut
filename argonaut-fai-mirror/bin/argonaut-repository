@@ -184,9 +184,9 @@ sub generate_cronjob_script {
     my ($localuri) = $uri;
     my $parent_or_opts = $repo->{'parent'};
     my $dist = $repo->{'dist'};
-    my $sections = join(',',$repo->{'sections'});
-    my (@section_list) = $repo->{'sections'};
-    my $archs = join(',',$repo->{'archs'}); # archs comma-separated
+    my $sections = join(',',@{$repo->{'sections'}});
+    my (@section_list) = @{$repo->{'sections'}};
+    my $archs = join(',',@{$repo->{'archs'}}); # archs comma-separated
     my $repoline = $repo->{'line'};
 
     print SOURCES "deb $uri $dist @section_list\n";
@@ -217,7 +217,7 @@ sub generate_cronjob_script {
       my $par_dist = $par_repo->{'dist'};
       my @outline = ();
       if ("$dist" eq "$par_dist") {
-        foreach my $section ($par_repo->{'sections'}) {
+        foreach my $section (@{$par_repo->{'sections'}}) {
           if (argonaut_array_find_and_remove( \@section_list, ${section})) {
             push (@outline, $section);
             last if (0 == scalar @section_list);

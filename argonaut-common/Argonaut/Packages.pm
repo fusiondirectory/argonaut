@@ -104,10 +104,10 @@ sub get_repolines {
           'uri'         => $uri,
           'parent'      => $parent,
           'dist'        => $dist,
-          'sections'    => split(',',$sections),
+          'sections'    => [split(',',$sections)],
           'installrepo' => $install,
           'localmirror' => ($local eq "local"),
-          'archs'       => split(',',$archs)
+          'archs'       => [split(',',$archs)]
         };
         push @repolines, $repo;
       }
@@ -161,12 +161,12 @@ sub get_packages_info {
             push @{$attrs},'FILENAME' if (not (grep {uc($_) eq 'FILENAME'} @{$attrs}));
         }
 
-        foreach my $section ($repo->{'sections'}) {
+        foreach my $section (@{$repo->{'sections'}}) {
             if(!defined $distributions->{"$dist/$section"}) {
                 $distributions->{"$dist/$section"} = {};
             }
             my $packages = $distributions->{"$dist/$section"};
-            foreach my $arch ($repo->{'archs'}) {
+            foreach my $arch (@{$repo->{'archs'}}) {
                 my $packages_file = "$packages_folder/$localuri/dists/$dist/$section/binary-$arch/Packages";
                 open (PACKAGES, "<$packages_file") or next;
                 my $parsed = {};
@@ -309,9 +309,9 @@ sub store_packages_file {
 
         my $localmirror = $repo->{'localmirror'};
 
-        foreach my $section ($repo->{'sections'}) {
+        foreach my $section (@{$repo->{'sections'}}) {
 
-            foreach my $arch ($repo->{'archs'}) {
+            foreach my $arch (@{$repo->{'archs'}}) {
               my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
               mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
               my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
