@@ -4,9 +4,9 @@
 #
 # ldap2fai
 #
-# Copyright (c) 2008 Landeshauptstadt München 
+# Copyright (c) 2008 Landeshauptstadt München
 # Copyright (c) 2008-2010 GONICUS GmbH  <gosa-devel@oss.gonicus.de>
-# Copyright (c) 2011 The FusionDirectory Project <contact@fusiondirectory.org>
+# Copyright (c) 2011-2012 The FusionDirectory Project <contact@fusiondirectory.org>
 #
 # Authors: Jan-Marek Glogowski
 #          Cajus Pollmeier
@@ -40,11 +40,7 @@ use File::Path;
 use Argonaut::Common qw(:ldap :net :array);
 use Argonaut::FAI qw(:flags);
 
-my $bind_dn;
-my $bind_pwd;
-my $prompt_pwd;
 my $ldapuris;
-my $ldap_conf = "/etc/ldap/ldap.conf";
 my $dump_dir = "/var/lib/fai/config";
 my $verbose = 0;
 my $print_classes = 0;
@@ -57,18 +53,21 @@ my $kernel;
 my $ldapinfos;
 my $mac;
 
+my $configfile = "/etc/argonaut/argonaut.conf";
+my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+my $ldap_conf               =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
+my $bind_dn                 =   $config->val( ldap => "dn"          ,"");
+my $bind_pwd                =   $config->val( ldap => "password"    ,"");
+
 Getopt::Long::Configure ("bundling");
 
-GetOptions( 'v|verbose' => \$verbose,
-            'h|help' => \&usage,
-            'c|config=s' => \$ldap_conf,
-            'd|dump-dir=s' => \$dump_dir,
-            'D|bind-dn=s' => \$bind_dn,
-            'n|dry-run' => \$dry_run,
-            'W|prompt-pwd' => \$prompt_pwd,
-            'w|password=s' => \$bind_pwd,
-            'H|hostname=s' => \$check_hostname,
-            'm|mac=s' => \$mac )
+GetOptions( 'v|verbose'     => \$verbose,
+            'h|help'        => \&usage,
+            'd|dump-dir=s'  => \$dump_dir,
+            'n|dry-run'     => \$dry_run,
+            'H|hostname=s'  => \$check_hostname,
+            'm|mac=s'       => \$mac )
   or usage( 'Wrong parameters' );
 
 # If we use dry-run, be verbose
@@ -84,11 +83,11 @@ if (!($mac =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i)) {
 
 # Is dump_dir a directory
 if( ! $dry_run ) {
-  -d "$dump_dir" 
+  -d "$dump_dir"
     || usage("'$dump_dir' is not a directory.\n");
 }
 
-$ldapinfos = argonaut_ldap_init( $ldap_conf, 0, $bind_dn, $prompt_pwd, $bind_pwd );
+$ldapinfos = argonaut_ldap_init( $ldap_conf, 0, $bind_dn, 0, $bind_pwd );
 
 if ( $ldapinfos->{'ERROR'} > 0) {
   print ( $ldapinfos->{'ERRORMSG'}."\n" );
@@ -99,9 +98,9 @@ my $ldap = $ldapinfos->{ 'HANDLE' };
 my $base = $ldapinfos->{ 'BASE' };
 
 # Get FAI object
-my $faiobj = Argonaut::FAI->new( 'LDAP' => $ldap,
-                             'base' => $base,
-                             'dumpdir' => $dump_dir );
+my $faiobj = Argonaut::FAI->new( 'LDAP'     => $ldap,
+                                 'base'     => $base,
+                                 'dumpdir'  => $dump_dir );
 
 # Set FAI flags
 $faiobj->flags( FAI_FLAG_VERBOSE ) if( $verbose );
@@ -164,18 +163,15 @@ sub usage
   (@_) && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
- usage: $0 [-hnvW] [-c config] [-D bind_dn ] [-w bind password] [-d dump_dir] [-H hostname] -m mac_address
+ usage: $0 [-hnvW] [-d dump_dir] [-H hostname] -m mac_address
 
   -h  : this (help) message
   -n  : dry run (includes verbose)
   -v  : be verbose
-  -c  : LDAP config file (default: ${ldap_conf})
   -d  : dump dir (default: ${dump_dir})
-  -D  : bind dn 
-  -W  : prompt for password
-  -w  : read password from command line
   -H  : check hostname
-  -m  : mac address       
+  -m  : mac address
+
 
 EOF
   exit -1;
@@ -227,7 +223,7 @@ sub create_dir
 {
   if( ! -d "$_[0]" ) {
     return if( $dry_run );
-    eval { 
+    eval {
       mkpath "$_[0]";
     };
     do_exit( 5, "Can't create dir $_[0]: $!\n" ) if( $@ );
@@ -257,7 +253,7 @@ sub get_classes {
     if( 0 == $mesg->count ) {
       do_exit( 3, "LDAP search for client failed!\n"
         . "No entries have been returned.\n"
-        . "  - Base:   $base\n" 
+        . "  - Base:   $base\n"
         . "  - Filter: $filter\n" );
     }
     else {
@@ -347,7 +343,7 @@ sub get_classes {
   }
 
   $fai_mirror = $entry->get_value( 'FAIdebianMirror' );
- 
+
   print( $host_info ) if $verbose;
 
   return $entry->get_value( 'FAIclass' );
@@ -391,7 +387,7 @@ sub generate_sources_list {
   $release_sections{ "$release" } = \@sec;
 
   my $fin = 0;
-  
+
   while( 1 ) {
     # Prepare search base
     if( ! defined $search_base )
@@ -422,7 +418,7 @@ sub generate_sources_list {
 
     $fin = 1;
     foreach $entry ($mesg->entries) {
-      print "   - inspecting repository server: " 
+      print "   - inspecting repository server: "
         . $entry->get_value('cn') . "\n" if $verbose;
 
       foreach my $repoline ($entry->get_value('FAIrepository')){
@@ -430,17 +426,17 @@ sub generate_sources_list {
         my (@modsections) = split( ',', $items[3] );
 
         # Check repository release
-        
+
         if( exists $release_sections{ $items[ 2 ] } ) {
 
           # Check sections
           # Idea: try to remove local section from global section list.
           # If not remove, removed from local list
-          # and add to 
+          # and add to
           my $index = 0;
           foreach my $section (@modsections) {
             if( 0 == argonaut_array_find_and_remove
-              ( $release_sections{ $items[ 2 ] }, $section ) ) 
+              ( $release_sections{ $items[ 2 ] }, $section ) )
             {
               splice( @modsections, $index, 1 );
               if( 0 == scalar $release_sections{ $items[ 2 ] } ) {
@@ -527,7 +523,7 @@ B<-h>, B<--help>
     print out this help message
 
 B<-v>, B<--verbose>
-    be verbose (multiple v's will increase verbosity) 
+    be verbose (multiple v's will increase verbosity)
 
 B<-n>, B<--foreground>
     dry run (includes verbose)
@@ -543,21 +539,21 @@ B<-D>
 
 B<-W>
     prompt for password
-    
+
 B<-w>
     read password from command line
-    
+
 B<-H>
     check hostname
-    
+
 B<-m>
-    mac address 
+    mac address
 
 =head1 DESCRIPTION
 
 ldap2fai is a script to create read the fai config from LDAP and create fai config space.
 
-=head1 BUGS 
+=head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
 <https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
