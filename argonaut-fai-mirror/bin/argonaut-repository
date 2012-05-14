@@ -190,7 +190,7 @@ sub generate_cronjob_script {
     my $repoline = $repo->{'line'};
 
     print SOURCES "deb $uri $dist @section_list\n";
-    print " +S  $dist ($sections) via $uri\n" if( $verbose eq "TRUE" );
+    print "sources.list: deb $uri $dist @section_list\n" if( $verbose eq "TRUE" );
 
     if ("" eq "$parent_or_opts") {
       print( "No parent for '$repoline'\n" );
@@ -225,12 +225,17 @@ sub generate_cronjob_script {
         }
 
         if (0 != scalar @{outline}) {
-          print CRON "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline})
+          my $cron_line = "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline})
                     . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/\n";
-          print " +Cs ${dist} (" . join(",", @{outline}) . ") from ${host}\n" if( $verbose eq "TRUE" );
+          print CRON $cron_line;
+          print "mirror-update-cronjob: ".$cron_line."\n" if( $verbose eq "TRUE" );
         }
         last if (0 == scalar @section_list);
       }
+    }
+
+    if (scalar @section_list != 0) {
+      print "No repository was found in parent $parent_or_opts for release $dist, for sections ".join(",", @section_list)."\n" if( $verbose eq "TRUE" );
     }
   }
   close (SOURCES);
