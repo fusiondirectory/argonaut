@@ -35,6 +35,40 @@ my $configfile = "/etc/argonaut/argonaut.conf";
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
+=pod
+=item readConfig
+Read from the config file argonaut.conf all the informations
+No parameters needed
+=cut
+sub getServiceName {
+    my ($nameFD) = @_;
+
+    my $client_ip              =   $config->val( client => "client_ip"             ,"");
+    my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+    my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+    my $ldap_password          =   $config->val( ldap => "password"                ,"");
+
+    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+
+    if ($ldapinfos->{'ERROR'} > 0) {
+        die $ldapinfos->{'ERRORMSG'}."\n";
+    }
+
+    my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
+              base   => $ldapinfos->{'BASE'},
+              filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
+              attrs => [ 'argonautServiceName' ]
+            );
+
+    if (scalar($mesg->entries)==1) {
+        foreach my $service (($mesg->entries)[0]->get_value("argonautServiceName")) {
+            my ($name,$value) = split(':',$service);
+            return $value if ($name eq $nameFD);
+        }
+    }
+    die "Service not found";
+}
+
 =item trigger_action_halt
 shutdown the computer
 =cut
@@ -73,8 +107,8 @@ execute an action on a service
 sub manage_service : Public {
   my ($s, $args) = @_;
     my ($service,$action) = @{$args};
-    my $folder = $config->val (services=>"folder","/etc/init.d");
-    my $exec = $config->val (services=>$service,$service);
+    my $folder = getServiceName("folder");
+    my $exec = getServiceName($service);
     system ("$folder/$exec $action\n");
     return ("done : $action $exec");
 }
