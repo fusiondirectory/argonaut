@@ -517,7 +517,7 @@ ldap2fai - read FAI config from LDAP and create config space.
 
 =head1 SYNOPSIS
 
-ldap2fai [-hnvW] [-c config] [-D bind_dn ] [-w bind password] [-d dump_dir] [-H hostname] -m <MAC>
+ldap2fai [-hnvW] [-d dump_dir] [-H hostname] -m <MAC>
 
 =head1 OPTIONS
 
@@ -530,20 +530,8 @@ B<-v>, B<--verbose>
 B<-n>, B<--foreground>
     dry run (includes verbose)
 
-B<-c>
-    LDAP config file (default: /etc/ldap/ldap.conf)
-
 B<-d>
     output dir (default: /var/lib/fai/config)
-
-B<-D>
-    bind dn
-
-B<-W>
-    prompt for password
-
-B<-w>
-    read password from command line
 
 B<-H>
     check hostname
