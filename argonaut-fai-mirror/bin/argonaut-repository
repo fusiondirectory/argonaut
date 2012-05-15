@@ -189,14 +189,17 @@ sub generate_cronjob_script {
     my $archs = join(',',@{$repo->{'archs'}}); # archs comma-separated
     my $repoline = $repo->{'line'};
 
-    print SOURCES "deb $uri $dist @section_list\n";
-    print "sources.list: deb $uri $dist @section_list\n" if( $verbose eq "TRUE" );
-
     if ("" eq "$parent_or_opts") {
       print( "No parent for '$repoline'\n" );
       $log->info ("No parent for '$repoline'\n");
       next;
     }
+    
+    print SOURCES "deb $uri $dist @section_list\n";
+
+    print "parent: $parent_or_opts\n" if( $verbose eq "TRUE" );
+    print "sources.list: deb $uri $dist @section_list\n" if( $verbose eq "TRUE" );
+
 
     my @par_repos = get_repolines(undef,$parent_or_opts);
     if (scalar(@par_repos) == 0) {
