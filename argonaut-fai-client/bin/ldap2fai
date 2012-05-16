@@ -138,7 +138,7 @@ print( "Extending FAI classtree with real objects...\n" );
 $faiobj->extend_class_cache( $release );
 
 print( "Dumping config space to '$dump_dir'...\n" );
-my( $sections, $error ) = $faiobj->dump_release( $release, $res_classlist, $hostname );
+my( $error, $sections, $customs ) = $faiobj->dump_release( $release, $res_classlist, $hostname );
 print $error . "\n" if( defined $error );
 
 if( defined ${hostname} ) {
@@ -354,7 +354,7 @@ sub get_classes {
 
 sub generate_sources_list {
   my( $sections ) = @_;
-  my( $mesg, $entry, $line, @deblines, @modsections, @rdns, %saw, $debline );
+  my( $line, @deblines, @modsections, @rdns, %saw, $debline );
 
   # Create unique list
   undef %saw;
@@ -383,18 +383,29 @@ sub generate_sources_list {
     return 0;
   }
 
+  add_repo_for_release("SOURCES",$release,$sections);
+  foreach my $custom ($customs) {
+    add_repo_for_release("SOURCES",$custom,$sections);
+  }
+
+  close (SOURCES) if( ! $dry_run );
+}
+
+sub add_repo_for_release()
+{
+  my ($filehandle,$release,$sections) = @_;
+  my @sec = @$sections; # copying sections
   my %release_sections = ();
-  my @sec = @$sections;
-  my ($search_base,@entries);
-  $release_sections{ "$release" } = \@sec;
+  my ($mesg,$search_base,@entries);
+  $release_sections{ "$release" } = \@sec; #reference the copy
 
   my $fin = 0;
 
-  while( 1 ) {
+  while (!$fin) {
     # Prepare search base
-    if( ! defined $search_base )
-      { $search_base = $host_base; }
-    else {
+    if (! defined $search_base) {
+      $search_base = $host_base;
+    } else {
       my @rdn = argonaut_ldap_split_dn( $search_base );
       shift( @rdn );
       $search_base = join( ',', @rdn );
@@ -410,7 +421,7 @@ sub generate_sources_list {
     goto BAILOUT_CHECK_SERVER if( ! defined $mesg );
     $mesg->code && do_exit
       ( 2, sprintf( "LDAP error: %s (%i)", $mesg->error, __LINE__ ) );
-    if( 0 == scalar $mesg->entries ) {
+    if (scalar $mesg->entries == 0) {
       next;
     }
 
@@ -419,11 +430,11 @@ sub generate_sources_list {
        if( $verbose && $mesg->count() );
 
     $fin = 1;
-    foreach $entry ($mesg->entries) {
+    foreach my $entry ($mesg->entries) {
       print "   - inspecting repository server: "
         . $entry->get_value('cn') . "\n" if $verbose;
 
-      foreach my $repoline ($entry->get_value('FAIrepository')){
+      foreach my $repoline ($entry->get_value('FAIrepository')) {
         my (@items) = split( '\|', ${repoline} );
         my (@modsections) = split( ',', $items[3] );
 
@@ -451,29 +462,28 @@ sub generate_sources_list {
 
           # Add deb-line for server, if we have local sections
           if( scalar @modsections > 0 ) {
-            $debline = "deb $items[ 0 ] $items[ 2 ] " . join(' ',@modsections) . "\n";
+            my $debline = "deb $items[ 0 ] $items[ 2 ] " . join(' ',@modsections) . "\n";
             print "   + add: $debline" if $verbose;
             print SOURCES "$debline" if( ! $dry_run );
           }
 
-          last if( 0 == scalar keys ( %release_sections ) );
+          last if( scalar keys ( %release_sections ) == 0);
         }
       }
 
       # Check, if there we still have some sections in any release
       while ( my ($key, $value) = each(%release_sections) ) {
-        if (0 != scalar @$value) {
+        if (scalar @$value != 0) {
           $fin = 0;
           last;
         }
       }
-      last if (1 == $fin);
+      last if $fin;
     }
-    last if(1 == $fin);
   }
 
 BAILOUT_CHECK_SERVER:
-  if( 0 == $fin ) {
+  if( ! $fin ) {
     if( $verbose ) {
       print "Missing sections for release:\n";
       while ( my ($key, $value) = each(%release_sections) ) {
@@ -482,8 +492,6 @@ BAILOUT_CHECK_SERVER:
     }
     exit -2;
   }
-
-  close (SOURCES) if( ! $dry_run );
 }
 
 

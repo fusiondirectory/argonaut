@@ -1,5 +1,5 @@
 #######################################################################
-# 
+#
 # Argonaut::FAI packages - functions to get info for install from ldap
 #
 # Copyright (c) 2008 Landeshauptstadt München
@@ -80,7 +80,7 @@ sub prepare_filter {
 #
 # $ldap    = Net::LDAP handle
 # %options = Hash of options like (Net::LDAP)
-# 
+#
 sub new {
   my $self = shift;
   my $type = ref($self) || $self;
@@ -208,7 +208,7 @@ sub release_check {
 
   my( $mesg, $entry );
   my $fai_base = 'ou=fai,ou=configs,ou=systems';
-  my @result_rdns; 
+  my @result_rdns;
   my @check_rdns = ();
   my @check_releases = ();
   my $rdn;
@@ -283,7 +283,7 @@ sub release_check {
   return( sprintf( "No release base for (%s) found!", $release ) )
     if( ! $full_base  );
 
-  $self->{ 'CHECKS' }->{ $norm_release } = 
+  $self->{ 'CHECKS' }->{ $norm_release } =
     [ \@result_rdns, \@check_releases ];
 
   return( \@result_rdns, \@check_releases );
@@ -395,7 +395,7 @@ sub generate_class_cache {
         foreach my $profile_class (split( ' ', $classlist_str )) {
           if( ":" eq substr( $profile_class, 0, 1 ) ) {
             warn( "Release '$cn' found in profile '$class' of '$release'." );
-          } else { 
+          } else {
             push( @{$cache{ $type }{ $cn }{ '_classes' }}, $profile_class );
           }
         }
@@ -482,20 +482,20 @@ sub fill_class_cache {
     $norm_release =~ s/\./\//g;
 
     if( ! exists $releases{ $norm_release  } ) {
-      warn( sprintf( "Unknown release for object '%s'", $entry->dn() ) ) 
+      warn( sprintf( "Unknown release for object '%s'", $entry->dn() ) )
         if( ! exists $releases{ $norm_release  } );
       next;
     }
     if( $type eq 'profile' ) {
       my $classlist = $entry->get_value( 'FAIclass' );
       $releases{ $norm_release }{ $type }{ $class }{ '_classes' } = ();
-      $releases{ $norm_release }{ $type }{ $class }{ '_state' } 
+      $releases{ $norm_release }{ $type }{ $class }{ '_state' }
         = $entry->get_value( 'FAIstate' );
       foreach my $profile_class (split( ' ', $classlist )) {
         if( ":" eq substr( $profile_class, 0, 1 ) ) {
           warn( "Release '$profile_class' found in profile '$class' of '$release'." );
-        } else { 
-          push( @{$releases{ $norm_release }{ $type }{ $class }{ '_classes' }}, $profile_class ); 
+        } else {
+          push( @{$releases{ $norm_release }{ $type }{ $class }{ '_classes' }}, $profile_class );
         }
       }
     }
@@ -538,7 +538,7 @@ sub extend_class_cache {
     $cache_ref = $self->{ 'FAI_TREES' }{ $norm_release }
       if( exists $self->{ 'FAI_TREES' }{ $norm_release } );
     return $self->{ 'FAI_TREES' }{ $norm_release }
-      if( defined $cache_ref && 
+      if( defined $cache_ref &&
           defined $cache_ref->{ 'extended' } );
     return undef if( ! $generate );
   }
@@ -596,7 +596,7 @@ sub extend_class_cache {
         my $class_base = "cn=${class},ou=${type},@{$rdns}[0],${base}";
         $mesg = $ldap->search(
             base => ${class_base},
-            filter => $self->prepare_filter( 
+            filter => $self->prepare_filter(
               '(|(objectClass=FAIpartitionDisk)(objectClass=FAIpartitionEntry)(objectClass=FAIpartitionTable))' ),
             scope => 'sub' );
         return( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
@@ -632,9 +632,9 @@ sub extend_class_cache {
               $dn_tail = join( ',', @rdns );
               my $cn = $entry->get_value( 'cn' );
 
-              last if( $dn_tail !~ /^${class_base}$/ 
+              last if( $dn_tail !~ /^${class_base}$/
                 || (exists $disk_configs{${cn}}) );
-              
+
               if( ! is_removed( $entry ) ) {
                 my %partitions = ();
                 $disk_configs{${cn}} = \%partitions;
@@ -665,7 +665,7 @@ sub extend_class_cache {
 
               $disk_configs{${disk}}->
                 { $entry->get_value( 'FAIpartitionNr' ) } = $entry;
-#              print( "   + partition '" . $entry->get_value( 'FAIpartitionNr' ) 
+#              print( "   + partition '" . $entry->get_value( 'FAIpartitionNr' )
 #                                        . "' to disk '${disk}'\n" );
               $entry = undef;
               last;
@@ -676,7 +676,7 @@ sub extend_class_cache {
           if( defined $entry ) {
             # If we didn't store the entry yet, check if it's valid
             if( $checked_entries < 0 ) {
-              print( "Unable to find disk for partition '" 
+              print( "Unable to find disk for partition '"
                     . $entry->get_value( 'cn' ) . "' - skipped\n" );
               next;
             }
@@ -701,7 +701,7 @@ sub extend_class_cache {
         );
         $search{ 'attrs' } = @attrs if( scalar @attrs );
         $mesg = $ldap->search( %search );
-        
+
       }
 
       return( sprintf( "LDAP search error at line %i: %s (%i)\n", __LINE__, $mesg->error, $mesg->code ) )
@@ -717,7 +717,7 @@ sub extend_class_cache {
           } elsif( 'templates' eq ${type} ) {
             $key = $entry->get_value( 'FAItemplatePath' );
           } else { $key = $entry->get_value( 'cn' ); }
-          if( exists $values{ $key } ) 
+          if( exists $values{ $key } )
             { warn( "Duplicated key '$key' in '$class' for  type '$type'" ); }
           else { $values{ $key } = $entry; }
         }
@@ -755,10 +755,10 @@ sub is_removed {
 #
 # $self         = Argonaut::FAI handle
 # $release      = Release to dump
-# $classref     = 
+# $classref     =
 # $flags        =
 # $type         =
-# $nomerge      = 
+# $nomerge      =
 #
 # $classref     = Arrayref to the requested FAIclass list (already expanded)
 # $dumpdir      =
@@ -779,7 +779,7 @@ sub init_dump_function {
     my %seen;
 
     if( $self->{ 'flags' } & FAI_FLAG_NO_COW ) {
-      my @cows = ( $release ); 
+      my @cows = ( $release );
       $cow_releases = \@cows;
     }
 
@@ -826,8 +826,8 @@ sub init_dump_function {
 sub dump_variables {
   my( $self, $release, $classref, $flags ) = @_;
   my( $dumpdir, $cow_cacheref );
-  
-  ( $classref, $dumpdir, $cow_cacheref ) 
+
+  ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'variables' );
   return $classref if( ! defined $dumpdir );
 
@@ -880,8 +880,8 @@ sub dump_variables {
 sub dump_package_list {
   my( $self, $release, $classref, $flags ) = @_;
   my( $dumpdir, $cow_cacheref );
-  
-  ( $classref, $dumpdir, $cow_cacheref ) 
+
+  ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'packages' );
   return $classref if( ! defined $dumpdir );
 
@@ -893,6 +893,7 @@ sub dump_package_list {
   }
 
   my %uniq_sections = ();
+  my %uniq_customs = ();
   foreach $class (@$classref) {
     next if( ! exists $cow_cacheref->{ $class } );
     $entry = $cow_cacheref->{ $class };
@@ -903,6 +904,10 @@ sub dump_package_list {
 
     foreach my $section ( $entry->get_value( 'FAIdebianSection' ) ) {
       $uniq_sections{ $section } = undef;
+    }
+
+    foreach my $custom ( $entry->get_value( 'FAIcustomRelease' ) ) {
+      $uniq_customs{ $custom } = undef;
     }
 
     next if( $self->{ 'flags' } & FAI_FLAG_DRY_RUN );
@@ -916,7 +921,8 @@ sub dump_package_list {
   }
 
   my @sections = keys( %uniq_sections );
-  return( undef, \@sections );
+  my @customs = keys( %uniq_customs );
+  return( undef, \@sections, \@customs );
 }
 
 
@@ -934,8 +940,8 @@ sub dump_package_list {
 sub dump_debconf_info {
   my( $self, $release, $classref, $flags ) = @_;
   my( $dumpdir, $cow_cacheref );
-  
-  ( $classref, $dumpdir, $cow_cacheref ) 
+
+  ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'debconf' );
   return $classref if( ! defined $dumpdir );
 
@@ -985,8 +991,8 @@ sub dump_debconf_info {
 sub dump_disk_config {
   my( $self, $release, $classref, $flags ) = @_;
   my( $cow_cacheref, $dumpdir );
-  
-  ( $classref, $dumpdir, $cow_cacheref ) 
+
+  ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'disk' );
   return $classref if( ! defined $dumpdir );
 
@@ -1058,7 +1064,7 @@ sub dump_disk_config {
         my $logic_count = 4;
         my $primary_count = 0;
 
-        foreach my $partition_nr (sort {$a <=> $b} 
+        foreach my $partition_nr (sort {$a <=> $b}
                                  (keys %{$disk_config->{ $disk }}) ) {
           my $line;
           my $dl = $disk_config->{ $disk }->{ $partition_nr };
@@ -1087,7 +1093,7 @@ sub dump_disk_config {
               $line= sprintf( "%-20s %-18s %-12s %-10s %s %s\n",
                 $lvm_name."-".$dl->get_value('cn'),
                 $dl->get_value('FAImountPoint'),
-                $dl->get_value('FAIpartitionSize'), 
+                $dl->get_value('FAIpartitionSize'),
                 $dl->get_value('FAIfsType'),
                 $mount_opts,
                 $combined_opts);
@@ -1095,7 +1101,7 @@ sub dump_disk_config {
               $line= sprintf( "%-20s %-18s %-12s %-10s %s %s\n",
                 $dl->get_value('FAIpartitionType'),
                 $dl->get_value('FAImountPoint'),
-                $dl->get_value('FAIpartitionSize'), 
+                $dl->get_value('FAIpartitionSize'),
                 $dl->get_value('FAIfsType'),
                 $mount_opts,
                 $combined_opts);
@@ -1111,9 +1117,9 @@ sub dump_disk_config {
 
               $line = sprintf( "%-7s %-12s %-12s %-10s ; %s mounttype=uuid\n",
                 $dl->get_value('FAIpartitionType'),
-                $dl->get_value('FAImountPoint'), 
-                $part_type, 
-                $mount_opts, 
+                $dl->get_value('FAImountPoint'),
+                $part_type,
+                $mount_opts,
                 $dl->get_value('FAIfsOptions') );
             }
             elsif ($dl->get_value('FAIfsType') eq 'swap') {
@@ -1122,14 +1128,14 @@ sub dump_disk_config {
               $line = sprintf( "%-7s %-12s %-12s %-10s ; mounttype=label label='%s'\n",
                 $dl->get_value('FAIpartitionType'),
                 $dl->get_value('FAImountPoint'),
-                $dl->get_value('FAIpartitionSize'), 
+                $dl->get_value('FAIpartitionSize'),
                 $mount_opts, $swaplabel );
             }
             else {
               $line= sprintf( "%-7s %-12s %-12s %-10s ; %s %s mounttype=uuid\n",
                 $dl->get_value('FAIpartitionType'),
                 $dl->get_value('FAImountPoint'),
-                $dl->get_value('FAIpartitionSize'), 
+                $dl->get_value('FAIpartitionSize'),
                 $mount_opts,
                 $dl->get_value('FAIfsOptions'),
                 $dl->get_value('FAIfsType') );
@@ -1263,7 +1269,7 @@ sub dump_scripts {
   my( $self, $release, $classref, $flags ) = @_;
   my( $cow_cacheref, $dumpdir );
 
-  ( $classref, $dumpdir, $cow_cacheref ) 
+  ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'scripts' );
   return $classref if( ! defined $dumpdir );
 
@@ -1314,7 +1320,7 @@ sub dump_templates {
   my( $self, $release, $classref, $flags ) = @_;
   my( $cow_cacheref, $dumpdir );
 
-  ( $classref, $dumpdir, $cow_cacheref ) 
+  ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'templates' );
   return $classref if( ! defined $dumpdir );
 
@@ -1373,7 +1379,7 @@ sub dump_hooks {
   my( $self, $release, $classref, $flags ) = @_;
   my( $dumpdir, $cow_cacheref );
 
-  ( $classref, $dumpdir, $cow_cacheref ) 
+  ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'hooks' );
   return $classref if( ! defined $dumpdir );
 
@@ -1418,6 +1424,8 @@ sub dump_hooks {
 # Returns a hashref including the classes for the FAI types
 #  $result->{ ''profile', 'hook', ... }->{ 'class' }
 #  In case of profiles it points to a hashref of profile subclasses
+# Returns error, sections and customs.
+# error is undef if no error happened.
 #
 sub dump_release {
   my( $self, $release, $classref, $hostname ) = @_;
@@ -1425,28 +1433,28 @@ sub dump_release {
 
   if( defined $classref ) {
     ($classref, $cls_release) = $self->resolve_classlist( $classref, $release, $hostname );
-    return( undef, $classref ) if( 'ARRAY' ne ref( $classref ) );
+    return( $classref ) if( 'ARRAY' ne ref( $classref ) );
     $release = $cls_release if( ! defined $release );
   }
 
-  return( undef, "No release specified\n" ) if( ! defined $release );
+  return( "No release specified\n" ) if( ! defined $release );
 
   my $cacheref = $self->extend_class_cache( $release );
-  return( undef, $cacheref ) if( 'HASH' ne ref( $cacheref ) );
+  return( $cacheref ) if( 'HASH' ne ref( $cacheref ) );
 
-  return( undef, "No dump directory specified" ) if( ! defined $self->{ 'dumpdir' } );
+  return( "No dump directory specified" ) if( ! defined $self->{ 'dumpdir' } );
   my $dumpdir = $self->{ 'dumpdir' };
   $dumpdir .= '/class' if( defined $hostname );
 
   # Create dump directory and hosts classfile
   if( ! -d "${dumpdir}" ) {
     eval { mkpath( "${dumpdir}" ); };
-    return( undef, "Can't create dir '${dumpdir}': $!\n" ) if( $@ );
+    return( "Can't create dir '${dumpdir}': $!\n" ) if( $@ );
   }
 
   if( defined ${hostname} ) {
     open( CLASSLIST, ">${dumpdir}/${hostname}" )
-      || return( undef, "Can't create ${dumpdir}/${hostname}. $!\n" );
+      || return( "Can't create ${dumpdir}/${hostname}. $!\n" );
     print( CLASSLIST join( ' ', @${classref} ) );
     close( CLASSLIST );
   }
@@ -1457,28 +1465,28 @@ sub dump_release {
 
   # Dump variables, packages, debconf, scripts, templates and disk_config
   my $dump_result = $self->dump_variables( $release, $classref );
-  return( undef, $dump_result ) if( defined $dump_result );
+  return( $dump_result ) if( defined $dump_result );
 
-  my $sections;
-  ($dump_result, $sections) = $self->dump_package_list( $release, $classref );
-  return( undef, $dump_result ) if( defined $dump_result );
+  my ($sections, $customs);
+  ($dump_result, $sections, $customs) = $self->dump_package_list( $release, $classref );
+  return( $dump_result ) if( defined $dump_result );
 
   $dump_result = $self->dump_debconf_info( $release, $classref );
-  return( undef, $dump_result ) if( defined $dump_result );
+  return( $dump_result ) if( defined $dump_result );
 
   $dump_result = $self->dump_scripts( $release, $classref );
-  return( undef, $dump_result ) if( defined $dump_result );
+  return( $dump_result ) if( defined $dump_result );
 
   $dump_result = $self->dump_templates( $release, $classref );
-  return( undef, $dump_result ) if( defined $dump_result );
+  return( $dump_result ) if( defined $dump_result );
 
   $dump_result = $self->dump_disk_config( $release, $classref );
-  return( undef, $dump_result ) if( defined $dump_result );
+  return( $dump_result ) if( defined $dump_result );
 
   $dump_result = $self->dump_hooks( $release, $classref );
-  return( undef, $dump_result ) if( defined $dump_result );
+  return( $dump_result ) if( defined $dump_result );
 
-  return( $sections );
+  return( undef, $sections, $customs );
 }
 
 
@@ -1502,7 +1510,7 @@ sub resolve_classlist {
   # Check for release in classlist
   foreach my $class (@classes) {
     if( ":" eq substr( $class, 0, 1 ) ) {
-      return( "Duplicated release in classlist\n" ) 
+      return( "Duplicated release in classlist\n" )
         if( defined $cls_release );
 
       if( 2 < length( ${class} ) ) {
@@ -1515,7 +1523,7 @@ sub resolve_classlist {
 
   # Overwrite release if supplied
   $cls_release = $release if( defined $release );
-  return( "No release for lookup defined\n" ) 
+  return( "No release for lookup defined\n" )
     if( ! defined $cls_release );
 
   # Always prepend release
@@ -1531,7 +1539,7 @@ sub resolve_classlist {
   my $ldap = $self->{ 'LDAP' };
   my $base = $self->{ 'base' };
 
-  my( $release_rdns, $cow_releases ) = 
+  my( $release_rdns, $cow_releases ) =
     $self->release_check( $cls_release );
 
   @newclasses = ();
@@ -1551,7 +1559,7 @@ sub resolve_classlist {
 
     foreach my $cow_release (@$cow_releases) {
       my $cache = $self->get_class_cache( $cow_release );
- 
+
       next if( ! exists $cache->{ 'profiles' } );
       next if( ! exists $cache->{ 'profiles' }->{ $class } );
 
@@ -1562,7 +1570,7 @@ sub resolve_classlist {
         next if( exists $seen{ $profile_class } );
 
         # Prepend class - it may also be a profile
-        unshift( @classes, $profile_class ) 
+        unshift( @classes, $profile_class )
           if( ! exists $seen{ $profile_class } );
       }
 
