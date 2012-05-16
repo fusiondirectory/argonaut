@@ -384,20 +384,20 @@ sub generate_sources_list {
   }
 
   add_repo_for_release("SOURCES",$release,$sections);
-  foreach my $custom ($customs) {
+  foreach my $custom (@$customs) {
+    print "Searching custom $custom for sections @$sections\n";
     add_repo_for_release("SOURCES",$custom,$sections);
   }
 
   close (SOURCES) if( ! $dry_run );
 }
 
-sub add_repo_for_release()
-{
-  my ($filehandle,$release,$sections) = @_;
+sub add_repo_for_release {
+  my ($filehandle,$release_name,$sections) = @_;
   my @sec = @$sections; # copying sections
   my %release_sections = ();
   my ($mesg,$search_base,@entries);
-  $release_sections{ "$release" } = \@sec; #reference the copy
+  $release_sections{ "$release_name" } = \@sec; #reference the copy
 
   my $fin = 0;
 
@@ -440,7 +440,7 @@ sub add_repo_for_release()
 
         # Check repository release
 
-        if( exists $release_sections{ $items[ 2 ] } ) {
+        if( exists $release_sections{ $items[2] } ) {
 
           # Check sections
           # Idea: try to remove local section from global section list.
@@ -448,16 +448,16 @@ sub add_repo_for_release()
           # and add to
           my $index = 0;
           foreach my $section (@modsections) {
-            if( 0 == argonaut_array_find_and_remove
-              ( $release_sections{ $items[ 2 ] }, $section ) )
+            if (argonaut_array_find_and_remove ( $release_sections{ $items[2] }, $section ) )
             {
-              splice( @modsections, $index, 1 );
-              if( 0 == scalar $release_sections{ $items[ 2 ] } ) {
-                delete $release_sections{ $items[ 2 ] };
-                last;
-              }
+              $index++; # The section is needed, we keep ip
+            } else {
+              splice( @modsections, $index, 1 ); # We don't want this section, remove it
             }
-            $index++;
+          }
+
+          if (scalar $release_sections{$items[2]} == 0) {
+            delete $release_sections{$items[2]};
           }
 
           # Add deb-line for server, if we have local sections
@@ -472,6 +472,7 @@ sub add_repo_for_release()
       }
 
       # Check, if there we still have some sections in any release
+      $fin = 1;
       while ( my ($key, $value) = each(%release_sections) ) {
         if (scalar @$value != 0) {
           $fin = 0;
