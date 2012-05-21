@@ -28,7 +28,7 @@ use 5.008;
 
 use Config::IniFiles;
 
-use Argonaut::Quota qw(get_quota_settings write_quota_files apply_users_quota apply_groups_quota);
+use Argonaut::Quota qw(get_quota_settings write_warnquota_file apply_quotas);
 
 my $warnquota_file = "/etc/warnquota.conf";
 my $configfile = "/etc/argonaut/argonaut.conf";
@@ -42,7 +42,6 @@ my $ldap_password           =   $config->val( ldap => "password"    ,"");
 my $settings = get_quota_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
 #~ my $settings = get_quota_settings($ldap_configfile,$ldap_dn,$ldap_password,"192.168.1.37");
 
-write_quota_files ($settings,$warnquota_file,"quotatab.test");
+write_warnquota_file ($settings,$warnquota_file);
 
-apply_users_quota ($ldap_configfile,$ldap_dn,$ldap_password,$settings->{'hostname'});
-apply_groups_quota ($ldap_configfile,$ldap_dn,$ldap_password,$settings->{'hostname'});
+apply_quotas ($ldap_configfile,$ldap_dn,$ldap_password,$settings->{'hostname'});
