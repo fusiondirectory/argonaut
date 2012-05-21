@@ -38,7 +38,7 @@ BEGIN
   $VERSION = '2012-04-24';
   @ISA = qw(Exporter);
 
-  @EXPORT_OK = qw(write_quota_files get_quota_settings apply_users_quota);
+  @EXPORT_OK = qw(write_quota_files get_quota_settings apply_users_quota apply_groups_quota);
 }
 
 =head1
@@ -179,8 +179,38 @@ sub apply_users_quota {
     foreach my $quota (@quotas) {
       my ($dev,$blocksoft,$blockhard,$inodesoft,$inodehard,$server,$adminlist) = split (':',$quota);
       if ($server eq $hostname) {
-        print "applying $dev, $uid, $blocksoft,$blockhard, $inodesoft,$inodehard\n";
+        print "applying quota ($blocksoft, $blockhard, $inodesoft, $inodehard) on $dev for uid $uid\n";
         Quota::setqlim($dev, $uid, $blocksoft,$blockhard, $inodesoft,$inodehard);
+      }
+    }
+  }
+}
+
+sub apply_groups_quota {
+  my ($ldap_configfile,$ldap_dn,$ldap_password,$hostname) = @_;
+
+  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+
+  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(objectClass=systemQuotas)(objectClass=posixGroup))",
+            attrs => ['quota','gidNumber']
+            );
+
+  foreach my $entry ($mesg->entries) {
+    my $gid = $entry->get_value("gidNumber");
+    my @quotas = $entry->get_value("quota");
+    foreach my $quota (@quotas) {
+      my ($dev,$blocksoft,$blockhard,$inodesoft,$inodehard,$server,$adminlist) = split (':',$quota);
+      if ($server eq $hostname) {
+        print "applying quota ($blocksoft, $blockhard, $inodesoft, $inodehard) on $dev for gid $gid\n";
+        Quota::setqlim($dev, $gid, $blocksoft, $blockhard, $inodesoft, $inodehard, 0, 1);
       }
     }
   }
