@@ -27,16 +27,18 @@ use warnings;
 
 use 5.008;
 
+use Quota;
+
+use Argonaut::Common qw(:ldap);
+
 BEGIN
 {
   use Exporter ();
-  use vars qw(%EXPORT_TAGS @ISA $VERSION);
+  use vars qw(@EXPORT_OK @ISA $VERSION);
   $VERSION = '2012-04-24';
   @ISA = qw(Exporter);
 
-  %EXPORT_TAGS = ();
-
-  Exporter::export_ok_tags(keys %EXPORT_TAGS);
+  @EXPORT_OK = qw(write_quota_files get_quota_settings apply_users_quota);
 }
 
 =head1
@@ -44,41 +46,39 @@ Warnquota
 
 Write warnquota and quotatab files
 =cut
-sub warnquota {
-  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip,$warnquota_file,$quotatab_file) = @_;
+sub write_quota_files {
+  my ($settings,$warnquota_file,$quotatab_file) = @_;
 
   open (WARNQUOTA, ">", $warnquota_file) or die "Could not open file $warnquota_file";
   open (QUOTATAB, ">", $quotatab_file) or die "Could not open file $quotatab_file";
 
-  my $settings = get_quota_settings($ldap_configfile,$ldap_dn,$ldap_password,$ip);
-
   # edition of warnquota.conf
-  print WARNQUOTA "MAIL_CMD        = ".$settings->{'mail_cmd'}."\n";
-  print WARNQUOTA "CC_TO           = ".$settings->{'cc_to'}."\n";
-  print WARNQUOTA "FROM            = ".$settings->{'from'}."\n";
-  print WARNQUOTA "SUBJECT         = ".$settings->{'subject'}."\n";
+  print WARNQUOTA "MAIL_CMD               = ".$settings->{'mail_cmd'}."\n";
+  print WARNQUOTA "CC_TO                  = ".$settings->{'cc_to'}."\n";
+  print WARNQUOTA "FROM                   = ".$settings->{'from'}."\n";
+  print WARNQUOTA "SUBJECT                = ".$settings->{'subject'}."\n";
   # Support email for assistance (included in generated mail)
-  print WARNQUOTA "SUPPORT         = ".$settings->{'support'}."\n";
+  print WARNQUOTA "SUPPORT                = ".$settings->{'support'}."\n";
   # Support phone for assistance (included in generated mail)
   # The message to send
-  print WARNQUOTA "MESSAGE         = ".$settings->{'message'}."\n";
+  print WARNQUOTA "MESSAGE                = ".$settings->{'message'}."\n";
   # The signature of the mail
-  print WARNQUOTA "SIGNATURE       = ".$settings->{'signature'}."\n";
+  print WARNQUOTA "SIGNATURE              = ".$settings->{'signature'}."\n";
   # character set the email is to be send in
-  print WARNQUOTA "CHARSET         = ".$settings->{'charset'}."\n";
+  print WARNQUOTA "CHARSET                = ".$settings->{'charset'}."\n";
   # add LDAP support
-  print WARNQUOTA "LDAP_MAIL             = true"."\n";
-  print WARNQUOTA "LDAP_SEARCH_ATTRIBUTE = ".$settings->{'ldap_searchattribute'}."\n";
-  print WARNQUOTA "LDAP_MAIL_ATTRIBUTE   = mail\n";
-  print WARNQUOTA "LDAP_BASEDN           = ".$settings->{'ldap_basedn'}."\n";
-  print WARNQUOTA "LDAP_HOST             = ".$settings->{'ldap_host'}."\n";
-  print WARNQUOTA "LDAP_PORT             = ".$settings->{'ldap_port'}."\n";
-  print WARNQUOTA "LDAP_USER_DN          = ".$settings->{'ldap_userdn'}."n";
-  print WARNQUOTA "LDAP_PASSWORD         = ".$settings->{'ldap_userpwd'}."\n";
+  print WARNQUOTA "LDAP_MAIL              = true"."\n";
+  print WARNQUOTA "LDAP_SEARCH_ATTRIBUTE  = ".$settings->{'ldap_searchattribute'}."\n";
+  print WARNQUOTA "LDAP_MAIL_ATTRIBUTE    = mail\n";
+  print WARNQUOTA "LDAP_BASEDN            = ".$settings->{'ldap_basedn'}."\n";
+  print WARNQUOTA "LDAP_HOST              = ".$settings->{'ldap_host'}."\n";
+  print WARNQUOTA "LDAP_PORT              = ".$settings->{'ldap_port'}."\n";
+  print WARNQUOTA "LDAP_USER_DN           = ".$settings->{'ldap_userdn'}."\n";
+  print WARNQUOTA "LDAP_PASSWORD          = ".$settings->{'ldap_userpwd'}."\n";
   # end of warnquota.conf
 
   # Begin of quota tab edition
-  my @quotaDeviceParameters = $settings->{'device_parameters'};
+  my @quotaDeviceParameters = @{$settings->{'device_parameters'}};
   if ($#quotaDeviceParameters >= 0) {
     foreach (@quotaDeviceParameters) {
       my @quotaDeviceParameter = split /:/;
@@ -102,7 +102,7 @@ sub get_quota_settings {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=quotaService)(ipHostNumber=$ip))",
-            attrs => [  'quotaDeviceParameters',
+            attrs => [  'cn','quotaDeviceParameters',
                         'quotaLdapSearchIdAttribute',
                         'quotaLdapServerURI','quotaLdapServerUserDn',
                         'quotaLdapServerUserPassword','quotaMsgCharsetSupport',
@@ -112,32 +112,78 @@ sub get_quota_settings {
                         'quotaCarbonCopyMail' ]
             );
 
-  my $client_settings = {};
+  my $settings = {};
 
   if(scalar($mesg->entries)==1) {
     my $uri = URI->new(($mesg->entries)[0]->get_value('quotaLdapServerURI'));
-    $client_settings = {
-      'mail_cmd'              => ($mesg->entries)[0]->get_value("quotaMailCommand"),
-      'cc_to'                 => ($mesg->entries)[0]->get_value("quotaCarbonCopyMail"),
-      'from'                  => ($mesg->entries)[0]->get_value("quotaMsgFromSupport"),
-      'subject'               => ($mesg->entries)[0]->get_value("quotaMsgSubjectSupport"),
-      'support'               => ($mesg->entries)[0]->get_value("quotaMsgContactSupport"),
-      'message'               => ($mesg->entries)[0]->get_value("quotaMsgContentSupport"),
-      'signature'             => ($mesg->entries)[0]->get_value("quotaMsgSignatureSupport"),
-      'charset'               => ($mesg->entries)[0]->get_value("quotaMsgCharsetSupport"),
+
+    $settings = {
+      'hostname'              => ($mesg->entries)[0]->get_value("cn"),
       'ldap_basedn'           => $uri->dn,
       'ldap_host'             => $uri->host,
       'ldap_port'             => $uri->port,
-      'ldap_searchattribute'  => ($mesg->entries)[0]->get_value("quotaLdapSearchIdAttribute"),
-      'ldap_userdn'           => ($mesg->entries)[0]->get_value("quotaLdapServerUserDn"),
-      'ldap_userpwd'          => ($mesg->entries)[0]->get_value("quotaLdapServerUserPassword"),
-      'device_parameters'     => ($mesg->entries)[0]->get_value("quotaDeviceParameters"),
     };
+    my %keys = (
+      'mail_cmd'              => "quotaMailCommand",
+      'cc_to'                 => "quotaCarbonCopyMail",
+      'from'                  => "quotaMsgFromSupport",
+      'subject'               => "quotaMsgSubjectSupport",
+      'support'               => "quotaMsgContactSupport",
+      'message'               => "quotaMsgContentSupport",
+      'signature'             => "quotaMsgSignatureSupport",
+      'charset'               => "quotaMsgCharsetSupport",
+      'ldap_searchattribute'  => "quotaLdapSearchIdAttribute",
+      'ldap_userdn'           => "quotaLdapServerUserDn",
+      'ldap_userpwd'          => "quotaLdapServerUserPassword",
+    );
+    while (my ($key, $value) = each(%keys)) {
+      if (($mesg->entries)[0]->get_value($value)) {
+        $settings->{$key} = ($mesg->entries)[0]->get_value($value);
+      } else {
+        $settings->{$key} = "";
+      }
+    }
+
+    if (($mesg->entries)[0]->get_value('quotaDeviceParameters')) {
+      $settings->{'device_parameters'} = ($mesg->entries)[0]->get_value('quotaDeviceParameters', asref=>1);
+    } else {
+      $settings->{'device_parameters'} = [];
+    }
   } else {
     die "This computer ($ip) is not configured in LDAP to run quota (missing service quotaService).";
   }
 
-  return $client_settings;
+  return $settings;
+}
+
+sub apply_users_quota {
+  my ($ldap_configfile,$ldap_dn,$ldap_password,$hostname) = @_;
+
+  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+
+  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(objectClass=systemQuotas)(uid=*))",
+            attrs => ['quota','uidNumber']
+            );
+
+  foreach my $entry ($mesg->entries) {
+    my $uid = $entry->get_value("uidNumber");
+    my @quotas = $entry->get_value("quota");
+    foreach my $quota (@quotas) {
+      my ($dev,$blocksoft,$blockhard,$inodesoft,$inodehard,$server,$adminlist) = split (':',$quota);
+      if ($server eq $hostname) {
+        print "applying $dev, $uid, $blocksoft,$blockhard, $inodesoft,$inodehard\n";
+        Quota::setqlim($dev, $uid, $blocksoft,$blockhard, $inodesoft,$inodehard);
+      }
+    }
+  }
 }
 
 END {}
