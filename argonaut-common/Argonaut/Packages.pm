@@ -198,17 +198,7 @@ sub get_packages_info {
                                     mirror("$uri/".$parsed->{'FILENAME'},$packages_folder."/".$parsed->{'FILENAME'});
                                 }
                             }
-                            if(defined $packages->{$parsed->{'PACKAGE'}}) {
-                                if(grep {uc($_) eq 'VERSION'} @{$attrs}) {
-                                    if(defined $packages->{$parsed->{'PACKAGE'}}->{'VERSION'}) {
-                                        $packages->{$parsed->{'PACKAGE'}}->{'VERSION'} .= ",".$parsed->{'VERSION'}; # FIXME : here we collected a lot of info we just not use, we should have stopped analysing after finding version, and we should not have treated templates
-                                    } else {
-                                        $packages->{$parsed->{'PACKAGE'}} = $parsed;
-                                    }
-                                }
-                            } else {
-                                $packages->{$parsed->{'PACKAGE'}} = $parsed;
-                            }
+                            $packages->{$parsed->{'PACKAGE'}} = $parsed;
                         }
                         $parsed = {};
                         if((! defined $to) || ($package_indice<$to)) {
@@ -232,12 +222,36 @@ sub get_packages_info {
                                         last;
                                     }
                                 }
+                                $parsed = {};
                                 next;
                             }
                         }
                         if (grep {uc($_) eq uc($key)} @{$attrs}) {
-                            if(uc($key) eq 'DESCRIPTION') {
+                            if (uc($key) eq 'DESCRIPTION') {
                                 $parsed->{'DESCRIPTION'} = encode_base64($value);
+                            } elsif ((uc($key) eq 'PACKAGE') && (defined $packages->{$value}) && !(grep {uc($_) eq 'VERSION'} @{$attrs})) {
+                                # We already have the info on this package and version was not asked, skip to next one.
+                                while(<PACKAGES>) {
+                                    if (/^$/) {
+                                        last;
+                                    }
+                                }
+                                $parsed = {};
+                                next;
+                            } elsif ((uc($key) eq 'VERSION') && (defined $packages->{$parsed->{'PACKAGE'}}->{'VERSION'})) {
+                                # We already have the info on this package and this is the version, add it to the list and then skip to next one
+                                my @versions = split(',',$packages->{$parsed->{'PACKAGE'}}->{'VERSION'});
+                                if (!(grep {uc($_) eq uc($value)} @versions)) {
+                                    push @versions, $value;
+                                }
+                                $packages->{$parsed->{'PACKAGE'}}->{'VERSION'} = join(',',@versions);
+                                while(<PACKAGES>) {
+                                    if (/^$/) {
+                                        last;
+                                    }
+                                }
+                                $parsed = {};
+                                next;
                             } else {
                                 $parsed->{uc($key)} = $value;
                             }
