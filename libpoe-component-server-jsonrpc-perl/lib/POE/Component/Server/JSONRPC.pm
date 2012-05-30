@@ -24,7 +24,7 @@ POE::Component::Server::JSONRPC - POE tcp or http based JSON-RPC server
             'sum'  => 'sum',
         },
     );
-
+    
     #tcp version:
     POE::Component::Server::JSONRPC::Tcp->new(
         Port    => 3000,
@@ -33,16 +33,16 @@ POE::Component::Server::JSONRPC - POE tcp or http based JSON-RPC server
             'sum'  => 'sum',
         },
     );
-
+    
     sub echo {
         my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
-
+    
         $kernel->post( $jsonrpc => 'result' => $id, @params );
     }
-
+    
     sub sum {
         my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
-
+    
         $kernel->post( $jsonrpc => 'result' => $id, $params[0] + $params[1] );
     }
 
@@ -84,7 +84,7 @@ sub new {
     $self->{parent} = $poe_kernel->get_active_session->ID;
     $self->{json} ||= JSON->new;
 
-    my $session = POE::Session->create(
+    my $session = POE::Session->create(                
         object_states => [
             $self => {
                 map { ( $_ => "poe_$_", ) }
@@ -146,13 +146,12 @@ sub poe__start {
 
     $heap->{clients} = {};
     $heap->{id} = 0;
-
+    
     $kernel->yield('init_server');
 }
 
 =head2 poe_init_server
-
-Should be defined in Http or Tcp
+    Should be defined in Http or Tcp
 =cut
 
 sub poe_init_server { print "error init_server\n"; }
@@ -163,9 +162,9 @@ sub poe_init_server { print "error init_server\n"; }
 
 sub poe_input_handler {
     my ($self, $kernel, $session, $heap, $request, $response, $dirmatch) = @_[OBJECT, KERNEL, SESSION, HEAP, ARG0..$#_ ];
-
+    
     $heap->{clients}->{$heap->{id}} = {json_id => undef, response => $response};
-
+    
     my $json;
     eval {
         $json = $self->{json}->decode( $request->content );
@@ -174,7 +173,7 @@ sub poe_input_handler {
         $kernel->yield('error', $heap->{id}, q{invalid json request});
         return;
     }
-
+    
     $heap->{clients}->{$heap->{id}} = {json_id => $json->{id}, response => $response};
 
     unless ($json and $json->{method}) {
@@ -191,7 +190,7 @@ sub poe_input_handler {
     my @params = @{ $json->{params} || [] };
 
     $kernel->post($self->{parent}, $handler, $session->ID, $heap->{id}, @params);
-
+    
     $heap->{id}++;
     if ($heap->{id}>=65535) { # limit to 2 bytes
         $heap->{id} = 0;
@@ -208,16 +207,16 @@ sub poe_result {
     #~ print "answering to ".$id."\n";
 
     my $client = $heap->{clients}->{$id};
-
+    
     my $json_content = $self->{json}->encode(
             {   id => $client->{json_id} || undef,
                 error  => undef,
                 result => (@results > 1 ? \@results : $results[0]),
             }
         );
-
+        
     #~ print "json content : ".$json_content."\n";
-
+        
     $kernel->yield('send',$client->{response},$json_content);
     delete $heap->{clients}->{$id};
 }
@@ -230,23 +229,22 @@ sub poe_error {
     my ($self, $kernel, $heap, $id, $error) = @_[OBJECT, KERNEL, HEAP, ARG0..$#_];
 
     my $client = $heap->{clients}->{$id};
-
+    
     my $json_error_content = $self->{json}->encode(
         {   id => $client->{json_id} || undef,
             error  => $error,
             result => undef,
         }
     );
-
+    
     #~ print "json content : ".$json_error_content."\n";
-
+    
     $kernel->yield('send',$client->{response},$json_error_content);
     delete $heap->{clients}->{$id};
 }
 
 =head2 poe_send
-
-Should be defined in Http or Tcp
+    Should be defined in Http or Tcp
 =cut
 
 sub poe_send { print "error poe_send\n"; }

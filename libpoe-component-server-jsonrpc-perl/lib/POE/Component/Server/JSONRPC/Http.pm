@@ -38,8 +38,7 @@ use Data::Dumper;
 POE::Component::Server::JSONRPC::Http - POE http based JSON-RPC server
 
 =head2 new
-
-constructor
+    constructor
 =cut
 
 sub new {
@@ -48,22 +47,19 @@ sub new {
 }
 
 =head2 poe_init_server
-
-Init HTTP Server.
+    Init HTTP Server.
 =cut
 
 sub poe_init_server {
     my ($self, $kernel, $session, $heap) = @_[OBJECT, KERNEL, SESSION, HEAP];
-
+    
     $kernel->alias_set( 'JSONRPCHTTP' );
-
+    
     $self->{http} = POE::Component::Server::SimpleHTTP->new(
         'ALIAS'         =>      'HTTPD',
         'PORT'          =>      $self->{Port},
-        $self->{Address}     ? ('ADDRESS'               => $self->{Address} )                   : (),
-        $self->{Hostname}    ? ('HOSTNAME'              => $self->{Hostname} )                  : (),
-        $self->{SslKey}      ? ('SSLKEYCERT'            => ($self->{SslKey}, $self->{SslCert})) : (),
-        $self->{SslCacert}   ? ('SSLINTERMEDIATECACERT' => $self->{SslCacert} )                 : (),
+        $self->{Address}     ? ('ADDRESS'     => $self->{Address} )     : (),
+        $self->{Hostname}    ? ('HOSTNAME'    => $self->{Hostname} )    : (),
         'HANDLERS'      =>      [
                 {
                         'DIR'           =>      '.*',
@@ -75,17 +71,16 @@ sub poe_init_server {
 }
 
 =head2 poe_send
-
-Send HTTP response
+    Send HTTP response
 =cut
 
 sub poe_send {
     my ($kernel,$response, $content) = @_[KERNEL,ARG0..$#_];
-
+    
     #HTTP
     $response->code( 200 );
     $response->content( $content );
-
+    
     $kernel->post( 'HTTPD', 'DONE', $response );
 }
 
