@@ -94,7 +94,10 @@ sub argonaut_ldap2zone
 
   create_namedconf($zone,$reverse_zone,$BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER);
 
-  system("$RNDC reconfig && $RNDC freeze && $RNDC reload && $RNDC thaw");
+  system("$RNDC reconfig")  == 0 or die "$RNDC reconfig failed : $?";
+  system("$RNDC freeze")    == 0 or die "$RNDC freeze failed : $?";
+  system("$RNDC reload")    == 0 or die "$RNDC reload failed : $?";
+  system("$RNDC thaw")      == 0 or die "$RNDC thaw failed : $?";
 }
 
 =item zoneparse
