@@ -62,7 +62,7 @@ sub poe_init_server {
         'PORT'          =>      $self->{Port},
         $self->{Address}     ? ('ADDRESS'               => $self->{Address} )                   : (),
         $self->{Hostname}    ? ('HOSTNAME'              => $self->{Hostname} )                  : (),
-        $self->{SslKey}      ? ('SSLKEYCERT'            => [$self->{SslKey}, $self->{SslCert}]) : (),
+        $self->{SslKey}      ? ('SSLKEYCERT'            => ($self->{SslKey}, $self->{SslCert})) : (),
         $self->{SslCacert}   ? ('SSLINTERMEDIATECACERT' => $self->{SslCacert} )                 : (),
         'HANDLERS'      =>      [
                 {

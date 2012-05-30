@@ -197,7 +197,7 @@ sub do_action { # if ip pings, send the request
     params  => [$params],
   };
 
-  my $res = $client->call($protocol."://".$ip.":".$client_port, $callobj);
+  my $res = $client->call($protocol.$ip.":".$client_port, $callobj);
 
   if($res) {
     if ($res->is_error) {
@@ -416,9 +416,6 @@ POE::Session->create(
                     'set_error' => 'set_error',
                     'get_packages' => 'get_packages'
                 },
-                ($protocol eq 'https')  ? ( SslKey  => '/usr/share/argonaut/cert/server.key',
-                                            SslCert => '/usr/share/argonaut/cert/server.crt')
-                                        : ()
             );
             $_[HEAP]{handlers} = {
                 "trigger_action_reinstall" => \&handler_fai,

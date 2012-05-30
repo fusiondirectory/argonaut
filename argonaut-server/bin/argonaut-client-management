@@ -20,7 +20,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
 #######################################################################
-
+ 
 use strict;
 use warnings;
 
@@ -36,13 +36,11 @@ use Argonaut::Common qw(:ldap :file);
 
 use Argonaut::ClientDaemon ();
 
-my ($client_port,$logdir,$protocol);
+my ($client_port,$logdir);
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-client-management.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-client-management.pid";
-my $keyfile = '/usr/share/argonaut/cert/server.key';
-my $crtfile = '/usr/share/argonaut/cert/server.crt';
 
 $SIG{TERM}=\&sig_int_handler;
 
@@ -53,7 +51,7 @@ readConfig();
 argonaut_create_dir($logdir);
 
 my $log = Log::Handler->create_logger("argonaut-client-management");
-
+    
 $log->add(
     file => {
         filename => "$logdir/$logfile",
@@ -82,13 +80,7 @@ $pid->write;
 =pod
 This just launch a JSONRPC server with ClientDaemon.pm methods.
 =cut
-my $server = JSON::RPC::Server::Daemon->new(
-  LocalPort     => $client_port,
-  ($protocol eq 'https') ? (SSL_server    => 1,
-                            SSL_key_file  => $keyfile,
-                            SSL_cert_file => $crtfile,)
-                         : ()
-);
+my $server = JSON::RPC::Server::Daemon->new(LocalPort => $client_port);
 
 $log->notice("argonaut-client-management started on port $client_port");
 
@@ -104,18 +96,15 @@ No parameters needed
 sub readConfig {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    my $client_ip         =   $config->val( client => "client_ip"             ,"");
-    my $server_ip         =   $config->val( server => "server_ip"             ,"");
-    my $ldap_configfile   =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-    my $ldap_dn           =   $config->val( ldap => "dn"                      ,"");
-    my $ldap_password     =   $config->val( ldap => "password"                ,"");
-
-    my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
-    my $settings        = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
-
+    my $client_ip              =   $config->val( client => "client_ip"            ,"");
+    my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+    my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+    my $ldap_password          =   $config->val( ldap => "password"                ,"");
+    
+    my $settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+    
     $client_port  = $settings->{'port'};
     $logdir       = $settings->{'logdir'};
-    $protocol     = $server_settings->{'protocol'}
 }
 
 =pod
