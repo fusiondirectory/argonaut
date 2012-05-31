@@ -67,10 +67,6 @@ sub argonaut_ldap2zone
     die "$BIND_DIR does not exist";
   }
 
-  if($ALLOW_NOTIFY eq "FALSE") {
-    $ALLOW_NOTIFY = "";
-  }
-
   if (substr($zone,-1) ne ".") { # If the end point is not there, add it
     $zone = $zone.".";
   }
@@ -215,13 +211,13 @@ sub create_namedconf
     $ALLOW_NOTIFY = "";
   }
 
-  if ($ALLOW_UPDATE eq "TRUE") {
+  if ($ALLOW_UPDATE ne "") {
     $ALLOW_UPDATE = "allow-update {$ALLOW_UPDATE};";
   } else {
     $ALLOW_UPDATE = "";
   }
 
-  if ($ALLOW_TRANSFER eq "TRUE") {
+  if ($ALLOW_TRANSFER ne "") {
     $ALLOW_TRANSFER = "allow-transfer {$ALLOW_TRANSFER};";
   } else {
     $ALLOW_TRANSFER = "";
