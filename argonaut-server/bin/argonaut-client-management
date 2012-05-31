@@ -30,7 +30,7 @@ use JSON::RPC::Server::Daemon;
 use Config::IniFiles;
 use Log::Handler;
 use File::Pid;
-use App::Daemon qw(detach);
+use App::Daemon qw(daemonize);
 
 use Argonaut::Common qw(:ldap :file);
 
@@ -61,21 +61,10 @@ $log->add(
     }
 );
 
-detach();
-
 argonaut_create_dir($piddir);
+$App::Daemon::pidfile = "$piddir/$pidfile";
 
-my $pid = File::Pid->new({
-    file => "$piddir/$pidfile",
-  });
-
-my $pidrunning = $pid->running;
-
-if ($pidrunning) {
-  die "Argonaut Management is already running $pidrunning\n";
-}
-
-$pid->write;
+daemonize();
 
 =pod
 This just launch a JSONRPC server with ClientDaemon.pm methods.
@@ -94,17 +83,21 @@ Read from the config file argonaut.conf all the informations
 No parameters needed
 =cut
 sub readConfig {
-    my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    my $client_ip              =   $config->val( client => "client_ip"            ,"");
-    my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-    my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-    my $ldap_password          =   $config->val( ldap => "password"                ,"");
-    
-    my $settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
-    
-    $client_port  = $settings->{'port'};
-    $logdir       = $settings->{'logdir'};
+  my $client_ip              =   $config->val( client => "client_ip"            ,"");
+  my $server_ip              =   $config->val( server => "server_ip"             ,"");
+  my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+  my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+  my $ldap_password          =   $config->val( ldap => "password"                ,"");
+
+  my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
+  my $settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+
+  $client_port  = $settings->{'port'};
+  $logdir       = $settings->{'logdir'};
+  $protocol     = $server_settings->{'protocol'}
+
 }
 
 =pod
@@ -114,9 +107,7 @@ Get the sigint signals, remove the pid and exit
 =cut
 
 sub sig_int_handler {
-
-    $pid->remove;
-    exit(0);
+  exit(0);
 }
 
 
