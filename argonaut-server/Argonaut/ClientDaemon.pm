@@ -108,10 +108,10 @@ execute an action on a service
 sub manage_service : Public {
   my ($s, $args) = @_;
     my ($service,$action) = @{$args};
-    my $folder = getServiceName("folder");
-    my $exec = getServiceName($service);
-    system ("$folder/$exec $action\n");
-    return ("done : $action $exec");
+    my $folder  = getServiceName("folder");
+    my $exec    = getServiceName($service);
+    system ("$folder/$exec $action\n") == 0 or die "$folder/$exec $action returned error $?";;
+    return "done : $action $exec";
 }
 
 =item echo
