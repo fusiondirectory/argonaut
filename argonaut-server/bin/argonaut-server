@@ -197,7 +197,7 @@ sub do_action { # if ip pings, send the request
     params  => [$params],
   };
 
-  my $res = $client->call($protocol.$ip.":".$client_port, $callobj);
+  my $res = $client->call($protocol."://".$ip.":".$client_port, $callobj);
 
   if($res) {
     if ($res->is_error) {
