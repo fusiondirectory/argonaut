@@ -17,7 +17,7 @@ Description: argonaut json rpc server to manage deployment system
 
 Package: argonaut-client-management
 Architecture: all
-Depends: argonaut-common (>=1.0), libconfig-inifiles-perl, liblog-handler-perl, libfile-pid-perl, libapp-daemon-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl
+Depends: argonaut-common (>=1.0), argonaut-ldap2zone, libconfig-inifiles-perl, liblog-handler-perl, libfile-pid-perl, libapp-daemon-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl
 Description: argonaut json rpc client to manage computers
  .
 
