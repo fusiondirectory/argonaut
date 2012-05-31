@@ -40,8 +40,7 @@ use JSON;
 use Config::IniFiles;
 use File::Path;
 use Log::Handler;
-use File::Pid;
-use App::Daemon qw(detach);
+use App::Daemon qw(daemonize);
 
 use Argonaut::Common qw(:ldap :file);
 use Argonaut::Packages qw(get_packages_info store_packages_file);
@@ -76,21 +75,12 @@ $log->add(
     }
 );
 
-detach();
+$App::Daemon::pidfile = "$piddir/$pidfile";
 
 argonaut_create_dir($piddir);
 
-my $pid = File::Pid->new({
-    file => "$piddir/$pidfile",
-  });
+daemonize();
 
-my $pidrunning = $pid->running;
-
-if ($pidrunning) {
-  die "Argonaut Server is already running $pidrunning\n";
-}
-
-$pid->write;
 
 =pod
 =item readConfig
@@ -762,7 +752,6 @@ POE::Session->create(
                 }
                 close(DUMP);
             }
-            $pid->remove;
         },
         sigchild => sub {
             $log->notice("child process exiting…");
@@ -770,7 +759,6 @@ POE::Session->create(
         },
         _stop => sub {
             $log->notice("_stop");
-            $pid->remove;
         },
     },
 );

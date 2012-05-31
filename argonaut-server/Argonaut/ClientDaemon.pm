@@ -29,6 +29,7 @@ use 5.008;
 use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
 use Data::Dumper;
 
+use Argonaut::Common qw(:ldap);
 use Argonaut::Ldap2zone qw(argonaut_ldap2zone);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
