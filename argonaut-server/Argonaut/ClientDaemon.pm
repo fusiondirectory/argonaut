@@ -56,7 +56,7 @@ sub getServiceName {
 
     my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
               base   => $ldapinfos->{'BASE'},
-              filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
+              filter => "(&(objectClass=argonautClient)(ipHostNumber=$client_ip))",
               attrs => [ 'argonautServiceName' ]
             );
 
