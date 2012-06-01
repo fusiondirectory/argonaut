@@ -76,6 +76,8 @@ $log->add(
 );
 
 $App::Daemon::pidfile = "$piddir/$pidfile";
+$App::Daemon::logfile = "$logdir/$logfile";
+$App::Daemon::as_user = "root";
 
 argonaut_create_dir($piddir);
 
