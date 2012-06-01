@@ -20,7 +20,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
 #######################################################################
- 
+
 use strict;
 use warnings;
 
@@ -51,7 +51,7 @@ readConfig();
 argonaut_create_dir($logdir);
 
 my $log = Log::Handler->create_logger("argonaut-client-management");
-    
+
 $log->add(
   file => {
     filename => "$logdir/$logfile",
@@ -63,6 +63,8 @@ $log->add(
 
 argonaut_create_dir($piddir);
 $App::Daemon::pidfile = "$piddir/$pidfile";
+$App::Daemon::logfile = "$logdir/$logfile";
+$App::Daemon::as_user = "root";
 
 daemonize();
 
@@ -96,8 +98,6 @@ sub readConfig {
 
   $client_port  = $settings->{'port'};
   $logdir       = $settings->{'logdir'};
-  $protocol     = $server_settings->{'protocol'};
-
 }
 
 =pod
