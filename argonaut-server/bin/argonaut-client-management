@@ -42,7 +42,7 @@ my $logfile = "argonaut-client-management.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-client-management.pid";
 
-$SIG{TERM}=\&sig_int_handler;
+$SIG{TERM}=\&sig_term_handler;
 
 $SIG{INT}=\&sig_int_handler;
 
@@ -53,12 +53,12 @@ argonaut_create_dir($logdir);
 my $log = Log::Handler->create_logger("argonaut-client-management");
     
 $log->add(
-    file => {
-        filename => "$logdir/$logfile",
-        maxlevel => "debug",
-        minlevel => "emergency",
-        newline  => 1,
-    }
+  file => {
+    filename => "$logdir/$logfile",
+    maxlevel => "debug",
+    minlevel => "emergency",
+    newline  => 1,
+  }
 );
 
 argonaut_create_dir($piddir);
@@ -96,21 +96,31 @@ sub readConfig {
 
   $client_port  = $settings->{'port'};
   $logdir       = $settings->{'logdir'};
-  $protocol     = $server_settings->{'protocol'}
+  $protocol     = $server_settings->{'protocol'};
 
 }
 
 =pod
 
 =item sig_int_handler
-Get the sigint signals, remove the pid and exit
+Get the sigint signals, and exit
 =cut
 
 sub sig_int_handler {
+  $log->notice("argonaut-client-management on port $client_port terminated by sigint");
+  exit(0);
+}
+
+=pod
+
+=item sig_term_handler
+Get the sigterm signals, and exit
+=cut
+
+sub sig_term_handler {
+  $log->notice("argonaut-client-management on port $client_port terminated by sigterm");
   exit(0);
 }
 
 
 __END__
-
-# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
