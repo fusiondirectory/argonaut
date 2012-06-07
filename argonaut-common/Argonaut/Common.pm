@@ -682,11 +682,12 @@ sub argonaut_get_client_settings {
 
   if(scalar($mesg->entries)==1) {
       $client_settings = {
-          'mac' => ($mesg->entries)[0]->get_value("macAddress"),
-          'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
-          'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
-          'interface' => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
-          'logdir' => ($mesg->entries)[0]->get_value("argonautClientLogDir")
+          'ip'          => $ip,
+          'mac'         => ($mesg->entries)[0]->get_value("macAddress"),
+          'port'        => ($mesg->entries)[0]->get_value("argonautClientPort"),
+          'taskidfile'  => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
+          'interface'   => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
+          'logdir'      => ($mesg->entries)[0]->get_value("argonautClientLogDir")
           };
   } else {
     $mesg = $ldap->search( # perform a search
@@ -706,11 +707,12 @@ sub argonaut_get_client_settings {
           );
     if(scalar($mesg->entries)==1) {
       $client_settings = {
-        'port' => ($mesg->entries)[0]->get_value("argonautClientPort"),
-        'taskidfile' => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
-        'interface' => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
-        'logdir' => ($mesg->entries)[0]->get_value("argonautClientLogDir")
-      };
+        'ip'          => $ip,
+        'port'        => ($mesg->entries)[0]->get_value("argonautClientPort"),
+        'taskidfile'  => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
+        'interface'   => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
+        'logdir'      => ($mesg->entries)[0]->get_value("argonautClientLogDir")
+      }; # FIXME : when in a group, not returning macAddress
     } else {
       die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
     }

@@ -29,34 +29,7 @@ use 5.008;
 use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
 use Data::Dumper;
 
-use Argonaut::Ldap2zone qw(argonaut_ldap2zone);
 use Argonaut::Common qw(:ldap :file);
-
-my $logfile = "argonaut-client-management.log";
-my $configfile = "/etc/argonaut/argonaut.conf";
-
-my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-
-my $client_ip         =   $config->val( client => "client_ip"             ,"");
-my $ldap_configfile   =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-my $ldap_dn           =   $config->val( ldap => "dn"                      ,"");
-my $ldap_password     =   $config->val( ldap => "password"                ,"");
-
-my $settings        = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
-
-my $logdir       = $settings->{'logdir'};
-
-argonaut_create_dir($logdir);
-my $log = Log::Handler->create_logger("argonaut-client-management");
-
-$log->add(
-  file => {
-    filename => "$logdir/$logfile",
-    maxlevel => "debug",
-    minlevel => "emergency",
-    newline  => 1,
-  }
-);
 
 =pod
 =item readConfig
@@ -98,7 +71,7 @@ shutdown the computer
 
 sub trigger_action_halt : Public {
   my ($s, $args) = @_;
-  $log->notice("halt called");
+  $main::log->notice("halt called");
   system("sleep 5 && halt &");
   return "shuting down";
 }
@@ -109,21 +82,9 @@ reboot the computer
 
 sub trigger_action_reboot : Public {
   my ($s, $args) = @_;
-  $log->notice("reboot called, rebooting…");
+  $main::log->notice("reboot called, rebooting…");
   system("sleep 5 && reboot &");
   return "rebooting";
-}
-
-=item ldap2zone
-launch ldap2zone on the computer and store the result in the right place
-=cut
-
-sub ldap2zone : Public {
-  my ($s, $args) = @_;
-  my ($zone) = @{$args};
-  $log->notice("ldap2zone called");
-  argonaut_ldap2zone($zone);
-  return "ldap2zone done";
 }
 
 =item manage_service
@@ -135,7 +96,7 @@ sub manage_service : Public {
   my ($service,$action) = @{$args};
   my $folder  = getServiceName("folder");
   my $exec    = getServiceName($service);
-  $log->notice("manage service called: $service ($folder/$exec) $action");
+  $main::log->notice("manage service called: $service ($folder/$exec) $action");
   system ("$folder/$exec $action\n") == 0 or die "$folder/$exec $action returned error $?";;
   return "done : $action $exec";
 }
@@ -146,7 +107,7 @@ return the parameters passed to it
 
 sub echo : Public {
   my ($s, $args) = @_;
-  $log->notice("echo method called with args $args");
+  $main::log->notice("echo method called with args $args");
   return $args;
 }
 
