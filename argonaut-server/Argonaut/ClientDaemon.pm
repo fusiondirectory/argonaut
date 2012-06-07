@@ -27,48 +27,10 @@ use warnings;
 use 5.008;
 
 use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
-use Data::Dumper;
-
-use Argonaut::Common qw(:ldap :file);
-
-=pod
-=item readConfig
-Read from the config file argonaut.conf all the informations
-No parameters needed
-=cut
-sub getServiceName {
-    my ($nameFD) = @_;
-
-    my $client_ip              =   $config->val( client => "client_ip"             ,"");
-    my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-    my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-    my $ldap_password          =   $config->val( ldap => "password"                ,"");
-
-    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-
-    if ($ldapinfos->{'ERROR'} > 0) {
-        die $ldapinfos->{'ERRORMSG'}."\n";
-    }
-
-    my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
-              base   => $ldapinfos->{'BASE'},
-              filter => "(&(objectClass=argonautClient)(ipHostNumber=$client_ip))",
-              attrs => [ 'argonautServiceName' ]
-            );
-
-    if (scalar($mesg->entries)==1) {
-        foreach my $service (($mesg->entries)[0]->get_value("argonautServiceName")) {
-            my ($name,$value) = split(':',$service);
-            return $value if ($name eq $nameFD);
-        }
-    }
-    die "Service not found";
-}
 
 =item trigger_action_halt
 shutdown the computer
 =cut
-
 sub trigger_action_halt : Public {
   my ($s, $args) = @_;
   $main::log->notice("halt called");
@@ -79,26 +41,11 @@ sub trigger_action_halt : Public {
 =item trigger_action_reboot
 reboot the computer
 =cut
-
 sub trigger_action_reboot : Public {
   my ($s, $args) = @_;
   $main::log->notice("reboot called, rebooting…");
   system("sleep 5 && reboot &");
   return "rebooting";
-}
-
-=item manage_service
-execute an action on a service
-=cut
-
-sub manage_service : Public {
-  my ($s, $args) = @_;
-  my ($service,$action) = @{$args};
-  my $folder  = getServiceName("folder");
-  my $exec    = getServiceName($service);
-  $main::log->notice("manage service called: $service ($folder/$exec) $action");
-  system ("$folder/$exec $action\n") == 0 or die "$folder/$exec $action returned error $?";;
-  return "done : $action $exec";
 }
 
 =item echo

@@ -34,15 +34,15 @@ use App::Daemon qw(daemonize);
 
 use Argonaut::Common qw(:ldap :file);
 
+# where to look for modules files
+use Module::Pluggable search_path => 'Argonaut::ClientDaemon::Modules', sub_name => 'modules';
+
 our ($client_settings, $server_settings);
+our ($ldap_configfile, $ldap_dn, $ldap_password);
 my $configfile  = "/etc/argonaut/argonaut.conf";
 my $logfile     = "argonaut-client-management.log";
 my $piddir      = "/var/run/argonaut";
 my $pidfile     = "argonaut-client-management.pid";
-
-# where to look for modules files
-my $moduledir   = "/usr/share/perl5/Argonaut/ClientDaemon/Modules";
-my $moduleclass = "Argonaut::ClientDaemon::Modules";
 
 $SIG{TERM}=\&sig_term_handler;
 
@@ -80,7 +80,6 @@ $log->notice("argonaut-client-management started on port ".$client_settings->{'p
 $server->version(0);
 $server->return_die_message(1);
 
-
 my $modules = import_modules();
 
 $server->dispatch_to($modules)->handle();
@@ -93,11 +92,11 @@ No parameters needed
 sub readConfig {
   my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-  my $client_ip              =   $config->val( client => "client_ip"            ,"");
-  my $server_ip              =   $config->val( server => "server_ip"             ,"");
-  my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-  my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-  my $ldap_password          =   $config->val( ldap => "password"                ,"");
+  my $client_ip           =   $config->val( client => "client_ip"            ,"");
+  my $server_ip           =   $config->val( server => "server_ip"             ,"");
+  $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+  $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+  $ldap_password          =   $config->val( ldap => "password"                ,"");
 
   $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
   $client_settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
@@ -107,25 +106,10 @@ sub readConfig {
 Import the available modules
 =cut
 sub import_modules {
-  my $modules = ['Argonaut::ClientDaemon'];
-  if (not -e $moduledir) {
-    $log->error("Cannot find directory or directory is not readable: $moduledir\n");
-    return $modules;
+  foreach my $module (modules()) {
+    $log->notice("Loaded module $module");
   }
-
-  if (not opendir (DIR, $moduledir)) {
-    $log->error("ERROR while loading modules from directory $moduledir : $!\n");
-    return $modules;
-  }
-  while (defined (my $file = readdir (DIR))) {
-    if (not $file =~ /(\S*?).pm$/) {
-      next;
-    }
-    my $fullname = $moduleclass.'::'.$1;
-    push @{$modules}, $fullname;
-    $log->notice("Loaded module $fullname");
-  }
-  return $modules;
+  return ['Argonaut::ClientDaemon',modules()];
 }
 
 =pod
