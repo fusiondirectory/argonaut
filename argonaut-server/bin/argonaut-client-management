@@ -73,7 +73,12 @@ daemonize();
 =pod
 This just launch a JSONRPC server with ClientDaemon.pm methods.
 =cut
-my $server = JSON::RPC::Server::Daemon->new(LocalPort => $client_settings->{'port'});
+my $server = JSON::RPC::Server::Daemon->new(
+  LocalPort => $client_settings->{'port'},
+  ($client_settings->{'protocole'} eq 'https') ? (SSL_server    => 1,
+                                                  SSL_key_file  => $client_settings->{'keyfile'},
+                                                  SSL_cert_file => $client_settings->{'certfile'},)
+                                               : ());
 
 $log->notice("argonaut-client-management started on port ".$client_settings->{'port'});
 

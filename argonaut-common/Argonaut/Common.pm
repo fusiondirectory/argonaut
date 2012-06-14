@@ -822,11 +822,12 @@ sub argonaut_get_server_settings {
             filter => $filter,
             attrs => [  'macAddress','argonautProtocol','argonautPort',
                         'argonautDeleteFinished','argonautIpTool',
-                        'argonautWakeOnLanInterface','argonautLogDir' ]
+                        'argonautWakeOnLanInterface','argonautLogDir',
+                        'argonautKeyPath','argonautCertPath' ]
             );
 
   if(scalar($mesg->entries)==1) {
-    return {
+    my $settings = {
       'mac'                   => ($mesg->entries)[0]->get_value("macAddress"),
       'port'                  => ($mesg->entries)[0]->get_value("argonautPort"),
       'protocol'              => ($mesg->entries)[0]->get_value("argonautProtocol"),
@@ -835,6 +836,14 @@ sub argonaut_get_server_settings {
       'interface'             => ($mesg->entries)[0]->get_value("argonautWakeOnLanInterface"),
       'logdir'                => ($mesg->entries)[0]->get_value("argonautLogDir")
     };
+    if (($mesg->entries)[0]->get_value('argonautKeyPath') && ($mesg->entries)[0]->get_value('argonautCertPath')) {
+      $settings->{'keyfile'} = ($mesg->entries)[0]->get_value('argonautKeyPath');
+      $settings->{'certfile'} = ($mesg->entries)[0]->get_value('argonautCertPath');
+    } else {
+      $settings->{'keyfile'} = "";
+      $settings->{'certfile'} = "";
+    }
+    return $settings;
   } else {
     die 'Argonaut server ($ip) not found in LDAP';
   }

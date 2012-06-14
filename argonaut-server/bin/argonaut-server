@@ -53,7 +53,7 @@ use English qw(-no_match_vars);
 use Socket;
 
 my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,
-    $protocol,$server_port,$iptool,$delete_finished_tasks,
+    $protocol,$sslkeyfile,$sslcertfile,$server_port,$iptool,$delete_finished_tasks,
     $interface,$logdir,$packages_folder);
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-server.log";
@@ -122,6 +122,8 @@ sub readLdapConfig {
   $delete_finished_tasks  = $settings->{'delete_finished_tasks'};
   $interface              = $settings->{'interface'};
   $logdir                 = $settings->{'logdir'};
+  $sslkeyfile             = $settings->{'keyfile'};
+  $sslcertfile            = $settings->{'certfile'};
 
   $packages_folder        = "/var/cache/argonaut/packages";
 }
@@ -408,6 +410,9 @@ POE::Session->create(
                     'set_error' => 'set_error',
                     'get_packages' => 'get_packages'
                 },
+                ($protocol eq 'https')  ? ( SslKey  => $sslkeyfile,
+                                            SslCert => $sslcertfile)
+                                        : ()
             );
             $_[HEAP]{handlers} = {
                 "trigger_action_reinstall" => \&handler_fai,
