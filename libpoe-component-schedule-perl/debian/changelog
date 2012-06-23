@@ -1,5 +1,5 @@
 libpoe-component-schedule-perl (0.95-1) unstable; urgency=low
 
-  * Initial Release.
+  * Initial Release (Closes: #678643).
 
- -- Benoit Mortier <benoit.mortier@opensides.be>  Tue, 6 Sep 2011 22:07:49 +0200
+ -- Benoit Mortier <benoit.mortier@opensides.be>  Sat, 23 Jun 2012 14:11:28 +0200
