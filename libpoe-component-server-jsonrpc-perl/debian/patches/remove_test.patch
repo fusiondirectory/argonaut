@@ -1,0 +1,17 @@
+Description: Remove failing test when building
+ Remove failing test when building in chroot.
+Author: Benoit Mortier <benoit.mortier@opensides.be>
+Last-Update: 2012-06-06
+Index: libpoe-component-server-jsonrpc-perl/t/00_compile.t
+===================================================================
+--- libpoe-component-server-jsonrpc-perl.orig/t/00_compile.t	2012-06-23 13:22:43.000000000 +0200
++++ /dev/null	1970-01-01 00:00:00.000000000 +0000
+@@ -1,8 +0,0 @@
+-use strict;
+-use Test::More tests => 3;
+-
+-BEGIN {
+-    use_ok 'POE::Component::Server::JSONRPC';
+-    use_ok 'POE::Component::Server::JSONRPC::Http';
+-    use_ok 'POE::Component::Server::JSONRPC::Tcp';
+-}

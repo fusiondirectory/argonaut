@@ -1,0 +1,22 @@
+Description: Remove Missing files from manifest and correct names
+ Remove files not in distribution by in manifest and correct the name 
+ of renamed ones.
+Author: Benoit Mortier <benoit.mortier@opensides.be>
+Last-Update: 2012-06-20
+Index: libpoe-component-server-jsonrpc-perl/MANIFEST
+===================================================================
+--- libpoe-component-server-jsonrpc-perl.orig/MANIFEST	2012-06-23 13:20:23.000000000 +0200
++++ libpoe-component-server-jsonrpc-perl/MANIFEST	2012-06-23 13:20:31.000000000 +0200
+@@ -15,11 +15,10 @@
+ inc/Test/Builder.pm
+ inc/Test/Builder/Module.pm
+ inc/Test/More.pm
+-lib/POE/Component/Server/JSONRPC-old.pm
+ lib/POE/Component/Server/JSONRPC.pm
+ lib/POE/Component/Server/JSONRPC/Http.pm
+ lib/POE/Component/Server/JSONRPC/Tcp.pm
+-LISENCE
++LICENCE
+ Makefile.PL
+ MANIFEST			This list of files
+ META.yml
