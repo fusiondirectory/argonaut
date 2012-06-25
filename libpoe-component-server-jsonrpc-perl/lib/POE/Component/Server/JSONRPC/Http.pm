@@ -23,7 +23,7 @@ use warnings;
 use POE::Component::Server::JSONRPC; # for old Perl 5.005
 use base qw(POE::Component::Server::JSONRPC);
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use POE qw/
     Component::Server::SimpleHTTP
@@ -79,6 +79,11 @@ sub poe_init_server {
         ],
     );
 }
+
+=head2 poe_http_authentication_input_handler
+
+This function is used to treat HTTP authentication if needed
+=cut
 
 sub poe_http_authentication_input_handler {
     my ($self, $kernel, $session, $heap, $request, $response, $dirmatch) = @_[OBJECT, KERNEL, SESSION, HEAP, ARG0..$#_ ];

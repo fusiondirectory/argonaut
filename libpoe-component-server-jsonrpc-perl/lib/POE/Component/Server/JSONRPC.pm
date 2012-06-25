@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use base qw/Class::Accessor::Fast/;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use POE qw/
     Filter::Line
@@ -23,6 +23,11 @@ POE::Component::Server::JSONRPC - POE tcp or http based JSON-RPC server
             'echo' => 'echo',
             'sum'  => 'sum',
         },
+        SslKey  => '/path/to/the/server.key',
+        SslCert => '/path/to/the/server.crt',
+        Authenticate => \&authentication_handler,
+        # authentication_handler must be a function that takes two parameters login and password,
+        # and returns true if connection is successful, false otherwise
     );
 
     #tcp version:
