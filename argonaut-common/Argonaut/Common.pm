@@ -681,14 +681,14 @@ sub argonaut_get_client_settings {
   my $client_settings = {};
 
   if(scalar($mesg->entries)==1) {
-      $client_settings = {
-          'ip'          => $ip,
-          'mac'         => ($mesg->entries)[0]->get_value("macAddress"),
-          'port'        => ($mesg->entries)[0]->get_value("argonautClientPort"),
-          'taskidfile'  => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
-          'interface'   => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
-          'logdir'      => ($mesg->entries)[0]->get_value("argonautClientLogDir")
-          };
+    $client_settings = {
+      'ip'          => $ip,
+      'mac'         => ($mesg->entries)[0]->get_value("macAddress"),
+      'port'        => ($mesg->entries)[0]->get_value("argonautClientPort"),
+      'taskidfile'  => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
+      'interface'   => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
+      'logdir'      => ($mesg->entries)[0]->get_value("argonautClientLogDir")
+    };
   } else {
     $mesg = $ldap->search( # perform a search
               base   => $ldap_base,

@@ -57,6 +57,12 @@ sub poe_init_server {
 
     $kernel->alias_set( 'JSONRPCHTTP' );
 
+    if (defined($self->{Authenticate})) {
+        $kernel->state('http_input_handler' , $self, 'poe_http_authentication_input_handler');
+    } else {
+        $kernel->state('http_input_handler' , $self, 'poe_input_handler');
+    }
+
     $self->{http} = POE::Component::Server::SimpleHTTP->new(
         'ALIAS'         =>      'HTTPD',
         'PORT'          =>      $self->{Port},
@@ -68,10 +74,28 @@ sub poe_init_server {
                 {
                         'DIR'           =>      '.*',
                         'SESSION'       =>      'JSONRPCHTTP',
-                        'EVENT'         =>      'input_handler',
+                        'EVENT'         =>      'http_input_handler',
                 },
         ],
     );
+}
+
+sub poe_http_authentication_input_handler {
+    my ($self, $kernel, $session, $heap, $request, $response, $dirmatch) = @_[OBJECT, KERNEL, SESSION, HEAP, ARG0..$#_ ];
+
+    my ( $login, $password ) = $request->authorization_basic();
+    if (&{$self->{Authenticate}}($login,$password)) {
+        # Authentication worked
+        $kernel->post( 'JSONRPCHTTP', 'input_handler', $request, $response, $dirmatch);
+    } else {
+        # Set the authorization
+        $response->header( 'WWW-Authenticate' => 'Basic realm="JSONRPCRealm"' );
+        $response->code( 401 );
+        $response->content( 'FORBIDDEN.' );
+
+        # Send it off!
+        $kernel->post( 'HTTPD', 'DONE', $response );
+    }
 }
 
 =head2 poe_send
