@@ -50,7 +50,7 @@ my $ldapinfos;
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $outdir = "/etc/argonaut/fai";
-my $crond_dir= "/etc/cron.d";
+my $crond_dir= "/etc/cron.daily";
 my $logfile = "ldap2repository.log";
 
 readConfig($configfile);
@@ -194,7 +194,7 @@ sub generate_cronjob_script {
       $log->info ("No parent for '$repoline'\n");
       next;
     }
-    
+
     print SOURCES "deb $uri $dist @section_list\n";
 
     print "parent: $parent_or_opts\n" if( $verbose eq "TRUE" );
