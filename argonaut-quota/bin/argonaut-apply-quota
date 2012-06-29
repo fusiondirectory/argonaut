@@ -40,7 +40,6 @@ my $ldap_dn                 =   $config->val( ldap => "dn"          ,"");
 my $ldap_password           =   $config->val( ldap => "password"    ,"");
 
 my $settings = get_quota_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
-#~ my $settings = get_quota_settings($ldap_configfile,$ldap_dn,$ldap_password,"192.168.1.37");
 
 write_warnquota_file ($settings,$warnquota_file);
 
