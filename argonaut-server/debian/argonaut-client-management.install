@@ -1,3 +1,5 @@
-bin/argonaut-client-management	usr/sbin/
-Argonaut/ClientDaemon.pm	usr/share/perl5/Argonaut/
+bin/argonaut-client-management  usr/sbin/
+Argonaut/ClientDaemon.pm        usr/share/perl5/Argonaut/
+Argonaut/ClientDaemon.pm        usr/share/perl5/Argonaut/ClientDaemon/Modules/Service.pm
+
 
