@@ -13,7 +13,7 @@ DM-Upload-Allowed: yes
 Package: argonaut-quota
 Architecture: all
 Depends: ${misc:Depends}, ${shlibs:Depends}, argonaut-common, libconfig-inifiles-perl, libnet-ldap-perl, libquota-perl
-Description: Argonaut tool to extract DNS zones from LDAP trees
+Description: Argonaut tool to apply disk quota from ldap
  This is a tool that reads info for quota from LDAP and apply it
  to your quota server. The LDAP information has to be stored using
  the fdQuota schema.
