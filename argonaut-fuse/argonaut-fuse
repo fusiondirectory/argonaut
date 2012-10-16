@@ -50,8 +50,8 @@ use constant USEC => 1000000;
 
 use lib "/usr/share/perl5/Argonaut/Fuse";
 
-#where to look for modules files
-my $modules_path= "/usr/share/perl5/Argonaut/Fuse";
+# where to look for modules files
+use Module::Pluggable search_path => 'Argonaut::Fuse', sub_name => 'modules';
 
 # Predefined variables for config
 our ($default_mode, $tftp_root, $tftp_static_root, $fai_flags, $nfs_opts, $nfs_root, $union);
@@ -187,44 +187,25 @@ sub readConfig
 
 #===  FUNCTION  ================================================================
 #         NAME:  import_modules
-#   PARAMETERS:  module_path - string - abs. path to the directory the modules
-#                are stored
+#   PARAMETERS:  none
 #      RETURNS:  nothing
-#  DESCRIPTION:  each file in module_path which ends with '.pm' and activation
-#                state is on is imported by "require 'file';"
+#  DESCRIPTION:  Import modules from Argonaut::Fuse namespace,
+#                store their get_module_info result
 #===============================================================================
 
 sub import_modules {
-  if (not -e $modules_path) {
-    $log->error("Cannot find directory or directory is not readable: $modules_path\n");
-  }
+  foreach my $module (modules()) {
+    my $info = eval($module.'::get_module_info()');
+    # Only load module if get_module_info() returns a non-null object
+    if ($info) {
+      $known_modules->{$module} = $info;
 
-  opendir (DIR, $modules_path) or die "ERROR while loading modules from directory $modules_path : $!\n";
-  while (defined (my $file = readdir (DIR))) {
-    if (not $file =~ /(\S*?).pm$/) {
-      next;
-    }
-    my $mod_name = $1;
-
-    eval { require $file; };
-    if ($@) {
-      $log->error("argonaut-fuse could not load module $file");
-      $log->error("$@");
-    } else {
-      my $info = eval($mod_name.'::get_module_info()');
-      # Only load module if get_module_info() returns a non-null object
-      if ($info) {
-        $known_modules->{$mod_name} = $info;
-
-        # Load additional configuration values
-        $log->info("Loaded Module $mod_name\n");
-        #$cfg_defaults{$mod_name}= eval($mod_name.'::get_config_sections')
-        #  if(eval($mod_name.'::get_config_sections'));
-      }
+      # Load additional configuration values
+      $log->info("Loaded module $module\n");
+      #$cfg_defaults{$module}= eval($module.'::get_config_sections')
+      #  if(eval($module.'::get_config_sections'));
     }
   }
-
-  close (DIR);
 }
 
 
