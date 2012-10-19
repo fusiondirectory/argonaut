@@ -845,7 +845,7 @@ sub argonaut_get_server_settings {
     }
     return $settings;
   } else {
-    die 'Argonaut server ($ip) not found in LDAP';
+    die "Argonaut server ($ip) not found in LDAP";
   }
 }
 
