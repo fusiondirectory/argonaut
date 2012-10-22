@@ -828,6 +828,7 @@ sub argonaut_get_server_settings {
 
   if(scalar($mesg->entries)==1) {
     my $settings = {
+      'ip'                    => $ip,
       'mac'                   => ($mesg->entries)[0]->get_value("macAddress"),
       'port'                  => ($mesg->entries)[0]->get_value("argonautPort"),
       'protocol'              => ($mesg->entries)[0]->get_value("argonautProtocol"),
