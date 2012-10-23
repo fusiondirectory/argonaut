@@ -59,6 +59,7 @@ sub getServiceName : Private {
 
 =item manage
 execute an action on a service
+return a string that begins with "done" if it worked.
 =cut
 sub manage : Public {
   my ($s, $args) = @_;
@@ -68,6 +69,23 @@ sub manage : Public {
   $main::log->notice("manage service called: $service ($folder/$exec) $action");
   system ("$folder/$exec $action\n") == 0 or die "$folder/$exec $action returned error $?";;
   return "done : $action $exec";
+}
+
+=item is_running
+returns "yes" or "no" wether if a service is running or not
+=cut
+sub is_running : Public {
+  my ($s, $args) = @_;
+  my ($service) = @{$args};
+  my $folder  = getServiceName("folder");
+  my $exec    = getServiceName($service);
+  $main::log->notice("is_running service called: $service ($folder/$exec) status");
+  my $lsb_code = system ("$folder/$exec status\n");
+  if ($lsb_code == 0) {
+    return "yes";
+  } else {
+    return "no";
+  }
 }
 
 1;
