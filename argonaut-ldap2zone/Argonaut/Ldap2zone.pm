@@ -142,7 +142,6 @@ sub zoneparse
           push @{$list},{ host => $value, ttl => $ttl };
         }
         print "Added record $type $name $class $value $ttl\n" if $verbose;
-        last;
       }
     }
     my $soa = $entry->get_value("soaRecord");
@@ -163,6 +162,10 @@ sub zoneparse
       print "Added record SOA $name $class $soa $TTL\n" if $verbose;
       $dn = $entry->dn();
     }
+  }
+
+  if (not defined $dn) {
+    die "Zone $zone was not found in LDAP!";
   }
 
   # write the new zone file to disk
