@@ -22,7 +22,7 @@
 #
 #######################################################################
 
-package LTSP;
+package Argonaut::Fuse::Modules::LTSP;
 
 use strict;
 use warnings;
@@ -42,20 +42,29 @@ our @ISA = ("Exporter");
 
 use constant USEC => 1000000;
 
-my $server;
-
 my $log = Log::Handler->get_logger("argonaut-fuse");
 
 sub get_module_info {
   return "Linux Terminal Server Project";
 };
 
+sub get_module_settings {
+  return argonaut_get_generic_settings(
+    'argonautFuseLTSPConfig',
+    {
+      'server'  => "argonautFuseLtspServer",
+    },
+    $ldap_configfile,$ldap_dn,$ldap_password,$client_ip
+  );
+}
+
 sub get_pxe_config {
   my ($filename) = shift || return undef;
+  my $settings = get_module_settings();
+  my $server  = $settings->{'server'};
+  my $mac     = $settings->{'mac'};
   my $cmdline;
   my $result = undef;
-
-  my $mac = argonaut_get_mac_pxe($filename);
 
   # Prepare the ldap handle
   reconnect:
@@ -65,7 +74,7 @@ sub get_pxe_config {
         my $mesg = $main::ldap_handle->search(
             base => "$main::ldap_base",
             filter => "(&(macAddress=$mac)(objectClass=gotoTerminal))",
-            attrs => [ 
+            attrs => [
                 'gotoTerminalPath', 'gotoBootKernel',
                 'gotoKernelParameters', 'cn', 'gotoLdapServer' ]);
 
@@ -194,11 +203,11 @@ sub get_pxe_config {
 
     $log->info("$filename - PXE status: boot\n");
     my $code = &main::write_pxe_config_file( undef, $filename, "kernel $kernel", $cmdline );
-    
+
     if ($code == 0) {
       return time;
-    } 
-    
+    }
+
     if ($code == -1) {
       $log->error("$filename - unknown error\n");
     }

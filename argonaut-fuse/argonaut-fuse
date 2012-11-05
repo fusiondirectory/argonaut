@@ -48,22 +48,21 @@ use Argonaut::Common qw(:ldap :file);
 
 use constant USEC => 1000000;
 
-use lib "/usr/share/perl5/Argonaut/Fuse";
+use Argonaut::Fuse::Common;
 
 # where to look for modules files
-use Module::Pluggable search_path => 'Argonaut::Fuse', sub_name => 'modules';
+use Module::Pluggable search_path => 'Argonaut::Fuse::Modules', sub_name => 'modules';
 
 # Predefined variables for config
-our ($default_mode, $tftp_root, $tftp_static_root, $fai_flags, $nfs_opts, $nfs_root, $union);
-our ($opsiserver, $admin, $password, $lang);
-our ($ltspserver);
+our ($default_mode, $tftp_root, $tftp_static_root);
+our $client_ip;
 our ($ldap_configfile, $ldap_dn, $ldap_password, $ldap_base, $ldap_handle, $ldap_uris, $ldapinfos);
 
 our $filesystem;
 our $last_attred_file;
 our ($known_modules);
 
-my $configfile = "/etc/argonaut/argonaut-fuse.conf";
+my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-fuse.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-fuse.pid";
@@ -124,7 +123,7 @@ $filesystem= {
   }
 };
 
-$log->info("Argonaut-fuse opening $tftp_static_root");
+$log->info("Argonaut-Fuse opening $tftp_static_root");
 
 # Open static directory
 my $tftp_static_root_handle;
@@ -163,25 +162,29 @@ sub readConfig
 {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    my $client_ip                       =   $config->val( client => "client_ip" ,"");
-    my $ldap_configfile                 =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
-    my $ldap_dn                         =   $config->val( ldap => "dn"          ,"");
-    my $ldap_password                   =   $config->val( ldap => "password"    ,"");
+    $client_ip                       =   $config->val( client => "client_ip" ,"");
+    $ldap_configfile                 =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
+    $ldap_dn                         =   $config->val( ldap => "dn"          ,"");
+    $ldap_password                   =   $config->val( ldap => "password"    ,"");
 
     my $settings = argonaut_get_fuse_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
 
     $default_mode           =   $settings->{"default_mode"};
     $tftp_root              =   $settings->{"pxelinux_cfg"};
     $tftp_static_root       =   $settings->{"pxelinux_cfg_static"};
-    $fai_flags              =   $settings->{"fai_flags"};
-    $nfs_opts               =   "";
-    $nfs_root               =   $settings->{"nfs_root"};
-    $union                  =   "aufs";
-    $opsiserver             =   $settings->{"opsi_server"};
-    $admin                  =   $settings->{"opsi_admin"};
-    $password               =   $settings->{"opsi_password"};
-    $lang                   =   $settings->{"opsi_lang"};
-    $ltspserver             =   $settings->{"ltsp_server"};
+
+    #~ $fai_flags              =   $settings->{"fai_flags"};
+    #~ $nfs_opts               =   "";
+    #~ $nfs_root               =   $settings->{"nfs_root"};
+    #~ $union                  =   "aufs";
+
+    #~ $opsiserver             =   $settings->{"opsi_server"};
+    #~ $admin                  =   $settings->{"opsi_admin"};
+    #~ $password               =   $settings->{"opsi_password"};
+    #~ $lang                   =   $settings->{"opsi_lang"};
+
+    #~ $ltspserver             =   $settings->{"ltsp_server"};
+
     $logdir                 =   $settings->{"logdir"};
 }
 
@@ -195,15 +198,18 @@ sub readConfig
 
 sub import_modules {
   foreach my $module (modules()) {
+    eval('use '.$module);
     my $info = eval($module.'::get_module_info()');
     # Only load module if get_module_info() returns a non-null object
     if ($info) {
       $known_modules->{$module} = $info;
 
       # Load additional configuration values
-      $log->info("Loaded module $module\n");
+      $log->info("Loaded module $module ($info)\n");
       #$cfg_defaults{$module}= eval($module.'::get_config_sections')
       #  if(eval($module.'::get_config_sections'));
+    } else {
+      $log->info("$module is not a module\n");
     }
   }
 }
@@ -347,7 +353,7 @@ sub getattr {
         MODULE: foreach my $module (keys %{$known_modules}) {
           $log->info("Processing Module $module with argument ${path_element}\n");
           no strict "refs";
-          my $answer = &{ $module."::get_pxe_config" }($path_element, $nfs_root, $nfs_opts, $fai_flags, $union);
+          my $answer = &{ $module."::get_pxe_config" }($path_element);
           if (exists($current->{$path_element})) {
             last MODULE;
           }

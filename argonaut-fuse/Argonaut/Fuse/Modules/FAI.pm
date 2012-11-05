@@ -22,7 +22,7 @@
 #
 #######################################################################
 
-package FAI;
+package Argonaut::Fuse::Modules::FAI;
 
 use strict;
 use warnings;
@@ -40,8 +40,6 @@ our @ISA = ("Exporter");
 
 use constant USEC => 1000000;
 
-my ($nfs_root, $nfs_opts, $fai_flags, $union);
-
 my $log = Log::Handler->get_logger("argonaut-fuse");
 
 sub get_module_info {
@@ -49,16 +47,33 @@ sub get_module_info {
   return "Fully Automatic Installation";
 };
 
-sub get_pxe_config {
-  my ($filename, $nfs_root, $nfs_opts, $fai_flags, $union) = @_;
-  my $result = undef;
+sub get_module_settings {
+  return argonaut_get_generic_settings(
+    'argonautFuseFAIConfig',
+    {
+      'fai_flags' => "argonautFuseFaiFlags",
+      'nfs_root'  => "argonautFuseNfsRoot",
+    },
+    $ldap_configfile,$ldap_dn,$ldap_password,$client_ip
+  );
+}
 
-  my $mac = argonaut_get_mac_pxe($filename);
+sub get_pxe_config {
+  my ($filename) = shift || return undef;
+  my $settings = get_module_settings();
+  my $nfs_root  = $settings->{'nfs_root'};
+  #~ my $nfs_opts  = $settings->{'nfs_opts'};
+  my $nfs_opts  = "";
+  my $fai_flags = $settings->{'fai_flags'};
+  #~ my $union     = $settings->{'union'};
+  my $union     = "aufs";
+  my $mac       = $settings->{'mac'};
+  my $result = undef;
 
   # Prepare the ldap handle
 reconnect:
   return undef if( ! &main::prepare_ldap_handle_retry
-    ( 5 * USEC, -1, 0.5 * USEC, 1.2 ) );                                                                                                                                                                                                  
+    ( 5 * USEC, -1, 0.5 * USEC, 1.2 ) );
 
   # Search for the host to examine the FAI state
   my $mesg = $main::ldap_handle->search(
@@ -68,44 +83,44 @@ reconnect:
     'gotoKernelParameters', 'gotoLdapServer', 'cn', 'ipHostNumber' ] );
 
   if (0 != $mesg->code) {
-    goto reconnect if( 81 == $mesg->code ); 
-    $log->warning("$mac - LDAP MAC lookup error $mesg->code : $mesg->error\n");                                                                                                                                                                                  
-    return undef; 
-  } 
+    goto reconnect if( 81 == $mesg->code );
+    $log->warning("$mac - LDAP MAC lookup error $mesg->code : $mesg->error\n");
+    return undef;
+  }
 
-  my ($entry, $hostname, $status); 
+  my ($entry, $hostname, $status);
   if ($mesg->count() == 0) {
     $log->info("No FAI configuration for client with MAC ${mac}\n");
     return undef;
-  } elsif ($mesg->count() == 1) { 
-    $entry = ($mesg->entries)[0]; 
-    $status = $entry->get_value( 'FAIstate' ); 
+  } elsif ($mesg->count() == 1) {
+    $entry = ($mesg->entries)[0];
+    $status = $entry->get_value( 'FAIstate' );
     $hostname = $entry->get_value( 'cn' );
     } elsif ($mesg->count() == 0) {
-      } else { 
-        $log->warning("$filename - MAC lookup error: too many LDAP results $mesg->count()\n"); 
-        return undef; 
-      } 
+      } else {
+        $log->warning("$filename - MAC lookup error: too many LDAP results $mesg->count()\n");
+        return undef;
+      }
 
-    my ($ldap_srv); 
+    my ($ldap_srv);
 
-    # If we don't have a FAI state 
+    # If we don't have a FAI state
     if ((! defined($status)) || ("" eq $status)) {
-      # Handle our default action 
+      # Handle our default action
       if ($main::default_mode eq 'fallback') {
-        # Remove PXE config and rely on 'default' fallback 
-        if (-f "$main::tftp_root/$filename") {  
-          if (0 == unlink( "$main::tftp_root/$filename" )) { 
-            $log->error("$filename - removing from '$main::tftp_root' failed: $!\n"); 
-            return undef; 
-          } 
-        } else { 
-          $log->info("$filename - no LDAP status - continue PXE boot\n"); 
+        # Remove PXE config and rely on 'default' fallback
+        if (-f "$main::tftp_root/$filename") {
+          if (0 == unlink( "$main::tftp_root/$filename" )) {
+            $log->error("$filename - removing from '$main::tftp_root' failed: $!\n");
+            return undef;
+          }
+        } else {
+          $log->info("$filename - no LDAP status - continue PXE boot\n");
         }
 
         ############# break
         #############
-        return 0;       
+        return 0;
       } else {
         # "Super"-Default is 'localboot' - just use the built in disc
         $ldap_srv = $main::ldap_uris . '/' . $main::ldap_base;
@@ -132,7 +147,7 @@ reconnect:
     # If any of these values isn't provided by the client check group membership
     if ((! defined $kernel) || ("" eq $kernel)  ||
         (! defined $cmdline)  || ("" eq $cmdline) ||
-        (! defined $ldap_srv) || ("" eq $ldap_srv)) { 
+        (! defined $ldap_srv) || ("" eq $ldap_srv)) {
         $log->info("$filename - Information for PXE creation is missing\n");
         $log->info("$filename - Checking group membership...\n");
 
@@ -142,22 +157,22 @@ reconnect:
         $mesg = $main::ldap_handle->search(
           base => $main::ldap_base,
           filter => $filter,
-          attrs => [ 'gotoBootKernel', 'gotoKernelParameters', 
+          attrs => [ 'gotoBootKernel', 'gotoKernelParameters',
             'gotoLdapServer', 'cn' ]);
-            
+
         if (0 != $mesg->code) {
           goto reconnect if( 81 == $mesg->code );
           $log->warning("$filename - LDAP group lookup error $mesg->code: $mesg->error\n");
-          return undef;   
+          return undef;
         }
 
         # Get information from group membership
-        my $group_entry;  
+        my $group_entry;
         if (1 == $mesg->count) {
           $group_entry = ($mesg->entries)[0];
-          $kernel = $group_entry->get_value('gotoBootKernel') 
+          $kernel = $group_entry->get_value('gotoBootKernel')
           if (! defined $kernel);
-            $cmdline = $group_entry->get_value('gotoKernelParameters') 
+            $cmdline = $group_entry->get_value('gotoKernelParameters')
           if (! defined $cmdline);
             $ldap_srv = @{$group_entry->get_value( 'gotoLdapServer', asref => 1)}[0]
           if (defined($group_entry->get_value( 'gotoLdapServer', asref => 1)) and not defined $ldap_srv );
@@ -186,14 +201,14 @@ reconnect:
 
           $mesg  = "$filename - missing LDAP attribs:";
           $mesg .= ' gotoBootKernel' if( ! defined $kernel );
-          $mesg .= ' gotoLdapServer' if( ! defined $ldap_srv ); 
-          $mesg .= "\n";  
+          $mesg .= ' gotoLdapServer' if( ! defined $ldap_srv );
+          $mesg .= "\n";
 
           $log->info($mesg);
           return undef;
         }
-    } 
-  
+    }
+
     # We jump here to omit group checks, since we should already have predefined
     # sane defaults, when we install initially
     skipped_data_lookup:

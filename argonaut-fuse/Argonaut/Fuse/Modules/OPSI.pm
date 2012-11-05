@@ -22,7 +22,7 @@
 #
 #######################################################################
 
-package OPSI;
+package Argonaut::Fuse::Modules::OPSI;
 
 use strict;
 use warnings;
@@ -42,23 +42,35 @@ our @ISA = ("Exporter");
 
 my $sclient="";
 
-my ($admin, $password, $server, $lang);
-
 my $log = Log::Handler->get_logger("argonaut-fuse");
 
 sub get_module_info {
   return "Automatic Windows Installation";
 };
 
-sub get_pxe_config {
-  my $opsi_url= "https://$admin:$password\@$server:4447/rpc";
-  my $opsi_client = new JSON::RPC::Client;
+sub get_module_settings {
+  return argonaut_get_generic_settings(
+    'argonautFuseOPSIConfig',
+    {
+      'admin'     => "argonautFuseOpsiAdmin",
+      'password'  => "argonautFuseOpsiPassword",
+      'server'    => "argonautFuseOpsiServer",
+      'lang'      => "argonautFuseOpsiLang"
+    },
+    $ldap_configfile,$ldap_dn,$ldap_password,$client_ip
+  );
+}
 
+sub get_pxe_config {
   my ($filename) = shift || return undef;
+  my $settings = get_module_settings();
+  my $lang  = $settings->{'lang'};
+  my $mac   = $settings->{'mac'};
+
+  my $opsi_url = "https://".$settings->{'admin'}.":".$settings->{'password'}."\@".$settings->{'server'}.":4447/rpc";
+  my $opsi_client = new JSON::RPC::Client;
   my $result = undef;
 
-  my $mac = argonaut_get_mac_pxe($filename);
-  
   # Load actions
   my $callobj = {
     method  => 'getClientIdByMac',
@@ -140,7 +152,7 @@ sub get_pxe_config {
   if ($code == 0) {
     return time;
   }
-   
+
   if ($code == -1) {
     $log->info("$filename - unknown state: $status\n");
   }
