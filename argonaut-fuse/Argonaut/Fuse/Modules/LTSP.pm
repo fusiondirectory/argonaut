@@ -62,7 +62,7 @@ sub get_pxe_config {
   my ($filename) = shift || return undef;
   my $settings = get_module_settings();
   my $server  = $settings->{'server'};
-  my $mac     = $settings->{'mac'};
+  my $mac     = argonaut_get_mac_pxe($filename);
   my $cmdline;
   my $result = undef;
 

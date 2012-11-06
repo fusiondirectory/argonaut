@@ -65,7 +65,7 @@ sub get_pxe_config {
   my ($filename) = shift || return undef;
   my $settings = get_module_settings();
   my $lang  = $settings->{'lang'};
-  my $mac   = $settings->{'mac'};
+  my $mac   = argonaut_get_mac_pxe($filename);
 
   my $opsi_url = "https://".$settings->{'admin'}.":".$settings->{'password'}."\@".$settings->{'server'}.":4447/rpc";
   my $opsi_client = new JSON::RPC::Client;
