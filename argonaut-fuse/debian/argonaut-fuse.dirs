@@ -1,2 +1,2 @@
 usr/sbin
-etc/argonaut
+usr/share/perl5/Argonaut/Fuse

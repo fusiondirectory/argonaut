@@ -1,1 +1,1 @@
-modules/FAI.pm                 usr/share/perl5/Argonaut/Fuse
+Argonaut/Fuse/Modules/FAI.pm  usr/share/perl5/Argonaut/Fuse/Modules

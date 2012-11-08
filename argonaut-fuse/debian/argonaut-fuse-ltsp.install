@@ -1,1 +1,1 @@
-modules/LTSP.pm                 usr/share/perl5/Argonaut/Fuse
+Argonaut/Fuse/Modules/LTSP.pm   usr/share/perl5/Argonaut/Fuse/Modules
