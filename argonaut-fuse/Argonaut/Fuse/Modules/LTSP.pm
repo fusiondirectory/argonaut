@@ -35,7 +35,7 @@ use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 use Log::Handler;
 
-use Argonaut::Common qw(:ldap);
+use Argonaut::Common qw(:ldap :file);
 
 use Exporter;
 our @ISA = ("Exporter");

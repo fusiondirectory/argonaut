@@ -199,7 +199,7 @@ sub readConfig
 
 sub import_modules {
   foreach my $module (modules()) {
-    my $info = $module->get_module_info();
+    my $info = eval($module.'::get_module_info()');
     # Only load module if get_module_info() returns a non-null object
     if ($info) {
       $known_modules->{$module} = $info;
@@ -352,7 +352,7 @@ sub getattr {
         # Process known Modules
         MODULE: foreach my $module (keys %{$known_modules}) {
           $log->info("Processing Module $module with argument ${path_element}\n");
-          my $answer = $module->get_pxe_config($path_element);
+          my $answer = eval($module.'::get_pxe_config("'.$path_element.'")');
           if (exists($current->{$path_element})) {
             last MODULE;
           }
