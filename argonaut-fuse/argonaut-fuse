@@ -50,9 +50,6 @@ use constant USEC => 1000000;
 
 use Argonaut::Fuse::Common;
 
-# where to look for modules files
-use Module::Pluggable search_path => 'Argonaut::Fuse::Modules', sub_name => 'modules';
-
 # Predefined variables for config
 our ($default_mode, $tftp_root, $tftp_static_root);
 our $client_ip;
@@ -100,7 +97,8 @@ if ( $ldapinfos->{'ERROR'} > 0) {
 
 $log->info("Argonaut-Fuse Started\n");
 
-# Scan for modules - these can set their own config sections.
+# Scan for modules
+use Module::Pluggable search_path => 'Argonaut::Fuse::Modules', sub_name => 'modules', require => 1;
 import_modules();
 
 argonaut_create_dir($piddir);
@@ -117,7 +115,7 @@ if ($pidrunning) {
 
 $pid->write;
 
-$filesystem= {
+$filesystem = {
   root => {
     content => {}
   }
@@ -127,7 +125,10 @@ $log->info("Argonaut-Fuse opening $tftp_static_root");
 
 # Open static directory
 my $tftp_static_root_handle;
-opendir($tftp_static_root_handle, $tftp_static_root);
+if (!opendir($tftp_static_root_handle, $tftp_static_root)) {
+  $log->error("Could not load tftp static root '$tftp_static_root'");
+  die "Could not load tftp static root '$tftp_static_root'";
+}
 
 $log->info("Argonaut-Fuse Mounting $tftp_root\n");
 
@@ -198,8 +199,7 @@ sub readConfig
 
 sub import_modules {
   foreach my $module (modules()) {
-    eval('use '.$module);
-    my $info = eval($module.'::get_module_info()');
+    my $info = $module->get_module_info();
     # Only load module if get_module_info() returns a non-null object
     if ($info) {
       $known_modules->{$module} = $info;
@@ -352,8 +352,7 @@ sub getattr {
         # Process known Modules
         MODULE: foreach my $module (keys %{$known_modules}) {
           $log->info("Processing Module $module with argument ${path_element}\n");
-          no strict "refs";
-          my $answer = &{ $module."::get_pxe_config" }($path_element);
+          my $answer = $module->get_pxe_config($path_element);
           if (exists($current->{$path_element})) {
             last MODULE;
           }

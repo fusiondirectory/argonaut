@@ -35,7 +35,7 @@ use Net::LDAP::Util qw(:escape);
 use JSON::RPC::Client;
 use Log::Handler;
 
-use Argonaut::Common qw(:file);
+use Argonaut::Common qw(:ldap);
 
 use Exporter;
 our @ISA = ("Exporter");
@@ -46,7 +46,7 @@ my $log = Log::Handler->get_logger("argonaut-fuse");
 
 sub get_module_info {
   return "Automatic Windows Installation";
-};
+}
 
 sub get_module_settings {
   return argonaut_get_generic_settings(
@@ -57,7 +57,7 @@ sub get_module_settings {
       'server'    => "argonautFuseOpsiServer",
       'lang'      => "argonautFuseOpsiLang"
     },
-    $ldap_configfile,$ldap_dn,$ldap_password,$client_ip
+    $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$main::client_ip
   );
 }
 

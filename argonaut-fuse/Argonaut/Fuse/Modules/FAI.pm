@@ -33,7 +33,7 @@ use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 use Log::Handler;
 
-use Argonaut::Common qw(:file);
+use Argonaut::Common qw(:ldap);
 
 use Exporter;
 our @ISA = ("Exporter");
@@ -45,7 +45,7 @@ my $log = Log::Handler->get_logger("argonaut-fuse");
 sub get_module_info {
   # Add additional config sections
   return "Fully Automatic Installation";
-};
+}
 
 sub get_module_settings {
   return argonaut_get_generic_settings(
@@ -54,7 +54,7 @@ sub get_module_settings {
       'fai_flags' => "argonautFuseFaiFlags",
       'nfs_root'  => "argonautFuseNfsRoot",
     },
-    $ldap_configfile,$ldap_dn,$ldap_password,$client_ip
+    $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$main::client_ip
   );
 }
 
