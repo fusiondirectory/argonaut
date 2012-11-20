@@ -692,8 +692,10 @@ sub argonaut_get_generic_settings {
       }
     }
     return $settings;
-  } else {
+  } elsif(scalar($mesg->entries)==0) {
     die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).";
+  } else {
+    die "Several computers are associated to IP $ip.";
   }
 }
 
