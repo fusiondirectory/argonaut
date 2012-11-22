@@ -57,6 +57,7 @@ sub argonaut_ldap2zone
   my $settings = argonaut_get_ldap2zone_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
 
   my $BIND_DIR                =   $settings->{'binddir'};
+  my $BIND_CACHE_DIR          =   $settings->{'bindcachedir'};
   my $ALLOW_NOTIFY            =   $settings->{'allownotify'};
   my $ALLOW_UPDATE            =   $settings->{'allowupdate'};
   my $ALLOW_TRANSFER          =   $settings->{'allowtransfer'};
@@ -65,6 +66,10 @@ sub argonaut_ldap2zone
 
   if(not -d $BIND_DIR) {
     die "$BIND_DIR does not exist";
+  }
+
+  if(not -d $BIND_CACHE_DIR) {
+    die "$BIND_CACHE_DIR does not exist";
   }
 
   if (substr($zone,-1) ne ".") { # If the end point is not there, add it
@@ -81,14 +86,14 @@ sub argonaut_ldap2zone
 
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 
-  my $dn = zoneparse($ldap,$ldap_base,$zone,$BIND_DIR,$TTL,$verbose);
+  my $dn = zoneparse($ldap,$ldap_base,$zone,$BIND_CACHE_DIR,$TTL,$verbose);
 
   my $reverse_zone = get_reverse_zone($ldap,$ldap_base,$dn);
   print "Reverse zone is $reverse_zone\n" if $verbose;
 
-  zoneparse($ldap,$ldap_base,$reverse_zone,$BIND_DIR,$TTL,$verbose);
+  zoneparse($ldap,$ldap_base,$reverse_zone,$BIND_CACHE_DIR,$TTL,$verbose);
 
-  create_namedconf($zone,$reverse_zone,$BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER);
+  create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER);
 
   system("$RNDC reconfig")  == 0 or die "$RNDC reconfig failed : $?";
   system("$RNDC freeze")    == 0 or die "$RNDC freeze failed : $?";
@@ -103,7 +108,7 @@ Returns : dn of the zone
 =cut
 sub zoneparse
 {
-  my ($ldap,$ldap_base,$zone,$BIND_DIR,$TTL,$verbose) = @_;
+  my ($ldap,$ldap_base,$zone,$BIND_CACHE_DIR,$TTL,$verbose) = @_;
   my $mesg = $ldap->search( # perform a search
           base   => $ldap_base,
           filter => "zoneName=$zone",
@@ -169,7 +174,7 @@ sub zoneparse
   }
 
   # write the new zone file to disk
-  my $file_output = "$BIND_DIR/db.$zone";
+  my $file_output = "$BIND_CACHE_DIR/db.$zone";
   my $newzone;
   open($newzone, '>', $file_output) or die "error while trying to open $file_output";
   print $newzone $zonefile->output();
@@ -206,7 +211,7 @@ Returns :
 =cut
 sub create_namedconf
 {
-  my($zone,$reverse_zone,$BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER) = @_;
+  my($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER) = @_;
 
   if($ALLOW_NOTIFY eq "TRUE") {
     $ALLOW_NOTIFY = "notify yes;";
@@ -232,14 +237,14 @@ sub create_namedconf
 zone "$zone" {
   type master;
   $ALLOW_NOTIFY
-  file "$BIND_DIR/db.$zone";
+  file "$BIND_CACHE_DIR/db.$zone";
   $ALLOW_UPDATE
   $ALLOW_TRANSFER
 };
 zone "$reverse_zone" {
   type master;
   $ALLOW_NOTIFY
-  file "$BIND_DIR/db.$reverse_zone";
+  file "$BIND_CACHE_DIR/db.$reverse_zone";
   $ALLOW_UPDATE
   $ALLOW_TRANSFER
 };

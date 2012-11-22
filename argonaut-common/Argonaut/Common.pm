@@ -826,6 +826,7 @@ sub argonaut_get_ldap2zone_settings {
     'argonautDNSConfig',
     {
       'binddir'       => 'argonautLdap2zoneBindDir',
+      'bindcachedir'  => 'argonautLdap2zoneBindCacheDir',
       'allownotify'   => 'argonautLdap2zoneAllowNotify',
       'allowupdate'   => 'argonautLdap2zoneAllowUpdate',
       'allowtransfer' => 'argonautLdap2zoneAllowTransfer',
