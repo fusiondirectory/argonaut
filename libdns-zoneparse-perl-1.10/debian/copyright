@@ -1,0 +1,33 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: DNS-ZoneParse
+Source: http://search.cpan.org/dist/DNS-ZoneParse/
+Upstream-Contact: Mike Schilli (m@perlmeister.com)
+
+Files: *
+Copyright: 2003, Simon Flack (perl@simonflack.com)
+License: Artistic or GPL-1+
+Comment: The explicit copyright notice from REAMDE vanished but it is assumed
+ it still applies; and Simon Flack is still listed as the author of the
+ software, so under the Berne Convention he can be assumed to be the copyright
+ holder in any case.
+
+Files: debian/*
+Copyright: 2002, 2004, 2005, Ivan Kohler <ivan-debian@420.am>
+ 2012, gregor herrmann <gregoa@debian.org>
+License: Artistic or GPL-1+
+
+License: Artistic
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the Artistic License, which comes with Perl.
+ .
+ On Debian systems, the complete text of the Artistic License can be
+ found in `/usr/share/common-licenses/Artistic'.
+
+License: GPL-1+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 1, or (at your option)
+ any later version.
+ .
+ On Debian systems, the complete text of version 1 of the GNU General
+ Public License can be found in `/usr/share/common-licenses/GPL-1'.

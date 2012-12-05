@@ -1,0 +1,26 @@
+Source: libdns-zoneparse-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 8), perl
+Maintainer: Debian Perl Group <pkg-perl-maintainers@lists.alioth.debian.org>
+Uploaders: Ivan Kohler <ivan-debian@420.am>,
+ gregor herrmann <gregoa@debian.org>
+Standards-Version: 3.9.3
+Homepage: http://search.cpan.org/dist/DNS-ZoneParse/
+Vcs-Git: git://git.debian.org/pkg-perl/packages/libdns-zoneparse-perl.git
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-perl/packages/libdns-zoneparse-perl.git
+
+Package: libdns-zoneparse-perl
+Architecture: all
+Depends: ${misc:Depends}, ${perl:Depends}
+Description: Perl extension for parsing and manipulating DNS Zone Files
+ DNS::ZoneParse will parse a Zone File and put all the Resource Records (RRs)
+ into an anonymous hash structure. At the moment, the following types of RRs
+ are supported: SOA, NS, MX, A, CNAME, TXT, PTR. It could be useful for
+ maintaining DNS zones, or for transferring DNS zones to other servers. If you
+ want to generate an XML-friendly version of your zone files, it is easy to
+ use XML::Simple with this module once you have parsed the zonefile.
+ .
+ DNS::ZoneParse scans the DNS zonefile - removes comments and seperates
+ the file into its constituent records. It then parses each record and
+ stores the records internally.
