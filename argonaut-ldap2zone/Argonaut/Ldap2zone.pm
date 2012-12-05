@@ -138,8 +138,7 @@ sub zoneparse
       $ttl = "";#$default_ttl;
     }
     while(my ($type,$list) = each %{$records}){
-      my $value = $entry->get_value($type."Record");
-      if($value) {
+      foreach my $value ($entry->get_value($type."Record")) {
         if($name ne "@") {
           push @{$list},{ name => $name, class => $class,
                           host => $value, ttl => $ttl };
