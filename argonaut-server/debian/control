@@ -15,7 +15,7 @@ Depends: argonaut-common (>=1.0), libdatetime-perl, libnet-ldap-perl, libjson-pe
 Description: argonaut json rpc server to manage deployment system
  .
 
-Package: argonaut-client-management
+Package: argonaut-client
 Architecture: all
 Depends: argonaut-common (>=1.0), libconfig-inifiles-perl, liblog-handler-perl, libfile-pid-perl, libapp-daemon-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl
 Description: argonaut json rpc client to manage computers
