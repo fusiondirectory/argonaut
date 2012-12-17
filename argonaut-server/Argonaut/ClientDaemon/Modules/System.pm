@@ -1,8 +1,8 @@
 #######################################################################
 #
-# Argonaut::ClientDaemon -- Action to done on clients
+# Argonaut::ClientDaemon::Modules::System -- System management
 #
-# Copyright (C) 2011 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012 FusionDirectory project <contact@fusiondirectory.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #
 #######################################################################
 
-package Argonaut::ClientDaemon;
+package Argonaut::ClientDaemon::Modules::System;
 
 use strict;
 use warnings;
@@ -28,28 +28,26 @@ use 5.008;
 
 use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
 
-=item echo
-return the parameters passed to it
-=cut
+use Argonaut::Common qw(:ldap);
 
-sub echo : Public {
+=item halt
+shutdown the computer
+=cut
+sub halt : Public {
   my ($s, $args) = @_;
-  $main::log->notice("echo method called with args $args");
-  return $args;
+  $main::log->notice("halt called");
+  system("sleep 5 && halt &");
+  return "shuting down";
 }
 
-package
-    Argonaut::ClientDaemon::system;
-
-
-=item describe
-should be the answer of the system.describe standard JSONRPC call. It seems broken.
+=item reboot
+reboot the computer
 =cut
-sub describe {
-  return {
-    sdversion => "1.0",
-    name      => 'Argonaut::ClientDaemon',
-  };
+sub reboot : Public {
+  my ($s, $args) = @_;
+  $main::log->notice("reboot called, rebooting…");
+  system("sleep 5 && reboot &");
+  return "rebooting";
 }
 
 1;

@@ -45,6 +45,9 @@ use App::Daemon qw(daemonize);
 use Argonaut::Common qw(:ldap :file);
 use Argonaut::Packages qw(get_packages_info store_packages_file);
 
+# where to look for modules files
+use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules';
+
 use constant ETH_P_ALL => 0x0003;
 use constant PF_PACKET => 17;
 use constant SOCK_PACKET => 10;
@@ -167,126 +170,6 @@ sub getIpFromMac {
   $mesg = $ldap->unbind;   # take down session
 
   return $ip;
-}
-
-=pod
-=item do_action
-Execute a JSON-RPC method on a client which the ip is given.
-Parameters : ip,action,params
-=cut
-sub do_action { # if ip pings, send the request
-  my ($ip,$action,$params) = @_;
-
-  # this line is only needed when debugging stuff on localhost
-  #$ip = "localhost";
-
-  my $settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$ip);
-  my $client_port = $settings->{'port'};
-
-  my $client = new JSON::RPC::Client;
-  $client->version('1.0');
-  if ($protocol eq 'https') {
-    if ($client->ua->can('ssl_opts')) {
-      $client->ua->ssl_opts(verify_hostname => 1,SSL_ca_file => "dummy_ca.crt");
-    }
-    $client->ua->credentials($ip.":".$client_port, "JSONRPCRealm", "foo", "secret");
-  }
-
-  my $callobj = {
-    method  => $action,
-    params  => [$params],
-  };
-
-  my $res = $client->call($protocol."://".$ip.":".$client_port, $callobj);
-
-  if($res) {
-    if ($res->is_error) {
-      $log->error("Error : ".$res->error_message);
-      die "Error : ", $res->error_message."\n";
-    }
-    else {
-      $log->info("Result : ".$res->result);
-      return $res->result;
-    }
-  }
-  else {
-    $log->info("Status : ".$client->status_line);
-    die "Status : ".$client->status_line."\n";
-  }
-}
-
-=item
-
-=cut
-sub flag {
-    my ($target,$fai_state) = @_;
-    my ($ldap,$ldap_base) = bindLdap();
-
-  my $mesg = $ldap->search( # perform a search
-            base   => $ldap_base,
-            filter => "macAddress=$target"
-                        # ,attrs => [ 'ipHostNumber' ]
-            );
-
-  $mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
-
-  if(scalar($mesg->entries)>1) {
-    $log->error("Multiple entries were found for the Mac address $target!");
-    die "Multiple entries were found for the Mac address $target!";
-  } elsif(scalar($mesg->entries)<1) {
-    $log->error("No entry were found for the Mac address $target!");
-    die "No entry were found for the Mac address $target!";
-  }
-
-  my $dn = ($mesg->entries)[0];
-  my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
-
-  $mesg = $ldap->modify(
-            $dn,
-            replace => {
-              "FAIstate" => $fai_state
-              }
-            );
-
-  $mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
-
-  $mesg = $ldap->unbind;   # take down session
-
-  return $ip;
-}
-
-=pod
-item handler_fai
-Put the right boot mode in the ldap and send the right thing to the client.
-Parameters : the targetted mac address, the action received, the args received for it (args are currently unused).
-=cut
-sub handler_fai {
-    my($target,$action,$args) = @_;
-    my $fai_state = {
-                "trigger_action_reinstall"  => "install",
-                "trigger_action_update"     => "softupdate",
-                "trigger_action_reboot"     => "localboot",
-                "trigger_action_wake"       => "localboot"
-                };
-
-    my $need_reboot = ($action ne "trigger_action_wake");
-
-    my $ip = flag($target,$fai_state->{$action});
-
-    eval { # try
-        if($need_reboot) {
-            my $res = do_action($ip,"trigger_action_reboot");
-            return "rebooting";
-        } else {
-            wakeOnLan($target);
-            return "wake on lan";
-        }
-    };
-    if ($@) { # catch
-        $log->notice("Got $@ while trying to reboot, trying wake on lan");
-        wakeOnLan($target);
-        return "wake on lan";
-    };
 }
 
 =pod
@@ -435,16 +318,10 @@ POE::Session->create(
                                             Authenticate => \&ldap_authenticate,)
                                         : ()
             );
-            $_[HEAP]{handlers} = {
-                "trigger_action_reinstall" => \&handler_fai,
-                "trigger_action_update" => \&handler_fai,
-                "trigger_action_wake" => \&handler_fai,
-                "trigger_action_reboot" => \&handler_fai
-            };
             $_[HEAP]{scheduled_only} = [
-                "trigger_action_update",
-                "trigger_action_reinstall",
-                "trigger_action_memcheck",
+                "System.update",
+                "System.reinstall",
+                "System.memcheck",
                 "detect_hardware"
                 ];
             #~ $_[KERNEL]->yield(add=>undef,undef,"job_trigger_action_halt",["00:11:22:33:44:55"],{timestamp=>1314107700});
@@ -669,23 +546,18 @@ POE::Session->create(
             my $res = 0;
 
             eval { # try
-                my $action_client = $action;
-                if(defined $heap->{handlers}->{$action}) {
-                    $action_client = undef;
-                    my $substatus = $heap->{handlers}->{$action}->($target,$action,$data->{args});
-                    if(defined $taskid) {
-                        $heap->{tasks}->{$taskid}->{substatus} = $substatus;
-                    }
+              foreach my $module (modules()) {
+                #~ Is this module the one for this client?
+                if ($module->handle_client($target)) {
+                  #~ If it is, send him the infos
+                  if(defined $data->{args}) {
+                    $res = $module->do_action($target,$action,$taskid,$data->{args});
+                  } else {
+                    $res = $module->do_action($target,$action,$taskid);
+                  }
+                  last;
                 }
-                if(defined $action_client) {
-                    my $ip = getIpFromMac($target);
-                    $log->info("sending action $action to $ip");
-                    if(defined $data->{args}) {
-                        $res = do_action($ip,$action_client,$data->{args});
-                    } else {
-                        $res = do_action($ip,$action_client);
-                    }
-                }
+              }
             };
             if ($@) { # catch
                 $log->warning("Error occured : ".$@);
