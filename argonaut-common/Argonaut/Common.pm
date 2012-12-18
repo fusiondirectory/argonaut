@@ -661,10 +661,12 @@ sub argonaut_ldap_fsearch {
 
 #------------------------------------------------------------------------------
 # generic functions for get settings functions
-# TODO : add (optional) support for using group config
 #
 sub argonaut_get_generic_settings {
-  my ($objectClass,$params,$ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
+  my ($objectClass,$params,$ldap_configfile,$ldap_dn,$ldap_password,$ip,$inheritance) = @_;
+  unless (defined $inheritance) {
+    $inheritance = 1;
+  }
 
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
 
@@ -680,10 +682,12 @@ sub argonaut_get_generic_settings {
             attrs => ['macAddress',values(%{$params})]
             );
 
+  my $settings = {
+    'ip' => $ip
+  };
+
   if(scalar($mesg->entries)==1) {
-    my $settings = {
-      'mac'           => ($mesg->entries)[0]->get_value("macAddress")
-    };
+    $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
     while (my ($key,$value) = each(%{$params})) {
       if (($mesg->entries)[0]->get_value("$value")) {
         $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
@@ -693,7 +697,36 @@ sub argonaut_get_generic_settings {
     }
     return $settings;
   } elsif(scalar($mesg->entries)==0) {
-    die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).";
+    unless ($inheritance) {
+      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).";
+    }
+    $mesg = $ldap->search( # perform a search
+              base   => $ldap_base,
+              filter => "ipHostNumber=$ip",
+              attrs => [ 'dn', 'macAddress' ]
+              );
+    if(scalar($mesg->entries)!=1) {
+      die "Several computers are associated to IP $ip.";
+    }
+    $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
+    my $dn = ($mesg->entries)[0]->dn();
+    my $mesg = $ldap->search( # perform a search
+      base   => $ldap_base,
+      filter => "(&(objectClass=$objectClass)(member=$dn))",
+      attrs => ['macAddress',values(%{$params})]
+    );
+    if(scalar($mesg->entries)==1) {
+      while (my ($key,$value) = each(%{$params})) {
+        if (($mesg->entries)[0]->get_value("$value")) {
+          $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+        } else {
+          $settings->{"$key"} = "";
+        }
+      }
+      return $settings;
+    } else {
+      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).";
+    }
   } else {
     die "Several computers are associated to IP $ip.";
   }
@@ -726,64 +759,16 @@ sub argonaut_get_server_settings {
 # get client argonaut settings
 #
 sub argonaut_get_client_settings {
-  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
-
-  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-
-  if ( $ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."\n";
-  }
-
-  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-
-  my $mesg = $ldap->search( # perform a search
-            base   => $ldap_base,
-            filter => "(&(objectClass=argonautClient)(ipHostNumber=$ip))",
-            attrs => [ 'macAddress','argonautClientPort','argonautTaskIdFile',
-                       'argonautClientWakeOnLanInterface','argonautClientLogDir' ]
-            );
-
-  my $client_settings = {};
-
-  if(scalar($mesg->entries)==1) {
-    $client_settings = {
-      'ip'          => $ip,
-      'mac'         => ($mesg->entries)[0]->get_value("macAddress"),
-      'port'        => ($mesg->entries)[0]->get_value("argonautClientPort"),
-      'taskidfile'  => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
-      'interface'   => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
-      'logdir'      => ($mesg->entries)[0]->get_value("argonautClientLogDir")
-    };
-  } else {
-    $mesg = $ldap->search( # perform a search
-              base   => $ldap_base,
-              filter => "ipHostNumber=$ip",
-              attrs => [ 'dn' ]
-              );
-    if(scalar($mesg->entries)!=1) {
-      die "multiple entries for this IP ($ip)";
-    }
-    my $dn = ($mesg->entries)[0]->dn();
-    $mesg = $ldap->search( # perform a search
-          base   => $ldap_base,
-          filter => "(&(objectClass=argonautClient)(member=$dn))",
-          attrs => [ 'argonautClientPort','argonautTaskIdFile',
-                     'argonautClientWakeOnLanInterface','argonautClientLogDir' ]
-          );
-    if(scalar($mesg->entries)==1) {
-      $client_settings = {
-        'ip'          => $ip,
-        'port'        => ($mesg->entries)[0]->get_value("argonautClientPort"),
-        'taskidfile'  => ($mesg->entries)[0]->get_value("argonautTaskIdFile"),
-        'interface'   => ($mesg->entries)[0]->get_value("argonautClientWakeOnLanInterface"),
-        'logdir'      => ($mesg->entries)[0]->get_value("argonautClientLogDir")
-      }; # FIXME : when in a group, not returning macAddress
-    } else {
-      die "This computer ($ip) is not configured in LDAP to run an argonaut client.";
-    }
-  }
-
-  return $client_settings;
+  return argonaut_get_generic_settings(
+    'argonautClient',
+    {
+      'port'        => "argonautClientPort",
+      'interface'   => "argonautClientWakeOnLanInterface",
+      'logdir'      => "argonautClientLogDir",
+      'taskidfile'  => "argonautTaskIdFile"
+    },
+    @_
+  );
 }
 
 #------------------------------------------------------------------------------
