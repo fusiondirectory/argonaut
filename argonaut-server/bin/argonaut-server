@@ -549,21 +549,21 @@ POE::Session->create(
             }
         },
         action => sub {
-            my ($heap,$taskid,$action,$target,$data) = @_[HEAP,ARG0 .. $#_];
+            my ($kernel,$heap,$session,$taskid,$action,$target,$data) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
 
             my $handled = 0;
             my $res = 0;
 
             eval { # try
               foreach my $module (modules()) {
-                #~ Is this module the one for this client?
-                if ($module->handle_client($target)) {
+                #~ Is this module the one for this client and action?
+                if ($module->handle_client($target,$action)) {
                   $handled = 1;
                   #~ If it is, send him the infos
                   if(defined $data->{args}) {
-                    $res = $module->do_action($heap,$target,$action,$taskid,$data->{args});
+                    $res = $module->do_action($kernel,$heap,$session,$target,$action,$taskid,$data->{args});
                   } else {
-                    $res = $module->do_action($heap,$target,$action,$taskid);
+                    $res = $module->do_action($kernel,$heap,$session,$target,$action,$taskid);
                   }
                   last;
                 }

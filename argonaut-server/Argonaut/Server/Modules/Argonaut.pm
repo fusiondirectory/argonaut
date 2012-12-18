@@ -29,7 +29,12 @@ use 5.008;
 use Argonaut::Common qw(:ldap :file);
 
 sub handle_client {
-  my ($obj, $mac) = @_;
+  my ($obj, $mac,$action) = @_;
+
+  if ($action =~ m/^Deployment.*/) {
+    return 0;
+  }
+
   my $ip = main::getIpFromMac($mac);
 
   eval { #try
@@ -48,16 +53,9 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub do_action {
-  my ($obj, $heap,$target,$action,$taskid,$params) = @_;
+  my ($obj, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
 
-  my @fai_actions = ["System.reinstall", "System.update", "System.wake", "System.reboot"];
-  if(grep {$_ eq $action} @fai_actions) {
-    my $substatus = $obj->handler_fai($target,$action,$params);
-    if(defined $taskid) {
-      $heap->{tasks}->{$taskid}->{substatus} = $substatus;
-    }
-    return 0;
-  } elsif ($action eq 'ping') {
+  if ($action eq 'ping') {
     my $ok = 'OK';
     my $res = $obj->launch($target,'echo',$ok);
     return ($res eq $ok);
@@ -117,80 +115,6 @@ sub launch { # if ip pings, send the request
     $main::log->info("Status : ".$client->status_line);
     die "Status : ".$client->status_line."\n";
   }
-}
-
-=pod
-item handler_fai
-Put the right boot mode in the ldap and send the right thing to the client.
-Parameters : the targetted mac address, the action received, the args received for it (args are currently unused).
-=cut
-sub handler_fai {
-  my($obj, $target,$action,$args) = @_;
-  my $fai_state = {
-    "System.reinstall"  => "install",
-    "System.update"     => "softupdate",
-    "System.reboot"     => "localboot",
-    "System.wake"       => "localboot"
-  };
-
-  my $need_reboot = ($action ne "System.wake");
-
-  my $ip = $obj->flag($target,$fai_state->{$action});
-
-  eval { # try
-    if($need_reboot) {
-      my $res = launch($target,"System.reboot");
-      return "rebooting";
-    } else {
-      main::wakeOnLan($target);
-      return "wake on lan";
-    }
-  };
-  if ($@) { # catch
-    $main::log->notice("Got $@ while trying to reboot, trying wake on lan");
-    main::wakeOnLan($target);
-    return "wake on lan";
-  };
-}
-
-=item
-
-=cut
-sub flag {
-  my ($obj, $target,$fai_state) = @_;
-  my ($ldap,$ldap_base) = bindLdap();
-
-  my $mesg = $ldap->search( # perform a search
-            base   => $ldap_base,
-            filter => "macAddress=$target"
-                        # ,attrs => [ 'ipHostNumber' ]
-            );
-
-  $mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
-
-  if(scalar($mesg->entries)>1) {
-    $main::log->error("Multiple entries were found for the Mac address $target!");
-    die "Multiple entries were found for the Mac address $target!";
-  } elsif(scalar($mesg->entries)<1) {
-    $main::log->error("No entry were found for the Mac address $target!");
-    die "No entry were found for the Mac address $target!";
-  }
-
-  my $dn = ($mesg->entries)[0];
-  my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
-
-  $mesg = $ldap->modify(
-            $dn,
-            replace => {
-              "FAIstate" => $fai_state
-              }
-            );
-
-  $mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
-
-  $mesg = $ldap->unbind;   # take down session
-
-  return $ip;
 }
 
 1;
