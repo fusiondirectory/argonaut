@@ -29,7 +29,7 @@ use 5.008;
 use Argonaut::Common qw(:ldap :file);
 
 sub handle_client {
-  my ($mac) = @_;
+  my ($obj, $mac) = @_;
   my $ip = main::getIpFromMac($mac);
 
   eval { #try
@@ -48,17 +48,21 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub do_action {
-  my ($target,$action,$taskid,$params) = @_;
+  my ($obj, $heap,$target,$action,$taskid,$params) = @_;
 
   my @fai_actions = ["System.reinstall", "System.update", "System.wake", "System.reboot"];
   if(grep {$_ eq $action} @fai_actions) {
-    my $substatus = handler_fai($target,$action,$params);
+    my $substatus = $obj->handler_fai($target,$action,$params);
     if(defined $taskid) {
-      $main::heap->{tasks}->{$taskid}->{substatus} = $substatus;
+      $heap->{tasks}->{$taskid}->{substatus} = $substatus;
     }
     return 0;
+  } elsif ($action eq 'ping') {
+    my $ok = 'OK';
+    my $res = $obj->launch($target,'echo',$ok);
+    return ($res eq $ok);
   } else {
-    return launch($target,$action,$params);
+    return $obj->launch($target,$action,$params);
   }
 }
 
@@ -68,14 +72,14 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub launch { # if ip pings, send the request
-  my ($target,$action,$params) = @_;
+  my ($obj, $target,$action,$params) = @_;
+
   if ($action =~ m/^[^.]+\.[^.]+$/) {
     $action = 'Argonaut.ClientDaemon.Modules.'.$action;
   }
 
-
-  # this line is only needed when debugging stuff on localhost
   my $ip = main::getIpFromMac($target);
+  # this line is only needed when debugging stuff on localhost
   #$ip = "localhost";
 
   $main::log->info("sending action $action to $ip");
@@ -121,7 +125,7 @@ Put the right boot mode in the ldap and send the right thing to the client.
 Parameters : the targetted mac address, the action received, the args received for it (args are currently unused).
 =cut
 sub handler_fai {
-  my($target,$action,$args) = @_;
+  my($obj, $target,$action,$args) = @_;
   my $fai_state = {
     "System.reinstall"  => "install",
     "System.update"     => "softupdate",
@@ -131,7 +135,7 @@ sub handler_fai {
 
   my $need_reboot = ($action ne "System.wake");
 
-  my $ip = flag($target,$fai_state->{$action});
+  my $ip = $obj->flag($target,$fai_state->{$action});
 
   eval { # try
     if($need_reboot) {
@@ -153,8 +157,8 @@ sub handler_fai {
 
 =cut
 sub flag {
-    my ($target,$fai_state) = @_;
-    my ($ldap,$ldap_base) = bindLdap();
+  my ($obj, $target,$fai_state) = @_;
+  my ($ldap,$ldap_base) = bindLdap();
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,

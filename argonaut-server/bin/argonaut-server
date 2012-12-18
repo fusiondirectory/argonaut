@@ -46,7 +46,7 @@ use Argonaut::Common qw(:ldap :file);
 use Argonaut::Packages qw(get_packages_info store_packages_file);
 
 # where to look for modules files
-use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules';
+use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', require => 1;
 
 use constant ETH_P_ALL => 0x0003;
 use constant PF_PACKET => 17;
@@ -55,8 +55,8 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-my ($ldap_configfile,$ldap_dn,$ldap_password,$server_ip,
-    $protocol,$sslkeyfile,$sslcertfile,$server_port,$iptool,$delete_finished_tasks,
+our ($ldap_configfile,$ldap_dn,$ldap_password,$protocol,$server_ip,$server_port);
+my ($sslkeyfile,$sslcertfile,$iptool,$delete_finished_tasks,
     $interface,$logdir,$packages_folder);
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-server.log";
@@ -67,7 +67,7 @@ readConfig();
 
 argonaut_create_dir($logdir);
 
-my $log = Log::Handler->create_logger("argonaut-server");
+our $log = Log::Handler->create_logger("argonaut-server");
 
 $log->add(
     file => {
@@ -158,11 +158,11 @@ sub getIpFromMac {
   $mesg->code && die "Error while searching IP for mac address '$mac' :".$mesg->error;
 
   if(scalar($mesg->entries)>1) {
-    $log->error("Multiple IPs were found for the Mac address $mac!");
-    die "Multiple IPs were found for the Mac address $mac!";
+    $log->error("Multiple IPs were found for the Mac address '$mac'!");
+    die "Multiple IPs were found for the Mac address '$mac'!";
   } elsif(scalar($mesg->entries)<1) {
-    $log->error("No IPs were found for the Mac address $mac!");
-    die "No IPs were found for the Mac address $mac!";
+    $log->error("No IPs were found for the Mac address '$mac'!");
+    die "No IPs were found for the Mac address '$mac'!";
   }
 
   my $ip = ($mesg->entries)[0]->get_value("ipHostNumber");
@@ -342,17 +342,26 @@ POE::Session->create(
             $kernel->post( $jsonrpc => 'result' => $id, @params );
         },
         ping => sub {
-            my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
+            my ($kernel, $session, $jsonrpc, $id, @params) = @_[KERNEL,SESSION, ARG0..$#_ ];
             my ($mac) = @params;
             $log->info("ping $mac");
-            my $ok = "OK";
+            #~ my $ok = "OK";
             eval { # try
-                my $res = do_action(getIpFromMac($mac),"echo",$ok);
-                $kernel->post( $jsonrpc => 'result' => $id, ($ok eq $res) );
+                #~ my $res = do_action(getIpFromMac($mac),"echo",$ok);
+                #~ $kernel->post( $jsonrpc => 'result' => $id, ($ok eq $res) );
+              my $error = "";
+              my $result;
+              my $data = {'args' => []};
+              ($result,$error) = POE::Kernel->call($session=>action=>undef,'ping',$mac,$data); # synchronous call
+              if($error ne "") {
+                $kernel->post( $jsonrpc => 'error' => $id, $error );
+              } else {
+                $kernel->post( $jsonrpc => 'result' => $id, $result );
+              }
             };
             if ($@) { # catch
-                $log->notice("Error occured : ".$@);
-                $kernel->post( $jsonrpc => 'error' => $id, $@);
+              $log->notice("Error occured : ".$@);
+              $kernel->post( $jsonrpc => 'error' => $id, $@);
             };
         },
         id_of_mac => sub {
@@ -542,30 +551,34 @@ POE::Session->create(
         action => sub {
             my ($heap,$taskid,$action,$target,$data) = @_[HEAP,ARG0 .. $#_];
 
-            my $errors = "";
+            my $handled = 0;
             my $res = 0;
 
             eval { # try
               foreach my $module (modules()) {
                 #~ Is this module the one for this client?
                 if ($module->handle_client($target)) {
+                  $handled = 1;
                   #~ If it is, send him the infos
                   if(defined $data->{args}) {
-                    $res = $module->do_action($target,$action,$taskid,$data->{args});
+                    $res = $module->do_action($heap,$target,$action,$taskid,$data->{args});
                   } else {
-                    $res = $module->do_action($target,$action,$taskid);
+                    $res = $module->do_action($heap,$target,$action,$taskid);
                   }
                   last;
+                }
+                unless ($handled) {
+                  die 'No client module seems activated for target $target';
                 }
               }
             };
             if ($@) { # catch
-                $log->warning("Error occured : ".$@);
-                if(defined $taskid) {
-                    $heap->{tasks}->{$taskid}->{status} = "error";
-                    $heap->{tasks}->{$taskid}->{error} = $@;
-                }
-                return (0,$@);
+              $log->warning("Error occured : ".$@);
+              if(defined $taskid) {
+                $heap->{tasks}->{$taskid}->{status} = "error";
+                $heap->{tasks}->{$taskid}->{error} = $@;
+              }
+              return (0,$@);
             };
 
             if((defined $taskid) && !(defined $data->{periodic})) {
