@@ -1,1 +1,3 @@
-bin/argonaut-server		usr/sbin/
+bin/argonaut-server                   usr/sbin/
+Argonaut/Server/Modules/Argonaut.pm   usr/share/perl5/Argonaut/Server/Modules/
+
