@@ -15,6 +15,12 @@ Depends: argonaut-common (>=1.0), libdatetime-perl, libnet-ldap-perl, libjson-pe
 Description: argonaut json rpc server to manage deployment system
  .
 
+Package: argonaut-server-module-fai
+Architecture: all
+Depends: argonaut-common (>=1.0)
+Description: argonaut json rpc server module to manage fai deployment
+ .
+
 Package: argonaut-client
 Architecture: all
 Depends: argonaut-common (>=1.0), libconfig-inifiles-perl, liblog-handler-perl, libfile-pid-perl, libapp-daemon-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl
@@ -24,6 +30,6 @@ Description: argonaut json rpc client to manage computers
 Package: argonaut-client-fai
 Architecture: all
 Depends: argonaut-common (>= 1.0), libconfig-inifiles-perl, liblog-handler-perl, libjson-perl (>= 2.07-1), libjson-rpc-perl
-Description: argonaut json rpc client to manage fai installations
+Description: argonaut json rpc utilities to manage fai installations
  .
 
