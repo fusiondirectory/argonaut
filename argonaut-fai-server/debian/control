@@ -1,4 +1,4 @@
-Source: argonaut-fai-client
+Source: argonaut-fai-server
 Section: utils
 Priority: optional
 Maintainer: FusionDirectory Packagers <fusiondirectory-packages@lists.fusiondirectory.org>
@@ -10,7 +10,7 @@ Vcs-Browser: http://git.fusiondirectory.org/code/main/argonaut-agents.git
 Vcs-Git: http://git.fusiondirectory.org/main/argonaut-agents.git
 DM-Upload-Allowed: yes
 
-Package: argonaut-fai-client
+Package: argonaut-fai-server
 Architecture: all
 Depends: ${misc:Depends}, argonaut-common (>= 1.0), fai-client (>= 3.2.8), fai-server (>=3.2.8), libnet-ldap-perl
 Description: Scripts to enable Argonaut integration with FAI
