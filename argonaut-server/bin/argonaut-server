@@ -567,9 +567,9 @@ POE::Session->create(
                   }
                   last;
                 }
-                unless ($handled) {
-                  die 'No client module seems activated for target $target';
-                }
+              }
+              unless ($handled) {
+                die 'No client module seems activated for target $target';
               }
             };
             if ($@) { # catch
