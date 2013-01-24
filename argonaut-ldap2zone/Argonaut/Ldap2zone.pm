@@ -35,7 +35,7 @@ use DNS::ZoneParse;
 use Argonaut::Common qw(:ldap);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
-my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc')
+my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
@@ -123,7 +123,12 @@ sub zoneparse
 
   my $records = {};
   foreach my $record (@record_types) {
-    $records->{$record} = $zonefile->$record();
+    eval { #try
+      $records->{$record} = $zonefile->$record();
+    };
+    if ($@) { # catch
+      print "This DNS::ZoneParse version does not support '$record' record\n" if $verbose;
+    };
   }
 
   my $dn; # Dn of zone entry;
