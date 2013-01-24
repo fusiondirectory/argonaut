@@ -35,7 +35,7 @@ use DNS::ZoneParse;
 use Argonaut::Common qw(:ldap);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
-my @record_types = ('a','cname','mx','ns','ptr','txt');#,'srv','hinfo','rp','loc'
+my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc')
 
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
