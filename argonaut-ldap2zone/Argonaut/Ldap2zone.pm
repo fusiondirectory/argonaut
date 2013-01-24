@@ -93,7 +93,7 @@ sub argonaut_ldap2zone
 
   zoneparse($ldap,$ldap_base,$reverse_zone,$BIND_CACHE_DIR,$TTL,$verbose);
 
-  create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER);
+  create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
   system("$RNDC reconfig")  == 0 or die "$RNDC reconfig failed : $?";
   system("$RNDC freeze")    == 0 or die "$RNDC freeze failed : $?";
@@ -119,7 +119,7 @@ sub zoneparse
 
   print "Found ".scalar($mesg->entries())." results\n" if $verbose;
 
-  my $zonefile = DNS::ZoneParse->new();
+  my $zonefile = DNS::ZoneParse->new(\"", $zone);
 
   my $records = {};
   foreach my $record (@record_types) {
@@ -141,9 +141,9 @@ sub zoneparse
       foreach my $value ($entry->get_value($type."Record")) {
         if($name ne "@") {
           push @{$list},{ name => $name, class => $class,
-                          host => $value, ttl => $ttl };
+                          host => $value, ttl => $ttl, ORIGIN => $zone };
         } else {
-          push @{$list},{ host => $value, ttl => $ttl };
+          push @{$list},{ host => $value, ttl => $ttl, ORIGIN => $zone };
         }
         print "Added record $type $name $class $value $ttl\n" if $verbose;
       }
@@ -163,16 +163,18 @@ sub zoneparse
       $soa_record->{'class'}    = $class;
       $soa_record->{'ttl'}      = $TTL;
       $soa_record->{'origin'}   = $name;
+      $soa_record->{'ORIGIN'}   = $zone;
       print "Added record SOA $name $class $soa $TTL\n" if $verbose;
       $dn = $entry->dn();
     }
   }
 
   if (not defined $dn) {
-    die "Zone $zone was not found in LDAP!";
+    die "Zone $zone was not found in LDAP!\n";
   }
 
   # write the new zone file to disk
+  print "Writing DNS Zone '$zone' in $BIND_CACHE_DIR/db.$zone\n" if $verbose;
   my $file_output = "$BIND_CACHE_DIR/db.$zone";
   my $newzone;
   open($newzone, '>', $file_output) or die "error while trying to open $file_output";
@@ -210,7 +212,7 @@ Returns :
 =cut
 sub create_namedconf
 {
-  my($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER) = @_;
+  my($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
 
   if($ALLOW_NOTIFY eq "TRUE") {
     $ALLOW_NOTIFY = "notify yes;";
@@ -230,6 +232,7 @@ sub create_namedconf
     $ALLOW_TRANSFER = "";
   }
 
+  print "Writing named.conf file in $BIND_DIR/named.conf.ldap2zone.$zone\n" if $verbose;
   my $namedfile;
   open($namedfile, '>', "$BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $BIND_DIR/named.conf.ldap2zone.$zone";
   print $namedfile <<EOF;
@@ -250,6 +253,7 @@ zone "$reverse_zone" {
 EOF
   close $namedfile;
 
+  print "Writing file $BIND_DIR/named.conf.ldap2zone\n" if $verbose;
   open($namedfile, '>', "$BIND_DIR/named.conf.ldap2zone") or die "error while trying to open $BIND_DIR/named.conf.ldap2zone";
   opendir DIR, $BIND_DIR or die "Error while openning $BIND_DIR!";
   my @files = readdir DIR;
