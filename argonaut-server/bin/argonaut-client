@@ -40,7 +40,7 @@ use Module::Pluggable search_path => 'Argonaut::ClientDaemon::Modules', sub_name
 our ($client_settings, $server_settings);
 our ($ldap_configfile, $ldap_dn, $ldap_password);
 my $configfile  = "/etc/argonaut/argonaut.conf";
-my $logfile     = "argonaut-client-management.log";
+my $logfile     = "argonaut-client.log";
 my $piddir      = "/var/run/argonaut";
 my $pidfile     = "argonaut-client-management.pid";
 
