@@ -42,7 +42,7 @@ our ($ldap_configfile, $ldap_dn, $ldap_password);
 my $configfile  = "/etc/argonaut/argonaut.conf";
 my $logfile     = "argonaut-client.log";
 my $piddir      = "/var/run/argonaut";
-my $pidfile     = "argonaut-client-management.pid";
+my $pidfile     = "argonaut-client.pid";
 
 $SIG{TERM}=\&sig_term_handler;
 
