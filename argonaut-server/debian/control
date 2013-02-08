@@ -18,7 +18,13 @@ Description: argonaut json rpc server to manage deployment system
 Package: argonaut-server-module-fai
 Architecture: all
 Depends: argonaut-common (>=1.0)
-Description: argonaut json rpc server module to manage fai deployment
+Description: argonaut json rpc server module to manage fai
+ .
+
+Package: argonaut-server-module-opsi
+Architecture: all
+Depends: argonaut-common (>=1.0)
+Description: argonaut json rpc server module to manage opsi
  .
 
 Package: argonaut-client
