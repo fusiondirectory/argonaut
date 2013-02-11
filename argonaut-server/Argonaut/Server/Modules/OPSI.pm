@@ -28,6 +28,12 @@ use 5.008;
 
 use Argonaut::Common qw(:ldap :file);
 
+my $actions = {
+  'System.halt'       => 'hostControl_shutdown',
+  'System.reboot'     => 'hostControl_reboot',
+  'Deployment.reboot' => 'hostControl_reboot',
+};
+
 sub get_opsi_settings {
   my $settings = argonaut_get_generic_settings(
     'opsiClient',
@@ -38,7 +44,7 @@ sub get_opsi_settings {
     @_
   );
   my $cn = $settings->{'cn'};
-  $cn =~ s/\.$//;
+  $cn =~ s/\$$//;
 
   my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
 
@@ -57,6 +63,7 @@ sub get_opsi_settings {
   $settings->{'server-uri'} = ($mesg->entries)[0]->get_value("fdOpsiServerURI");
   $settings->{'server-usr'} = ($mesg->entries)[0]->get_value("fdOpsiServerUser");
   $settings->{'server-pwd'} = ($mesg->entries)[0]->get_value("fdOpsiServerPassword");
+
   $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
     base    => $ldapinfos->{'BASE'},
     filter  => "(&(relativeDomainName=$cn)(aRecord=".$settings->{'ip'}."))",
@@ -71,7 +78,7 @@ sub get_opsi_settings {
 sub handle_client {
   my ($obj, $mac,$action) = @_;
 
-  if ($action =~ m/^Deployment.*/) {
+  if (($action ne 'ping') && (not defined $actions->{$action})) {
     return 0;
   }
 
@@ -96,12 +103,9 @@ sub do_action {
   my ($obj, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
 
   if ($action eq 'ping') {
-    my $res = $obj->launch($target,'hostControl_reachable','1000');
-    return $res;
-  } elsif ($action eq 'System.halt') {
-    return $obj->launch($target,'hostControl_shutdown',$params);
-  } elsif ($action eq 'System.reboot') {
-    return $obj->launch($target,'hostControl_reboot',$params);
+    return $obj->launch($target,'hostControl_reachable',['1000']);
+  } elsif (defined $actions->{$action}) {
+    return $obj->launch($target,$actions->{$action},$params);
   } else {
     return $obj->launch($target,$action,$params);
   }
@@ -117,34 +121,46 @@ sub launch { # if ip pings, send the request
 
   my $ip = main::getIpFromMac($target);
 
-  $main::log->info("sending action $action to $ip");
+  $main::log->info("[OPSI] sending action $action to $ip");
 
   my $settings = get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
   my $client_port = $settings->{'port'};
 
   my $client = new JSON::RPC::Client;
   $client->version('1.0');
-  $client->ua->credentials($settings->{'server-uri'}, "OPSI Service", $settings->{'server-usr'}, $settings->{'server-pwd'});
+  my $host = $settings->{'server-uri'};
+  $host =~ s|^http(s?)://||;
+  $host =~ s|/.*$||;
+  $client->ua->credentials($host, "OPSI Service", $settings->{'server-usr'}, $settings->{'server-pwd'});
 
   my $callobj = {
     method  => $action,
-    params  => [$settings->{'fqdn'}, $params],
+    params  => [$settings->{'fqdn'}, @$params],
   };
 
   my $res = $client->call($settings->{'server-uri'}, $callobj);
 
   if($res) {
     if ($res->is_error) {
-      $main::log->error("Error : ".$res->error_message);
-      die "Error : ", $res->error_message."\n";
+      $main::log->error("[OPSI] Error : ".$res->error_message->{'message'});
+      die "Error : ", $res->error_message->{'message'}."\n";
+    } else {
+      if (JSON::XS::is_bool($res->result->{$settings->{'fqdn'}})) {
+        $main::log->info("[OPSI] Result : ".$res->result->{$settings->{'fqdn'}});
+        return $res->result->{$settings->{'fqdn'}};
+      } elsif (defined $res->result->{$settings->{'fqdn'}}->{'error'}) {
+        $main::log->error("[OPSI] Error : ".$res->result->{$settings->{'fqdn'}}->{'error'});
+        die "Error : ", $res->result->{$settings->{'fqdn'}}->{'error'}."\n";
+      } elsif (defined $res->result->{$settings->{'fqdn'}}->{'result'}) {
+        $main::log->info("[OPSI] Result : ".$res->result->{$settings->{'fqdn'}}->{'result'});
+        return $res->result->{$settings->{'fqdn'}}->{'result'};
+      } else {
+        $main::log->info("[OPSI] Result is empty (no errors though)");
+        return 1;
+      }
     }
-    else {
-      $main::log->info("Result : ".$res->result);
-      return $res->result;
-    }
-  }
-  else {
-    $main::log->info("Status : ".$client->status_line);
+  } else {
+    $main::log->info("[OPSI] Status : ".$client->status_line);
     die "Status : ".$client->status_line."\n";
   }
 }
