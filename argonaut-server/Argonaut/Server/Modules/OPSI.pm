@@ -23,15 +23,17 @@ package Argonaut::Server::Modules::OPSI;
 
 use strict;
 use warnings;
+use Data::Dumper;
 
 use 5.008;
 
 use Argonaut::Common qw(:ldap :file);
 
 my $actions = {
-  'System.halt'       => 'hostControl_shutdown',
-  'System.reboot'     => 'hostControl_reboot',
-  'Deployment.reboot' => 'hostControl_reboot',
+  'System.halt'           => 'hostControl_shutdown',
+  'System.reboot'         => 'hostControl_reboot',
+  'Deployment.reboot'     => 'hostControl_reboot',
+  'OPSI.update_or_insert' => 'update_or_insert',
 };
 
 sub get_opsi_settings {
@@ -39,6 +41,7 @@ sub get_opsi_settings {
     'opsiClient',
     {
       'server'      => "fdOpsiServerDn",
+      'description' => "description",
       'cn'          => 'cn',
     },
     @_
@@ -88,6 +91,7 @@ sub handle_client {
     get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
   };
   if ($@) { #catch
+    #~ $main::log->info("[OPSI] Can't handle client : $@");
     return 0;
   };
 
@@ -102,12 +106,29 @@ Parameters : ip,action,params
 sub do_action {
   my ($obj, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
 
+  my $ip = main::getIpFromMac($target);
+
+  my $settings = get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+
   if ($action eq 'ping') {
-    return $obj->launch($target,'hostControl_reachable',['1000']);
+    return $obj->launch($settings,'hostControl_reachable',[$settings->{'fqdn'},'1000']);
+  } elsif ($action eq 'OPSI.update_or_insert') {
+    my $infos = {
+      "id"              => $settings->{'fqdn'},
+      "description"     => $settings->{'description'},
+      "notes"           => "Created by FusionDirectory",
+      "hardwareAddress" => $settings->{'mac'},
+      "ipAddress"       => $settings->{'ip'},
+      "type"            => "OpsiClient",
+    };
+    return $obj->launch($settings,'host_updateObject',[$infos]);
   } elsif (defined $actions->{$action}) {
-    return $obj->launch($target,$actions->{$action},$params);
+    if ($action =~ m/^hostControl/) {
+      unshift @$params, $settings->{'fqdn'};
+    }
+    return $obj->launch($settings,$actions->{$action},$params);
   } else {
-    return $obj->launch($target,$action,$params);
+    return $obj->launch($settings,$action,$params);
   }
 }
 
@@ -117,13 +138,9 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub launch { # if ip pings, send the request
-  my ($obj, $target,$action,$params) = @_;
+  my ($obj, $settings,$action,$params) = @_;
 
-  my $ip = main::getIpFromMac($target);
-
-  $main::log->info("[OPSI] sending action $action to $ip");
-
-  my $settings = get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+  $main::log->info("[OPSI] sending action $action to ".$settings->{'fqdn'});
   my $client_port = $settings->{'port'};
 
   my $client = new JSON::RPC::Client;
@@ -135,9 +152,10 @@ sub launch { # if ip pings, send the request
 
   my $callobj = {
     method  => $action,
-    params  => [$settings->{'fqdn'}, @$params],
+    params  => [@$params],
   };
 
+  $main::log->info("[OPSI] Call : ".Dumper($callobj));
   my $res = $client->call($settings->{'server-uri'}, $callobj);
 
   if($res) {
@@ -145,19 +163,28 @@ sub launch { # if ip pings, send the request
       $main::log->error("[OPSI] Error : ".$res->error_message->{'message'});
       die "Error : ", $res->error_message->{'message'}."\n";
     } else {
-      if (JSON::XS::is_bool($res->result->{$settings->{'fqdn'}})) {
-        $main::log->info("[OPSI] Result : ".$res->result->{$settings->{'fqdn'}});
-        return $res->result->{$settings->{'fqdn'}};
-      } elsif (defined $res->result->{$settings->{'fqdn'}}->{'error'}) {
-        $main::log->error("[OPSI] Error : ".$res->result->{$settings->{'fqdn'}}->{'error'});
-        die "Error : ", $res->result->{$settings->{'fqdn'}}->{'error'}."\n";
-      } elsif (defined $res->result->{$settings->{'fqdn'}}->{'result'}) {
-        $main::log->info("[OPSI] Result : ".$res->result->{$settings->{'fqdn'}}->{'result'});
-        return $res->result->{$settings->{'fqdn'}}->{'result'};
-      } else {
+      if (not defined $res->result) {
         $main::log->info("[OPSI] Result is empty (no errors though)");
         return 1;
       }
+      if (defined $res->result->{$settings->{'fqdn'}}) {
+        my $result = $res->result->{$settings->{'fqdn'}};
+        if (JSON::XS::is_bool($result)) {
+          $main::log->info("[OPSI] Result : ".$result);
+          return $result;
+        } elsif (defined $result->{'error'}) {
+          $main::log->error("[OPSI] Error : ".$result->{'error'});
+          die "Error : ", $result->{'error'}."\n";
+        } elsif (defined $result->{'result'}) {
+          $main::log->info("[OPSI] Result : ".$result->{'result'});
+          return $result->{'result'};
+        } else {
+          $main::log->info("[OPSI] Result is empty (no errors though)");
+          return 1;
+        }
+      }
+      $main::log->info("[OPSI] Result : ".$res->result);
+      return $res->result;
     }
   } else {
     $main::log->info("[OPSI] Status : ".$client->status_line);
