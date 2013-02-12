@@ -30,6 +30,7 @@ use 5.008;
 use Argonaut::Common qw(:ldap :file);
 
 my $actions = {
+  'ping'                  => 'hostControl_reachable',
   'System.halt'           => 'hostControl_shutdown',
   'System.reboot'         => 'hostControl_reboot',
   'Deployment.reboot'     => 'hostControl_reboot',
@@ -81,7 +82,7 @@ sub get_opsi_settings {
 sub handle_client {
   my ($obj, $mac,$action) = @_;
 
-  if (($action ne 'ping') && (not defined $actions->{$action})) {
+  if (not defined $actions->{$action}) {
     return 0;
   }
 
@@ -110,26 +111,57 @@ sub do_action {
 
   my $settings = get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
 
-  if ($action eq 'ping') {
-    return $obj->launch($settings,'hostControl_reachable',[$settings->{'fqdn'},'1000']);
-  } elsif ($action eq 'OPSI.update_or_insert') {
+  my $res;
+
+  if ($action eq 'OPSI.update_or_insert') {
     my $infos = {
       "id"              => $settings->{'fqdn'},
       "description"     => $settings->{'description'},
-      "notes"           => "Created by FusionDirectory",
       "hardwareAddress" => $settings->{'mac'},
       "ipAddress"       => $settings->{'ip'},
       "type"            => "OpsiClient",
     };
-    return $obj->launch($settings,'host_updateObject',[$infos]);
+    my $opsiaction = 'host_updateObject';
+    my $tmpres = $obj->launch($settings,'host_getObjects',[['id'],{'id' => $settings->{'fqdn'}}]);
+    if (scalar(@$tmpres) < 1) {
+      $opsiaction = 'host_insertObject';
+      $infos->{"notes"} = "Created by FusionDirectory";
+    }
+    $res = $obj->launch($settings,$opsiaction,[$infos]);
   } elsif (defined $actions->{$action}) {
-    if ($action =~ m/^hostControl/) {
+    if ($action eq 'ping') {
+      $params = ['1000'];
+    }
+    my $hostControl = (($actions->{$action} =~ m/^hostControl/) || ($action eq 'ping'));
+    if ($hostControl) {
       unshift @$params, $settings->{'fqdn'};
     }
-    return $obj->launch($settings,$actions->{$action},$params);
+    $res = $obj->launch($settings,$actions->{$action},$params);
+    if ($hostControl) {
+      if ((ref $res eq ref {}) && defined $res->{$settings->{'fqdn'}}) {
+        my $result = $res->{$settings->{'fqdn'}};
+        if (JSON::XS::is_bool($result)) {
+          $res = $result;
+        } elsif (defined $result->{'error'}) {
+          $main::log->error("[OPSI] Error : ".$result->{'error'});
+          die "Error : ", $result->{'error'}."\n";
+        } elsif (defined $result->{'result'}) {
+          $res = $result->{'result'};
+        } else {
+          undef $res;
+        }
+      }
+    }
   } else {
-    return $obj->launch($settings,$action,$params);
+    $res = $obj->launch($settings,$action,$params);
   }
+
+  if (not defined $res) {
+    $main::log->info("[OPSI] Result is empty (no errors though)");
+    return 1;
+  }
+  $main::log->info("[OPSI] Result : ".$res);
+  return $res;
 }
 
 =pod
@@ -155,35 +187,15 @@ sub launch { # if ip pings, send the request
     params  => [@$params],
   };
 
-  $main::log->info("[OPSI] Call : ".Dumper($callobj));
+  $main::log->debug("[OPSI] Call : ".Dumper($callobj));
   my $res = $client->call($settings->{'server-uri'}, $callobj);
 
   if($res) {
+    $main::log->debug("[OPSI] Answer : ".Dumper($res));
     if ($res->is_error) {
       $main::log->error("[OPSI] Error : ".$res->error_message->{'message'});
       die "Error : ", $res->error_message->{'message'}."\n";
     } else {
-      if (not defined $res->result) {
-        $main::log->info("[OPSI] Result is empty (no errors though)");
-        return 1;
-      }
-      if (defined $res->result->{$settings->{'fqdn'}}) {
-        my $result = $res->result->{$settings->{'fqdn'}};
-        if (JSON::XS::is_bool($result)) {
-          $main::log->info("[OPSI] Result : ".$result);
-          return $result;
-        } elsif (defined $result->{'error'}) {
-          $main::log->error("[OPSI] Error : ".$result->{'error'});
-          die "Error : ", $result->{'error'}."\n";
-        } elsif (defined $result->{'result'}) {
-          $main::log->info("[OPSI] Result : ".$result->{'result'});
-          return $result->{'result'};
-        } else {
-          $main::log->info("[OPSI] Result is empty (no errors though)");
-          return 1;
-        }
-      }
-      $main::log->info("[OPSI] Result : ".$res->result);
       return $res->result;
     }
   } else {

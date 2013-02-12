@@ -72,7 +72,8 @@ our $log = Log::Handler->create_logger("argonaut-server");
 $log->add(
     file => {
         filename => "$logdir/$logfile",
-        maxlevel => "debug",
+        #~ maxlevel => "debug",
+        maxlevel => "info",
         minlevel => "emergency",
         newline  => 1,
     }
@@ -444,6 +445,10 @@ POE::Session->create(
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($action,$targets,$data) = @params;
 
+            if (ref $data ne ref {}) {
+              #If data is not an hash reference, make it so to avoid errors.
+              $data = {};
+            }
             $log->info("adding action $action");
 
             if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) &&
