@@ -35,40 +35,63 @@ my $actions = {
   'System.reboot'         => 'hostControl_reboot',
   'Deployment.reboot'     => 'hostControl_reboot',
   'OPSI.update_or_insert' => 'update_or_insert',
+  'OPSI.host_getObjects'  => 'host_getObjects',
 };
 
 sub get_opsi_settings {
-  my $settings = argonaut_get_generic_settings(
-    'opsiClient',
-    {
-      'server'      => "fdOpsiServerDn",
-      'description' => "description",
-      'cn'          => 'cn',
-    },
-    @_
-  );
+  my $settings;
+  eval { #try
+    $settings = argonaut_get_generic_settings(
+      'opsiClient',
+      {
+        'server-dn'   => "fdOpsiServerDn",
+        'description' => "description",
+        'cn'          => 'cn',
+      },
+      @_
+    );
+  };
+  if ($@) { #catch
+    my $error = $@;
+    eval {
+      $settings = argonaut_get_generic_settings(
+        'opsiServer',
+        {
+          'server-uri'      => "fdOpsiServerURI",
+          'server-usr'      => "fdOpsiServerUser",
+          'server-pwd'      => "fdOpsiServerPassword",
+          'description'     => "description",
+          'cn'              => 'cn',
+        },
+        @_
+      );
+    };
+    if ($@) {
+      die $error;
+    };
+  };
   my $cn = $settings->{'cn'};
   $cn =~ s/\$$//;
 
   my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
 
-  if ( $ldapinfos->{'ERROR'} > 0) {
+  if ($ldapinfos->{'ERROR'} > 0) {
     die $ldapinfos->{'ERRORMSG'}."\n";
   }
 
-  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+  if (not defined $settings->{'server-uri'}) {
+    my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
+      base    => $settings->{'server-dn'},
+      scope   => 'base',
+      filter  => "(objectClass=opsiServer)",
+      attrs   => ['fdOpsiServerURI', 'fdOpsiServerUser', 'fdOpsiServerPassword']
+    );
+    $settings->{'server-uri'} = ($mesg->entries)[0]->get_value("fdOpsiServerURI");
+    $settings->{'server-usr'} = ($mesg->entries)[0]->get_value("fdOpsiServerUser");
+    $settings->{'server-pwd'} = ($mesg->entries)[0]->get_value("fdOpsiServerPassword");
+  }
 
   my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
-    base    => $settings->{'server'},
-    scope   => 'base',
-    filter  => "(objectClass=opsiServer)",
-    attrs   => ['fdOpsiServerURI', 'fdOpsiServerUser', 'fdOpsiServerPassword']
-  );
-  $settings->{'server-uri'} = ($mesg->entries)[0]->get_value("fdOpsiServerURI");
-  $settings->{'server-usr'} = ($mesg->entries)[0]->get_value("fdOpsiServerUser");
-  $settings->{'server-pwd'} = ($mesg->entries)[0]->get_value("fdOpsiServerPassword");
-
-  $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
     base    => $ldapinfos->{'BASE'},
     filter  => "(&(relativeDomainName=$cn)(aRecord=".$settings->{'ip'}."))",
     attrs   => ['zoneName']
@@ -76,6 +99,7 @@ sub get_opsi_settings {
   my $zoneName = ($mesg->entries)[0]->get_value("zoneName");
   $zoneName =~ s/\.$//;
   $settings->{'fqdn'} = $cn.'.'.$zoneName;
+
   return $settings;
 }
 
@@ -92,7 +116,7 @@ sub handle_client {
     get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
   };
   if ($@) { #catch
-    #~ $main::log->info("[OPSI] Can't handle client : $@");
+    $main::log->debug("[OPSI] Can't handle client : $@");
     return 0;
   };
 
@@ -128,6 +152,9 @@ sub do_action {
       $infos->{"notes"} = "Created by FusionDirectory";
     }
     $res = $obj->launch($settings,$opsiaction,[$infos]);
+    if (defined $settings->{'depot'}) {
+      $res = $obj->launch($settings,'configState_create',["clientconfig.depot.id", $settings->{'fqdn'}, $settings->{'depot'}]);
+    }
   } elsif (defined $actions->{$action}) {
     if ($action eq 'ping') {
       $params = ['1000'];
@@ -136,6 +163,7 @@ sub do_action {
     if ($hostControl) {
       unshift @$params, $settings->{'fqdn'};
     }
+    $main::log->info("[OPSI] sending action ".$actions->{$action}." to ".$settings->{'fqdn'});
     $res = $obj->launch($settings,$actions->{$action},$params);
     if ($hostControl) {
       if ((ref $res eq ref {}) && defined $res->{$settings->{'fqdn'}}) {
@@ -171,9 +199,9 @@ Parameters : ip,action,params
 =cut
 sub launch { # if ip pings, send the request
   my ($obj, $settings,$action,$params) = @_;
-
-  $main::log->info("[OPSI] sending action $action to ".$settings->{'fqdn'});
-  my $client_port = $settings->{'port'};
+  if (not defined $params) {
+    $params = [];
+  }
 
   my $client = new JSON::RPC::Client;
   $client->version('1.0');
