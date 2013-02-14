@@ -35,8 +35,19 @@ my $actions = {
   'System.reboot'         => 'hostControl_reboot',
   'Deployment.reboot'     => 'hostControl_reboot',
   'OPSI.update_or_insert' => 'update_or_insert',
+  'OPSI.delete'           => 'host_delete',
   'OPSI.host_getObjects'  => 'host_getObjects',
 };
+
+sub needs_host_param
+{
+  my ($obj, $action) = @_;
+  #Right now update_or_insert and host_getObjects are the only actions
+  # that does not require the host as first parameter
+  return 0 if ($action eq 'update_or_insert');
+  return 0 if ($action eq 'host_getObjects');
+  return 1;
+}
 
 sub get_opsi_settings {
   my $settings;
@@ -159,13 +170,13 @@ sub do_action {
     if ($action eq 'ping') {
       $params = ['1000'];
     }
-    my $hostControl = (($actions->{$action} =~ m/^hostControl/) || ($action eq 'ping'));
-    if ($hostControl) {
+    my $hostParam = $obj->needs_host_param($actions->{$action});
+    if ($hostParam) {
       unshift @$params, $settings->{'fqdn'};
     }
     $main::log->info("[OPSI] sending action ".$actions->{$action}." to ".$settings->{'fqdn'});
     $res = $obj->launch($settings,$actions->{$action},$params);
-    if ($hostControl) {
+    if ($hostParam) {
       if ((ref $res eq ref {}) && defined $res->{$settings->{'fqdn'}}) {
         my $result = $res->{$settings->{'fqdn'}};
         if (JSON::XS::is_bool($result)) {
