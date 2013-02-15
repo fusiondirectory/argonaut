@@ -34,6 +34,7 @@ my $actions = {
   'System.halt'             => 'hostControl_shutdown',
   'System.reboot'           => 'hostControl_reboot',
   'Deployment.reboot'       => 'hostControl_reboot',
+  'Deployment.reinstall'    => \&reinstall,
   'OPSI.update_or_insert'   => \&update_or_insert,
   'OPSI.delete'             => 'host_delete',
   'OPSI.host_getObjects'    => 'host_getObjects',
@@ -59,6 +60,7 @@ sub get_opsi_settings {
       'opsiClient',
       {
         'server-dn'   => "fdOpsiServerDn",
+        'profile-dn'  => "fdOpsiProfileDn",
         'description' => "description",
         'cn'          => 'cn',
       },
@@ -175,28 +177,46 @@ sub set_netboot {
     "actionRequest" => "setup",
     "productType"   => "NetbootProduct",
   };
-  $res = $obj->launch($settings,'productOnClient_update',[$infos]);
+  $res = $obj->launch($settings,'productOnClient_updateObject',[$infos]);
 
   return $res;
 }
 
-#~ sub set_localboots {
-  #~ my ($obj, $settings,$action,$params) = @_;
-#~
-  #~ my ($productid) = @$params;
-#~
-  #~ my $res;
-#~
-  #~ my $infos = {
-    #~ "productId"     => $productid,
-    #~ "clientId"      => $settings->{'fqdn'},
-    #~ "actionRequest" => "setup",
-    #~ "productType"   => "LocalbootProduct",
-  #~ };
-  #~ $res = $obj->launch($settings,'productOnClient_update',[$infos]);
-#~
-  #~ return $res;
-#~ }
+sub reinstall {
+  my ($obj, $settings,$action,$params) = @_;
+  my $res;
+
+  #1 - fetch the host profile
+  my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
+
+  if ($ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+
+  my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
+    base    => $settings->{'profile-dn'},
+    scope   => 'base',
+    filter  => "(objectClass=opsiProfile)",
+    attrs   => ['fdOpsiNetbootProduct', 'fdOpsiLocalbootProduct']
+  );
+  $settings->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
+  $settings->{'localboots'} = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct");
+  #2 - set netboot as the profile specifies
+  my $infos = {
+    "productId"     => $settings->{'netboot'},
+    "clientId"      => $settings->{'fqdn'},
+    "actionRequest" => "setup",
+    "type"          => "ProductOnClient",
+    "productType"   => "NetbootProduct",
+  };
+  $res = $obj->launch($settings,'productOnClient_updateObject',[$infos]);
+  #3 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile)
+  #~ TODO
+  #4 - reboot the host
+  $res = $obj->launch($settings,'hostControl_reboot',[$settings->{'fqdn'}]);
+
+  return $res;
+}
 
 =pod
 =item do_action
