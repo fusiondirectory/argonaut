@@ -299,6 +299,7 @@ POE::Session->create(
             $_[HEAP]{id} = 0;
 
             $_[HEAP]{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
+                json    => JSON->new->utf8,
                 Port    => $server_port,
                 Handler => {
                     'echo' => 'echo',
