@@ -30,13 +30,16 @@ use 5.008;
 use Argonaut::Common qw(:ldap :file);
 
 my $actions = {
-  'ping'                  => 'hostControl_reachable',
-  'System.halt'           => 'hostControl_shutdown',
-  'System.reboot'         => 'hostControl_reboot',
-  'Deployment.reboot'     => 'hostControl_reboot',
-  'OPSI.update_or_insert' => 'update_or_insert',
-  'OPSI.delete'           => 'host_delete',
-  'OPSI.host_getObjects'  => 'host_getObjects',
+  'ping'                    => 'hostControl_reachable',
+  'System.halt'             => 'hostControl_shutdown',
+  'System.reboot'           => 'hostControl_reboot',
+  'Deployment.reboot'       => 'hostControl_reboot',
+  'OPSI.update_or_insert'   => \&update_or_insert,
+  'OPSI.delete'             => 'host_delete',
+  'OPSI.host_getObjects'    => 'host_getObjects',
+  'OPSI.get_netboots'       => 'product_getObjects',
+  'OPSI.get_localboots'     => 'product_getObjects',
+  'OPSI.set_netboot'        => \&set_netboot
 };
 
 sub needs_host_param
@@ -44,8 +47,8 @@ sub needs_host_param
   my ($obj, $action) = @_;
   #Right now update_or_insert and host_getObjects are the only actions
   # that does not require the host as first parameter
-  return 0 if ($action eq 'update_or_insert');
   return 0 if ($action eq 'host_getObjects');
+  return 0 if ($action eq 'product_getObjects');
   return 1;
 }
 
@@ -134,6 +137,67 @@ sub handle_client {
   return 1;
 }
 
+sub update_or_insert {
+  my ($obj, $settings,$action,$params) = @_;
+
+  my $res;
+
+  my $infos = {
+    "id"              => $settings->{'fqdn'},
+    "description"     => $settings->{'description'},
+    "hardwareAddress" => $settings->{'mac'},
+    "ipAddress"       => $settings->{'ip'},
+    "type"            => "OpsiClient",
+  };
+  my $opsiaction = 'host_updateObject';
+  my $tmpres = $obj->launch($settings,'host_getObjects',[['id'],{'id' => $settings->{'fqdn'}}]);
+  if (scalar(@$tmpres) < 1) {
+    $opsiaction = 'host_insertObject';
+    $infos->{"notes"} = "Created by FusionDirectory";
+  }
+  $res = $obj->launch($settings,$opsiaction,[$infos]);
+  if (defined $settings->{'depot'}) {
+    $res = $obj->launch($settings,'configState_create',["clientconfig.depot.id", $settings->{'fqdn'}, $settings->{'depot'}]);
+  }
+  return $res;
+}
+
+sub set_netboot {
+  my ($obj, $settings,$action,$params) = @_;
+
+  my ($productid) = @$params;
+
+  my $res;
+
+  my $infos = {
+    "productId"     => $productid,
+    "clientId"      => $settings->{'fqdn'},
+    "actionRequest" => "setup",
+    "productType"   => "NetbootProduct",
+  };
+  $res = $obj->launch($settings,'productOnClient_update',[$infos]);
+
+  return $res;
+}
+
+#~ sub set_localboots {
+  #~ my ($obj, $settings,$action,$params) = @_;
+#~
+  #~ my ($productid) = @$params;
+#~
+  #~ my $res;
+#~
+  #~ my $infos = {
+    #~ "productId"     => $productid,
+    #~ "clientId"      => $settings->{'fqdn'},
+    #~ "actionRequest" => "setup",
+    #~ "productType"   => "LocalbootProduct",
+  #~ };
+  #~ $res = $obj->launch($settings,'productOnClient_update',[$infos]);
+#~
+  #~ return $res;
+#~ }
+
 =pod
 =item do_action
 Execute a JSON-RPC method on a client which the ip is given.
@@ -148,25 +212,22 @@ sub do_action {
 
   my $res;
 
-  if ($action eq 'OPSI.update_or_insert') {
-    my $infos = {
-      "id"              => $settings->{'fqdn'},
-      "description"     => $settings->{'description'},
-      "hardwareAddress" => $settings->{'mac'},
-      "ipAddress"       => $settings->{'ip'},
-      "type"            => "OpsiClient",
-    };
-    my $opsiaction = 'host_updateObject';
-    my $tmpres = $obj->launch($settings,'host_getObjects',[['id'],{'id' => $settings->{'fqdn'}}]);
-    if (scalar(@$tmpres) < 1) {
-      $opsiaction = 'host_insertObject';
-      $infos->{"notes"} = "Created by FusionDirectory";
+  if ($action eq 'OPSI.get_netboots') {
+    if (scalar @$params < 1) {
+      $params->[0] = [];
     }
-    $res = $obj->launch($settings,$opsiaction,[$infos]);
-    if (defined $settings->{'depot'}) {
-      $res = $obj->launch($settings,'configState_create',["clientconfig.depot.id", $settings->{'fqdn'}, $settings->{'depot'}]);
+    if (scalar @$params < 2) {
+      $params->[1] = {'type' => 'NetbootProduct'};
     }
-  } elsif (defined $actions->{$action}) {
+  } elsif ($action eq 'OPSI.get_localboots') {
+    if (scalar @$params < 1) {
+      $params->[0] = [];
+    }
+    if (scalar @$params < 2) {
+      $params->[1] = {'type' => 'LocalbootProduct'};
+    }
+  }
+  if (ref $actions->{$action} eq ref "") {
     if ($action eq 'ping') {
       $params = ['1000'];
     }
@@ -192,7 +253,8 @@ sub do_action {
       }
     }
   } else {
-    $res = $obj->launch($settings,$action,$params);
+    my $sub = $actions->{$action};
+    $res = $obj->$sub($settings, $action, $params);
   }
 
   if (not defined $res) {
