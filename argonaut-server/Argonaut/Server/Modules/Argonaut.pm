@@ -57,7 +57,7 @@ sub do_action {
 
   if ($action eq 'ping') {
     my $ok = 'OK';
-    my $res = $obj->launch($target,'echo',[$ok]);
+    my $res = $obj->launch($target,'echo',$ok);
     return ($res eq $ok);
   } else {
     return $obj->launch($target,$action,$params);
@@ -96,7 +96,7 @@ sub launch { # if ip pings, send the request
 
   my $callobj = {
     method  => $action,
-    params  => [@$params],
+    params  => [$params],
   };
 
   my $res = $client->call($main::protocol."://".$ip.":".$client_port, $callobj);
