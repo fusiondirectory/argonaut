@@ -200,20 +200,38 @@ sub reinstall {
     attrs   => ['fdOpsiNetbootProduct', 'fdOpsiLocalbootProduct']
   );
   $settings->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
-  $settings->{'localboots'} = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct");
+  $settings->{'localboots'} = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct", asref => 1);
   #2 - set netboot as the profile specifies
-  my $infos = {
-    "productId"     => $settings->{'netboot'},
-    "clientId"      => $settings->{'fqdn'},
-    "actionRequest" => "setup",
-    "type"          => "ProductOnClient",
-    "productType"   => "NetbootProduct",
-  };
-  $res = $obj->launch($settings,'productOnClient_updateObject',[$infos]);
+  if (defined $settings->{'netboot'}) {
+    my $infos = {
+      "productId"     => $settings->{'netboot'},
+      "clientId"      => $settings->{'fqdn'},
+      "actionRequest" => "setup",
+      "type"          => "ProductOnClient",
+      "productType"   => "NetbootProduct",
+    };
+    $res = $obj->launch($settings,'productOnClient_updateObject',[$infos]);
+  }
   #3 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile)
-  #~ TODO
-  #4 - reboot the host
-  $res = $obj->launch($settings,'hostControl_reboot',[$settings->{'fqdn'}]);
+  if (defined $settings->{'localboots'}) {
+    my $infos = [];
+    foreach my $localboot (@{$settings->{'localboots'}}) {
+      push @$infos, {
+        "productId"     => $localboot,
+        "clientId"      => $settings->{'fqdn'},
+        "actionRequest" => "setup",
+        "type"          => "ProductOnClient",
+        "productType"   => "LocalbootProduct"
+      };
+    }
+    $res = $obj->launch($settings,'productOnClient_updateObjects',[$infos]);
+  }
+  #4 - reboot the host or fire the event
+  if (defined $settings->{'netboot'}) {
+    $res = $obj->launch($settings,'hostControl_reboot',[$settings->{'fqdn'}]);
+  } else {
+    $res = $obj->launch($settings,'hostControl_fireEvent',['on_demand', $settings->{'fqdn'}]);
+  }
 
   return $res;
 }

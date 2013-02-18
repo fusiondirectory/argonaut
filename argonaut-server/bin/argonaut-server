@@ -321,9 +321,9 @@ POE::Session->create(
                                         : ()
             );
             $_[HEAP]{scheduled_only} = [
-                "System.update",
-                "System.reinstall",
-                "System.memcheck",
+                "Deployment.update",
+                "Deployment.reinstall",
+                "Deployment.memcheck",
                 "detect_hardware"
                 ];
             #~ $_[KERNEL]->yield(add=>undef,undef,"job_trigger_action_halt",["00:11:22:33:44:55"],{timestamp=>1314107700});
