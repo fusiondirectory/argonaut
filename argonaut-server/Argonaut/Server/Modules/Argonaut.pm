@@ -28,6 +28,14 @@ use 5.008;
 
 use Argonaut::Common qw(:ldap :file);
 
+sub new
+{
+  my ($class) = @_;
+  my $self = {};
+  bless( $self, $class );
+  return $self;
+}
+
 sub handle_client {
   my ($obj, $mac,$action) = @_;
 

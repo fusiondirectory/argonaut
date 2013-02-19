@@ -30,6 +30,14 @@ use Argonaut::Common qw(:ldap :file);
 
 my @fai_actions = ["Deployment.reinstall", "Deployment.update", "Deployment.wake", "Deployment.reboot"];
 
+sub new
+{
+  my ($class) = @_;
+  my $self = {};
+  bless( $self, $class );
+  return $self;
+}
+
 sub handle_client {
   my ($obj, $mac, $action) = @_;
 

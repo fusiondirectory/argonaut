@@ -46,7 +46,7 @@ use Argonaut::Common qw(:ldap :file);
 use Argonaut::Packages qw(get_packages_info store_packages_file);
 
 # where to look for modules files
-use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', require => 1;
+use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', instantiate => 'new';
 
 use constant ETH_P_ALL => 0x0003;
 use constant PF_PACKET => 17;
@@ -247,6 +247,19 @@ sub ldap_authenticate {
   }
 
   return 1;
+}
+
+sub refresh_task {
+  my ($kernel,$heap,$session,$id,$entry) = @_;
+  if (defined $entry->{'handler'}) {
+    $entry->{'handler'}->update_task($kernel,$heap,$session,$id);
+  }
+  if($entry->{progress} >= 100) {
+    $entry->{status} = "processed";
+    if($delete_finished_tasks) {
+      delete $heap->{tasks}->{$id};
+    }
+  }
 }
 
 =pod
@@ -497,11 +510,12 @@ POE::Session->create(
             }
         },
         get_entries_by_id => sub {
-            my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, ARG0..$#_ ];
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, SESSION, ARG0..$#_ ];
             my ($ids) = @params;
             my $entries = [];
             while (my ($id,$entry) = each(%{$heap->{tasks}})) {
                 if((!defined $ids) || (grep {$_ == $id} $ids)) {
+                    refresh_task($kernel,$heap,$session,$id,$entry);
                     push @{$entries}, convert_entry($entry,$id);
                 }
             }
@@ -509,11 +523,12 @@ POE::Session->create(
             $kernel->post( $jsonrpc => 'result' => $id, $entries);
         },
         get_entries_by_mac => sub { # this has not been tested
-            my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, ARG0..$#_ ];
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, SESSION, ARG0..$#_ ];
             my ($macs) = @params;
             my $entries = [];
             while (my ($id,$entry) = each(%{$heap->{tasks}})) {
                 if((!defined $macs) || (grep {lc($_) eq $entry->{'target'}} $macs)) {
+                    refresh_task($kernel,$heap,$session,$id,$entry);
                     push @{$entries}, convert_entry($entry,$id);
                 }
             }
