@@ -101,6 +101,7 @@ sub get_opsi_settings {
   my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
 
   if ($ldapinfos->{'ERROR'} > 0) {
+    $main::log->notice("[OPSI] Client with OPSI activated but LDAP ERROR while searching server : ".$ldapinfos->{'ERRORMSG'});
     die $ldapinfos->{'ERRORMSG'}."\n";
   }
 
@@ -111,6 +112,9 @@ sub get_opsi_settings {
       filter  => "(objectClass=opsiServer)",
       attrs   => ['fdOpsiServerURI', 'fdOpsiServerUser', 'fdOpsiServerPassword']
     );
+    if (not defined ($mesg->entries)[0]->get_value("fdOpsiServerURI")) {
+      $main::log->notice("[OPSI] Client with OPSI activated but server ".$settings->{'server-dn'}." not found");
+    }
     $settings->{'server-uri'} = ($mesg->entries)[0]->get_value("fdOpsiServerURI");
     $settings->{'server-usr'} = ($mesg->entries)[0]->get_value("fdOpsiServerUser");
     $settings->{'server-pwd'} = ($mesg->entries)[0]->get_value("fdOpsiServerPassword");
@@ -121,9 +125,14 @@ sub get_opsi_settings {
     filter  => "(&(relativeDomainName=$cn)(aRecord=".$settings->{'ip'}."))",
     attrs   => ['zoneName']
   );
-  my $zoneName = ($mesg->entries)[0]->get_value("zoneName");
-  $zoneName =~ s/\.$//;
-  $settings->{'fqdn'} = $cn.'.'.$zoneName;
+  if (($mesg->entries)[0]->get_value("zoneName")) {
+    my $zoneName = ($mesg->entries)[0]->get_value("zoneName");
+    $zoneName =~ s/\.$//;
+    $settings->{'fqdn'} = $cn.'.'.$zoneName;
+  } else {
+    $main::log->notice("[OPSI] Client with OPSI activated but no DNS name");
+    die "Client with OPSI activated but no DNS name";
+  }
 
   return $settings;
 }

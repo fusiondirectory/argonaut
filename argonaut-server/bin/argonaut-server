@@ -46,7 +46,7 @@ use Argonaut::Common qw(:ldap :file);
 use Argonaut::Packages qw(get_packages_info store_packages_file);
 
 # where to look for modules files
-use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', instantiate => 'new';
+use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', instantiate => 'new', except => 'Argonaut::Server::Modules::Argonaut';
 
 use constant ETH_P_ALL => 0x0003;
 use constant PF_PACKET => 17;
@@ -576,7 +576,9 @@ POE::Session->create(
             my $res = 0;
 
             eval { # try
-              foreach my $module (modules()) {
+              my @modules = modules();
+              push @modules, Argonaut::Server::Modules::Argonaut->new();
+              foreach my $module (@modules) {
                 #~ Is this module the one for this client and action?
                 if ($module->handle_client($target,$action)) {
                   $handled = 1;
