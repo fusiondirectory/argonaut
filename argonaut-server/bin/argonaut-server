@@ -47,6 +47,7 @@ use Argonaut::Packages qw(get_packages_info store_packages_file);
 
 # where to look for modules files
 use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', instantiate => 'new', except => 'Argonaut::Server::Modules::Argonaut';
+use Argonaut::Server::Modules::Argonaut;
 
 use constant ETH_P_ALL => 0x0003;
 use constant PF_PACKET => 17;

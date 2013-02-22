@@ -112,7 +112,7 @@ sub get_opsi_settings {
       filter  => "(objectClass=opsiServer)",
       attrs   => ['fdOpsiServerURI', 'fdOpsiServerUser', 'fdOpsiServerPassword']
     );
-    if (not defined ($mesg->entries)[0]->get_value("fdOpsiServerURI")) {
+    if ($mesg->count <= 0) {
       $main::log->notice("[OPSI] Client with OPSI activated but server ".$settings->{'server-dn'}." not found");
     }
     $settings->{'server-uri'} = ($mesg->entries)[0]->get_value("fdOpsiServerURI");
