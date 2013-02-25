@@ -272,7 +272,17 @@ sub reinstall {
   );
   $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
   $self->{'localboots'} = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct", asref => 1);
-  #2 - set netboot as the profile specifies
+  #2 - remove existing setups
+  my $productOnClients = $self->launch('productOnClient_getObjects',
+    [[],
+    {
+      "clientId"      => $self->{'fqdn'},
+      "actionRequest" => "setup"
+      "type"          => "ProductOnClient",
+    }]
+  );
+  $res = $self->launch('productOnClient_deleteObjects', [$productOnClients]);
+  #3 - set netboot as the profile specifies
   if (defined $self->{'netboot'}) {
     my $infos = {
       "productId"     => $self->{'netboot'},
@@ -283,7 +293,7 @@ sub reinstall {
     };
     $res = $self->launch('productOnClient_updateObject',[$infos]);
   }
-  #3 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile)
+  #4 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile)
   if (defined $self->{'localboots'}) {
     my $infos = [];
     foreach my $localboot (@{$self->{'localboots'}}) {
@@ -297,7 +307,7 @@ sub reinstall {
     }
     $res = $self->launch('productOnClient_updateObjects',[$infos]);
   }
-  #4 - reboot the host or fire the event
+  #5 - reboot the host or fire the event
   if (defined $self->{'netboot'}) {
     $res = $self->launch('hostControl_reboot',[$self->{'fqdn'}]);
   } else {
