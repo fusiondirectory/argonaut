@@ -28,6 +28,8 @@ use 5.008;
 
 use Argonaut::Common qw(:ldap :file);
 
+my @unlocked_actions = ['System.halt', 'System.reboot'];
+
 sub new
 {
   my ($class) = @_;
@@ -37,7 +39,7 @@ sub new
 }
 
 sub handle_client {
-  my ($obj, $mac,$action) = @_;
+  my ($self, $mac,$action) = @_;
 
   if ($action =~ m/^Deployment.*/) {
     return 0;
@@ -46,7 +48,8 @@ sub handle_client {
   my $ip = main::getIpFromMac($mac);
 
   eval { #try
-    argonaut_get_client_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+    my $settings = argonaut_get_client_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+    %$self = %$settings;
   };
   if ($@) { #catch
     return 0;
@@ -61,14 +64,18 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub do_action {
-  my ($obj, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
+  my ($self, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
+
+  if ($self->{'locked'} && (grep {$_ eq $action} @unlocked_actions)) {
+    die 'This computer is locked';
+  }
 
   if ($action eq 'ping') {
     my $ok = 'OK';
-    my $res = $obj->launch($target,'echo',$ok);
+    my $res = $self->launch($target,'echo',$ok);
     return ($res eq $ok);
   } else {
-    return $obj->launch($target,$action,$params);
+    return $self->launch($target,$action,$params);
   }
 }
 
@@ -78,28 +85,25 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub launch { # if ip pings, send the request
-  my ($obj, $target,$action,$params) = @_;
+  my ($self, $target,$action,$params) = @_;
 
   if ($action =~ m/^[^.]+\.[^.]+$/) {
     $action = 'Argonaut.ClientDaemon.Modules.'.$action;
   }
 
-  my $ip = main::getIpFromMac($target);
+  my $ip = $self->{'ip'};
   # this line is only needed when debugging stuff on localhost
   #$ip = "localhost";
 
   $main::log->info("sending action $action to $ip");
 
-  my $settings = argonaut_get_client_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
-  my $client_port = $settings->{'port'};
-
-  my $client = new JSON::RPC::Client;
+  my $client = JSON::RPC::Client->new();
   $client->version('1.0');
   if ($main::protocol eq 'https') {
     if ($client->ua->can('ssl_opts')) {
       $client->ua->ssl_opts(verify_hostname => 1,SSL_ca_file => "dummy_ca.crt");
     }
-    $client->ua->credentials($ip.":".$client_port, "JSONRPCRealm", "foo", "secret");
+    $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "foo", "secret");
   }
 
   my $callobj = {
@@ -107,7 +111,7 @@ sub launch { # if ip pings, send the request
     params  => [$params],
   };
 
-  my $res = $client->call($main::protocol."://".$ip.":".$client_port, $callobj);
+  my $res = $client->call($main::protocol."://".$ip.":".$self->{'port'}, $callobj);
 
   if($res) {
     if ($res->is_error) {

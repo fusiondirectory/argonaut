@@ -679,7 +679,7 @@ sub argonaut_get_generic_settings {
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
             filter => "(&(objectClass=$objectClass)(ipHostNumber=$ip))",
-            attrs => ['macAddress',values(%{$params})]
+            attrs => ['macAddress','gotoMode',values(%{$params})]
             );
 
   my $settings = {
@@ -687,9 +687,15 @@ sub argonaut_get_generic_settings {
   };
 
   if(scalar($mesg->entries)==1) {
+    $settings->{'dn'} = ($mesg->entries)[0]->dn();
     $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
+    if (($mesg->entries)[0]->exists('gotoMode')) {
+      $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
+    } else {
+      $settings->{'locked'} = 0;
+    }
     while (my ($key,$value) = each(%{$params})) {
-      if (($mesg->entries)[0]->get_value("$value")) {
+      if (($mesg->entries)[0]->exists("$value")) {
         $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
       } else {
         $settings->{"$key"} = "";
@@ -703,17 +709,23 @@ sub argonaut_get_generic_settings {
     $mesg = $ldap->search( # perform a search
               base   => $ldap_base,
               filter => "ipHostNumber=$ip",
-              attrs => [ 'dn', 'macAddress' ]
+              attrs => [ 'dn', 'macAddress', 'gotoMode' ]
               );
     if(scalar($mesg->entries)!=1) {
       die "Several computers are associated to IP $ip.";
     }
+    $settings->{'dn'} = ($mesg->entries)[0]->dn();
     $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
+    if (($mesg->entries)[0]->exists('gotoMode')) {
+      $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
+    } else {
+      $settings->{'locked'} = 0;
+    }
     my $dn = ($mesg->entries)[0]->dn();
     my $mesg = $ldap->search( # perform a search
       base   => $ldap_base,
       filter => "(&(objectClass=$objectClass)(member=$dn))",
-      attrs => ['macAddress',values(%{$params})]
+      attrs => [values(%{$params})]
     );
     if(scalar($mesg->entries)==1) {
       while (my ($key,$value) = each(%{$params})) {

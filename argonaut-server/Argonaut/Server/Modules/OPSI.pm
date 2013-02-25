@@ -42,6 +42,12 @@ my $actions = {
   'OPSI.get_localboots'     => 'product_getObjects',
 };
 
+my @locked_actions = [
+  'ping',
+  'OPSI.update_or_insert', 'OPSI.delete',
+  'OPSI.host_getObjects', 'OPSI.get_netboots', 'OPSI.get_localboots',
+];
+
 my $settings;
 
 sub new
@@ -277,7 +283,7 @@ sub reinstall {
     [[],
     {
       "clientId"      => $self->{'fqdn'},
-      "actionRequest" => "setup"
+      "actionRequest" => "setup",
       "type"          => "ProductOnClient",
     }]
   );
@@ -324,6 +330,10 @@ Parameters : ip,action,params
 =cut
 sub do_action {
   my ($self, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
+
+  if ($self->{'locked'} && not (grep {$_ eq $action} @locked_actions)) {
+    die 'This computer is locked';
+  }
 
   if(defined $taskid) {
     $heap->{tasks}->{$taskid}->{handler} = $self;
@@ -399,7 +409,7 @@ sub launch { # if ip pings, send the request
     $params = [];
   }
 
-  my $client = new JSON::RPC::Client;
+  my $client = JSON::RPC::Client->new();
   $client->version('1.0');
   my $host = $self->{'server-uri'};
   $host =~ s|^http(s?)://||;

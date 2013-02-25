@@ -39,15 +39,16 @@ sub new
 }
 
 sub handle_client {
-  my ($obj, $mac, $action) = @_;
+  my ($self, $mac, $action) = @_;
 
   if (grep {$_ eq $action} @fai_actions) {
     my $ip = main::getIpFromMac($mac);
     eval { #try
-      argonaut_get_generic_settings(
+      my $settings = argonaut_get_generic_settings(
         'FAIobject', {'state' => "FAIstate"},
         $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip
       );
+      %$self = %$settings;
     };
     if ($@) { #catch
       return 0;
@@ -64,9 +65,13 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub do_action {
-  my ($obj, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
+  my ($self, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
 
-  my $substatus = $obj->handler_fai($kernel,$session,$taskid,$target,$action,$params);
+  if ($self->{'locked'}) {
+    die 'This computer is locked';
+  }
+
+  my $substatus = $self->handler_fai($kernel,$session,$taskid,$target,$action,$params);
   if(defined $taskid) {
     $heap->{tasks}->{$taskid}->{substatus} = $substatus;
   }
@@ -79,7 +84,7 @@ Put the right boot mode in the ldap and send the right thing to the client.
 Parameters : the targetted mac address, the action received, the args received for it (args are currently unused).
 =cut
 sub handler_fai {
-  my($obj, $kernel,$session,$taskid,$target,$action,$args) = @_;
+  my($self, $kernel,$session,$taskid,$target,$action,$args) = @_;
   my $fai_state = {
     "Deployment.reinstall"  => "install",
     "Deployment.update"     => "softupdate",
@@ -89,7 +94,7 @@ sub handler_fai {
 
   my $need_reboot = ($action ne "Deployment.wake");
 
-  $obj->flag($target,$fai_state->{$action});
+  $self->flag($target,$fai_state->{$action});
 
   eval { # try
     if($need_reboot) {
@@ -111,28 +116,10 @@ sub handler_fai {
 
 =cut
 sub flag {
-  my ($obj, $target,$fai_state) = @_;
+  my ($self, $target,$fai_state) = @_;
   my ($ldap,$ldap_base) = bindLdap();
 
-  my $mesg = $ldap->search( # perform a search
-    base   => $ldap_base,
-    filter => "macAddress=$target",
-    attrs => [ 'FAIstate' ]
-  );
-
-  $mesg->code && die "Error while searching entry for target address '$target' :".$mesg->error;
-
-  if(scalar($mesg->entries)>1) {
-    $main::log->error("Multiple entries were found for the Mac address $target!");
-    die "Multiple entries were found for the Mac address $target!";
-  } elsif(scalar($mesg->entries)<1) {
-    $main::log->error("No entry were found for the Mac address $target!");
-    die "No entry were found for the Mac address $target!";
-  }
-
-  my $dn = ($mesg->entries)[0];
-
-  $mesg = $ldap->modify($dn, replace => {"FAIstate" => $fai_state});
+  my $mesg = $ldap->modify($self->{'dn'}, replace => {"FAIstate" => $fai_state});
 
   $mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
 
