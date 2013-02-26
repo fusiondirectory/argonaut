@@ -30,16 +30,17 @@ use 5.008;
 use Argonaut::Common qw(:ldap :file);
 
 my $actions = {
-  'ping'                    => 'hostControl_reachable',
-  'System.halt'             => 'hostControl_shutdown',
-  'System.reboot'           => 'hostControl_reboot',
-  'Deployment.reboot'       => 'hostControl_reboot',
-  'Deployment.reinstall'    => \&reinstall,
-  'OPSI.update_or_insert'   => \&update_or_insert,
-  'OPSI.delete'             => 'host_delete',
-  'OPSI.host_getObjects'    => 'host_getObjects',
-  'OPSI.get_netboots'       => 'product_getObjects',
-  'OPSI.get_localboots'     => 'product_getObjects',
+  'ping'                        => 'hostControl_reachable',
+  'System.halt'                 => 'hostControl_shutdown',
+  'System.reboot'               => 'hostControl_reboot',
+  'Deployment.reboot'           => 'hostControl_reboot',
+  'Deployment.reinstall'        => \&reinstall,
+  'OPSI.update_or_insert'       => \&update_or_insert,
+  'OPSI.delete'                 => 'host_delete',
+  'OPSI.host_getObjects'        => 'host_getObjects',
+  'OPSI.get_netboots'           => 'product_getObjects',
+  'OPSI.get_localboots'         => 'product_getObjects',
+  'OPSI.get_product_properties' => 'productProperty_getObjects',
 };
 
 my @locked_actions = [
@@ -63,6 +64,7 @@ sub needs_host_param
   my ($self, $action) = @_;
   #Right now update_or_insert and host_getObjects are the only actions
   # that does not require the host as first parameter
+  return 0 if ($action eq 'productProperty_getObjects');
   return 0 if ($action eq 'host_getObjects');
   return 0 if ($action eq 'product_getObjects');
   return 1;
