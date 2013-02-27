@@ -276,20 +276,28 @@ sub reinstall {
     base    => $self->{'profile-dn'},
     scope   => 'base',
     filter  => "(objectClass=opsiProfile)",
-    attrs   => ['fdOpsiNetbootProduct', 'fdOpsiLocalbootProduct']
+    attrs   => ['fdOpsiNetbootProduct', 'fdOpsiLocalbootProduct', 'fdOpsiProductProperty']
   );
   $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
   $self->{'localboots'} = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct", asref => 1);
-  #2 - remove existing setups
+  $self->{'properties'} = ($mesg->entries)[0]->get_value("fdOpsiProductProperty", asref => 1);
+  #2 - remove existing setups and properties
   my $productOnClients = $self->launch('productOnClient_getObjects',
     [[],
     {
       "clientId"      => $self->{'fqdn'},
-      "actionRequest" => "setup",
       "type"          => "ProductOnClient",
     }]
   );
   $res = $self->launch('productOnClient_deleteObjects', [$productOnClients]);
+  my $productOnClients = $self->launch('productPropertyState_getObjects',
+    [[],
+    {
+      "objectId"      => $self->{'fqdn'},
+      "type"          => "ProductPropertyState",
+    }]
+  );
+  $res = $self->launch('productPropertyState_deleteObjects', [$productOnClients]);
   #3 - set netboot as the profile specifies
   if (defined $self->{'netboot'}) {
     my $infos = {
@@ -315,7 +323,23 @@ sub reinstall {
     }
     $res = $self->launch('productOnClient_updateObjects',[$infos]);
   }
-  #5 - reboot the host or fire the event
+  #5 - set properties as the profile specifies
+  if (defined $self->{'properties'}) {
+    my $infos = [];
+    foreach my $property (@{$self->{'properties'}}) {
+      my ($product, $propid, @values) = split('|',$property);
+      push @$infos, {
+        "productId"     => $product,
+        "propertyId"    => $propid,
+        "objectId"      => $self->{'fqdn'},
+        "values"        => \@values,
+        "type"          => "ProductPropertyState",
+      };
+    }
+    $res = $self->launch('productPropertyState_updateObjects',[$infos]);
+  }
+  #6 - TODO - set to uninstall product that are not in the profile
+  #7 - reboot the host or fire the event
   if (defined $self->{'netboot'}) {
     $res = $self->launch('hostControl_reboot',[$self->{'fqdn'}]);
   } else {
