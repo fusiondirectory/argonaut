@@ -313,10 +313,11 @@ sub reinstall {
   if (defined $self->{'localboots'}) {
     my $infos = [];
     foreach my $localboot (@{$self->{'localboots'}}) {
+      my ($product, $action) = split('|',$localboot);
       push @$infos, {
-        "productId"     => $localboot,
+        "productId"     => $product,
         "clientId"      => $self->{'fqdn'},
-        "actionRequest" => "setup",
+        "actionRequest" => $action,
         "type"          => "ProductOnClient",
         "productType"   => "LocalbootProduct"
       };
