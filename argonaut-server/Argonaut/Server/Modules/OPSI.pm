@@ -24,6 +24,7 @@ package Argonaut::Server::Modules::OPSI;
 use strict;
 use warnings;
 use Data::Dumper;
+use JSON;
 
 use 5.008;
 
@@ -205,17 +206,18 @@ sub update_task {
     my $status = "";
     if (defined $self->{'localboots'}) {
       foreach my $localboot (@{$self->{'localboots'}}) {
+        my ($product, $action) = split('\|',$localboot);
         $nblocals++;
         my $filter = {
-          "productId"     => $localboot,
+          "productId"     => $product,
           "clientId"      => $self->{'fqdn'},
           "productType"   => "LocalbootProduct",
         };
         my $results = $self->launch('productOnClient_getObjects',[$attrs, $filter]);
         my $res = shift @$results;
-        if ($res->{'actionRequest'} eq 'setup') {
+        if ($res->{'actionRequest'} eq $action) {
           if ($res->{'actionProgress'} ne "") {
-            $status = $localboot.": ".$res->{'actionProgress'};
+            $status = $product.": ".$res->{'actionProgress'};
           }
         } elsif ($res->{'installationStatus'} eq 'installed') {
           $nbinstalled++;
@@ -289,8 +291,11 @@ sub reinstall {
       "type"          => "ProductOnClient",
     }]
   );
-  $res = $self->launch('productOnClient_deleteObjects', [$productOnClients]);
-  my $productOnClients = $self->launch('productPropertyState_getObjects',
+  foreach my $product (@$productOnClients) {
+    $product->{"actionRequest"} = 'none';
+  }
+  $res = $self->launch('productOnClient_updateObjects', [$productOnClients]);
+  $productOnClients = $self->launch('productPropertyState_getObjects',
     [[],
     {
       "objectId"      => $self->{'fqdn'},
@@ -308,12 +313,27 @@ sub reinstall {
       "productType"   => "NetbootProduct",
     };
     $res = $self->launch('productOnClient_updateObject',[$infos]);
+  } else {
+    #3 bis - set to uninstall product that are not in the profile
+    $productOnClients = $self->launch('productOnClient_getObjects',
+      [[],
+      {
+        "clientId"            => $self->{'fqdn'},
+        "type"                => "ProductOnClient",
+        "installationStatus"  => "installed",
+      }]
+    );
+    foreach my $product (@$productOnClients) {
+      $product->{"actionRequest"} = "uninstall";
+      $main::log->debug("[OPSI] uninstall ".$product->{"productId"});
+    }
+    $res = $self->launch('productOnClient_updateObjects', [$productOnClients]);
   }
   #4 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile)
   if (defined $self->{'localboots'}) {
     my $infos = [];
     foreach my $localboot (@{$self->{'localboots'}}) {
-      my ($product, $action) = split('|',$localboot);
+      my ($product, $action) = split('\|',$localboot);
       push @$infos, {
         "productId"     => $product,
         "clientId"      => $self->{'fqdn'},
@@ -328,19 +348,18 @@ sub reinstall {
   if (defined $self->{'properties'}) {
     my $infos = [];
     foreach my $property (@{$self->{'properties'}}) {
-      my ($product, $propid, @values) = split('|',$property);
+      my ($product, $propid, $values) = split('\|',$property);
       push @$infos, {
         "productId"     => $product,
         "propertyId"    => $propid,
         "objectId"      => $self->{'fqdn'},
-        "values"        => \@values,
+        "values"        => decode_json($values),
         "type"          => "ProductPropertyState",
       };
     }
     $res = $self->launch('productPropertyState_updateObjects',[$infos]);
   }
-  #6 - TODO - set to uninstall product that are not in the profile
-  #7 - reboot the host or fire the event
+  #6 - reboot the host or fire the event
   if (defined $self->{'netboot'}) {
     $res = $self->launch('hostControl_reboot',[$self->{'fqdn'}]);
   } else {
