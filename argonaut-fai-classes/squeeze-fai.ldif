@@ -1,0 +1,32 @@
+dn: ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+objectClass: FAIbranch
+ou: squeeze
+
+dn: ou=packages,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: packages
+
+dn: ou=scripts,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: scripts
+
+dn: ou=hooks,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: hooks
+
+dn: ou=disk,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: disk
+
+dn: ou=variables,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: variables
+
+dn: ou=profiles,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: profiles
+
+dn: ou=templates,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: templates
