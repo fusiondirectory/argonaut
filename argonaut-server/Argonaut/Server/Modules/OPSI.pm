@@ -278,9 +278,10 @@ sub reinstall {
     base    => $self->{'profile-dn'},
     scope   => 'base',
     filter  => "(objectClass=opsiProfile)",
-    attrs   => ['fdOpsiNetbootProduct', 'fdOpsiLocalbootProduct', 'fdOpsiProductProperty']
+    attrs   => ['fdOpsiNetbootProduct', 'fdOpsiSoftwareList', 'fdOpsiProductProperty']
   );
   $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
+  $self->{'softlists'}  = ($mesg->entries)[0]->get_value("fdOpsiSoftwareList", asref => 1);
   $self->{'localboots'} = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct", asref => 1);
   $self->{'properties'} = ($mesg->entries)[0]->get_value("fdOpsiProductProperty", asref => 1);
   #2 - remove existing setups and properties
@@ -330,17 +331,29 @@ sub reinstall {
     $res = $self->launch('productOnClient_updateObjects', [$productOnClients]);
   }
   #4 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile)
-  if (defined $self->{'localboots'}) {
+  if (defined $self->{'softlists'}) {
     my $infos = [];
-    foreach my $localboot (@{$self->{'localboots'}}) {
-      my ($product, $action) = split('\|',$localboot);
-      push @$infos, {
-        "productId"     => $product,
-        "clientId"      => $self->{'fqdn'},
-        "actionRequest" => $action,
-        "type"          => "ProductOnClient",
-        "productType"   => "LocalbootProduct"
-      };
+    foreach my $softlistdn (@{$self->{'softlists'}}) {
+      my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
+        base    => $softlistdn,
+        scope   => 'base',
+        filter  => "(objectClass=opsiSoftwareList)",
+        attrs   => ['fdOpsiLocalbootProduct']
+      );
+      my $localboots = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct", asref => 1);
+      if (not defined $localboots) {
+        next;
+      }
+      foreach my $localboot (@{$localboots}) {
+        my ($product, $action) = split('\|',$localboot);
+        push @$infos, {
+          "productId"     => $product,
+          "clientId"      => $self->{'fqdn'},
+          "actionRequest" => $action,
+          "type"          => "ProductOnClient",
+          "productType"   => "LocalbootProduct"
+        };
+      }
     }
     $res = $self->launch('productOnClient_updateObjects',[$infos]);
   }
