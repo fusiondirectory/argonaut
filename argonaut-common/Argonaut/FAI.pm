@@ -3,7 +3,7 @@
 # Argonaut::FAI packages - functions to get info for install from ldap
 #
 # Copyright (c) 2008 Landeshauptstadt München
-# Copyright (C) 2011 FusionDirectory project
+# Copyright (C) 2011-2013 FusionDirectory project
 #
 # Author: Jan-Marek Glogowski
 #

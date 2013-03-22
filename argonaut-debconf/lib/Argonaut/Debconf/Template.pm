@@ -24,18 +24,18 @@ use base qw/Argonaut::Debconf::Class/;
 use Argonaut::Debconf::Common qw/:public/;
 
 sub _init {
-	__PACKAGE__->metadata->setup(
-			attributes          => [qw/
-				cn default description extendedDescription type choices
-				owners
-			/],
+  __PACKAGE__->metadata->setup(
+      attributes          => [qw/
+        cn default description extendedDescription type choices
+        owners
+      /],
 
-			unique_attributes   => [qw/
-				cn
-			/],
+      unique_attributes   => [qw/
+        cn
+      /],
 
-			base_dn             => $C->ldap_base,
-	)
+      base_dn             => $C->ldap_base,
+  )
 }
 
 1
@@ -47,7 +47,8 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
 Copyright 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,

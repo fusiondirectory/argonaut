@@ -24,7 +24,7 @@ Which host is preseed.cfg generated for?
 
   - For the host in LDAP whose ipHostNumber matches the IP from which the
     http request for the preseed file is coming. If you want to retrieve
-    the configuration from a different host, pass the ip=ip.add.re.ss 
+    the configuration from a different host, pass the ip=ip.add.re.ss
     parameter. To disable retrieving other hosts' preseed files,
     set "ip 0" in the %parm_valid variable below.
 
@@ -78,14 +78,14 @@ $query{ip}= $ENV{REMOTE_ADDR};
 # Transform input @query into %query hash, possibly overriding
 # default values
 for( @query){
-	next unless /^(\w+)=([\w\.]+)$/;
-	next unless $parm_valid{$1};
-	my( $key, $val)= ( $1, $2);
-	$query{$key}= $val;
+  next unless /^(\w+)=([\w\.]+)$/;
+  next unless $parm_valid{$1};
+  my( $key, $val)= ( $1, $2);
+  $query{$key}= $val;
 }
 if( $query{debug}) {
-	print '# '. scalar localtime, "\n";
-	while( my($k,$v)= each %query) { print "# $k=$v\n"}
+  print '# '. scalar localtime, "\n";
+  while( my($k,$v)= each %query) { print "# $k=$v\n"}
 }
 
 my( $cfg, $n);
@@ -93,14 +93,14 @@ my( $cfg, $n);
 if( my $s= FusionDirectory::Plugin::Debconf::System->find2(
  objectClass  => 'GOhard', ipHostNumber => $query{ip})) {
 
-	( $cfg, $n)= $s->Preseed( filter => 'flags='. $query{flag})
-		->as_config( debug => $query{debug})
+  ( $cfg, $n)= $s->Preseed( filter => 'flags='. $query{flag})
+    ->as_config( debug => $query{debug})
 }
 
 unless( $n) {
-	print( ( $query{must_exist}? '': '# '). "NO-CONFIG-FOR-$query{ip}")
+  print( ( $query{must_exist}? '': '# '). "NO-CONFIG-FOR-$query{ip}")
 } else {
-	print $cfg
+  print $cfg
 }
 
 exit 0
@@ -110,9 +110,10 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2008-2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2008-2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
-Copyright 2008-2011, SPINLOCK Solutions,
+Copyright (C) 2008-2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,
   http://techpubs.spinlocksolutions.com/
 

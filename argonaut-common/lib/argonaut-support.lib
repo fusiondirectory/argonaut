@@ -1,10 +1,10 @@
 #!/bin/sh
 #######################################################################
 #
-# Argonaut agent library -- 
+# Argonaut agent library --
 #
 # Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
-# Copyright (C) 2011 FusionDirectory project
+# Copyright (C) 2011-2013 FusionDirectory project
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ if [ -r /etc/ldap/ldap-shell.conf ]; then
     [ -f /etc/ldap/ldap-offline.conf ] && . /etc/ldap/ldap-offline.conf
 else
   # Fallback for non ldap2base config
-  for config in $LDAPCONF /etc/*ldap/ldap.conf /etc/ldap.conf; do    
+  for config in $LDAPCONF /etc/*ldap/ldap.conf /etc/ldap.conf; do
     # Not readable? Continue
     [ ! -r $config ] && continue
 
@@ -90,7 +90,7 @@ get_hostname_from_display()
 
     # IP addresses are not supported here
     echo $HOST | grep -q '^[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*$'
-    
+
     if [ $? -ne 0 ]; then
       echo ${DISPLAY%%.*}
     else
@@ -182,7 +182,7 @@ ldap_import() {
       counter=0
       vname_lastrun=$vname
     fi
-    
+
     echo "ldap_import_$vname[$counter]=\"$vvalue" >> /tmp/agent-lib.$$
   done
 
@@ -195,12 +195,12 @@ ldap_cat() {
    counter=0
    > /tmp/agent-lib.$$
    (ldapsearch -x -LLL  -b "$1" -s base 2> /dev/null) | fix_ldif | sed 's/^\([^:]*\):\(.*\)$/\1="\2"/' | while read line; do
-   
+
     vname=$(echo $line|cut -d= -f1)
     vvalue=$(echo $line|cut -d= -f2-)
 
     echo $line | grep -q '=": '
-    
+
     if [ $? -eq 0 ]; then
       vvalue=`echo $line|sed 's/^[^="]*=": //'|decode_blob`
       vvalue="$vvalue\""
@@ -261,7 +261,7 @@ ldap_user_has_profile() {
 #                          (User Object)
 #
 # Argument $1: UID of the user
-# 
+#
 ##########################################################################
 ldap_get_user_shares_of() {
   ldapsearch -x -LLL "(&$UNIT_TAG_FILTER(uid=$1))" gotoShare | fix_ldif | \
@@ -270,11 +270,11 @@ ldap_get_user_shares_of() {
 
 ##########################################################################
 #
-# ldap_get_shares_of: Supplies Shares of the user 
+# ldap_get_shares_of: Supplies Shares of the user
 #                     (about user and group objects)
 #
 # Argument $1: UID of the user
-# 
+#
 ##########################################################################
 ldap_get_shares_of() {
   ldap_get_object -user="$1" -filter="$UNIT_TAG_FILTER" -enctrigger=none \
@@ -335,7 +335,7 @@ EOF
   fi
 }
 
- 
+
 delete_all_applinks() {
   list=`ldapsearch -x -LLL "objectClass=gosaApplication" cn | fix_ldif | awk '/^cn: / {print $2}'`
   for link in $list; do
@@ -353,7 +353,7 @@ terminal_load_hardware_profile() {
   current=$(grep "^DN=" ${GOTO_SYSCFG}/${GOTO_DIR}|sed 's/\"//g;s/, /,/g;s/^.*,ou=\(workstations|terminals\),ou=systems,//g')
   self=$(grep "^DN=" ${GOTO_SYSCFG}/${GOTO_DIR}|sed 's/DN="*\([^"]*\)"*$/\1/g;s/, /,/g')
 
-  # Load potential object group entries 
+  # Load potential object group entries
   ldapsearch -x -LLL "(&(objectClass=gosaGroupOfNames)(|(gosaGroupObjects=[T])(gosaGroupObjects=[S])(gosaGroupObjects=[W]))(member=$self))" 2> /dev/null | fix_ldif_all | sed -e 's/^\([^:]*\): \(.*\)$/\U\1\E="\2"/' -e 's/^GOTO//g' >> "${GOTO_SYSCFG}/${GOTO_DIR}"
 
   # Reverse sysconfig/argonaut
@@ -414,7 +414,7 @@ decode_base64()
   else
     dec_res=$(echo $2 | cut -d\  -f2-)
   fi
-  
+
   eval "$1=\"$dec_res\""
 }
 

@@ -6,7 +6,7 @@
 #                           display for FAI installations.
 #
 # Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
-# Copyright (C) 2011 FusionDirectory project
+# Copyright (C) 2011-2013 FusionDirectory project
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ use Debconf::Client::ConfModule ':all';
 use Locale::gettext;
 use MIME::Base64;
 
-use Argonaut::Utils; 
+use Argonaut::Utils;
 
 # I18N setup
 setlocale(LC_MESSAGES, "");
@@ -104,7 +104,7 @@ progress("set", $percent);
 # Lets roll
 my $res;
 while (defined($line= $file->read)) {
-  
+
   # Tail logfile line by line until we're ready
   $res= process_input($line);
   if ($res->{'status'} == -1){
@@ -223,11 +223,11 @@ GTK backend instead of textual NEWT.
 =item B<FAI_METHOD>          Either 'install' or 'update' - this only controls
                              the displayed information
 
-=back 
+=back
 
 =head1 USAGE
 
-This example is from the confdir.default.source hook. It creates a new VT and starts the argonaut-fai-progress process inside of this VT. It can be 
+This example is from the confdir.default.source hook. It creates a new VT and starts the argonaut-fai-progress process inside of this VT. It can be
 stopped by "echo argonaut-fai-progress: hangup >> $FAI_LOG_PATH".
 
 FAI_PROGRESS_VT=$(openvt -v 2>&1 -- sh -c "

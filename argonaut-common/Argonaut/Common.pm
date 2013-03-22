@@ -3,7 +3,7 @@
 # Argonaut::Common package -- Argonaut basic functions.
 #
 # Copyright (c) 2008 Landeshauptstadt München
-# Copyright (C) 2011 FusionDirectory project
+# Copyright (C) 2011-2013 FusionDirectory project
 #
 # Author: Matthias S. Benkmann
 #         Come Bernigaud

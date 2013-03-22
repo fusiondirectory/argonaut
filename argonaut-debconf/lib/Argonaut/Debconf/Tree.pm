@@ -23,17 +23,17 @@ use Argonaut::Debconf::Common qw/:public/;
 use base qw/Argonaut::Debconf::Class/;
 
 sub _init {
-	__PACKAGE__->metadata->setup(
-		attributes          => [qw/
-			ou seeAlso
-		/],
+  __PACKAGE__->metadata->setup(
+    attributes          => [qw/
+      ou seeAlso
+    /],
 
-		unique_attributes   => [qw/
-			ou
-		/],
+    unique_attributes   => [qw/
+      ou
+    /],
 
-		base_dn             => $C->ldap_base,
-	)
+    base_dn             => $C->ldap_base,
+  )
 }
 
 
@@ -49,23 +49,23 @@ specified.
 =cut
 
 sub Questions {
-	( my $s, local %_)= @_;
-	$s->Entries( %_, base_dn => $s->qdn, class => 'Argonaut::Debconf::Question');
+  ( my $s, local %_)= @_;
+  $s->Entries( %_, base_dn => $s->qdn, class => 'Argonaut::Debconf::Question');
 }
 
 sub Templates {
   ( my $s, local %_)= @_;
-	$s->Entries( %_, base_dn => $s->tdn, class => 'Argonaut::Debconf::Template');
+  $s->Entries( %_, base_dn => $s->tdn, class => 'Argonaut::Debconf::Template');
 }
 
 sub Entries {
   ( my $s, local %_)= @_;
-	Net::LDAP::Class::Iterator->new(
-		ldap    => $ldap,
-		base_dn => $_{base_dn},
-		filter  => AND( '(objectClass=debConfDbEntry)', $_{filter}),
-		class   => $_{class},
-	)
+  Net::LDAP::Class::Iterator->new(
+    ldap    => $ldap,
+    base_dn => $_{base_dn},
+    filter  => AND( '(objectClass=debConfDbEntry)', $_{filter}),
+    class   => $_{class},
+  )
 }
 
 
@@ -97,40 +97,40 @@ with both the question and template part are returned.
 
 sub Keys {
   ( my $s, local %_)= @_;
-	my @trees= ( $s );
-	my( %q, %t);;
-	$$s{keys}= [];
+  my @trees= ( $s );
+  my( %q, %t);;
+  $$s{keys}= [];
 
-	for( my $i= 0; $i< @trees; $i++) {
-		my $t= $trees[$i];
+  for( my $i= 0; $i< @trees; $i++) {
+    my $t= $trees[$i];
 
-		my $qi= $t->Questions( %_);
-		while( my $qc= $qi->next) { $q{$qc->cn}//= $qc}
-		my $ti= $t->Templates;
-		while( my $tc= $ti->next) { $t{$tc->cn}//= $tc}
+    my $qi= $t->Questions( %_);
+    while( my $qc= $qi->next) { $q{$qc->cn}//= $qc}
+    my $ti= $t->Templates;
+    while( my $tc= $ti->next) { $t{$tc->cn}//= $tc}
 
-		if( $C->seeAlso) {
-			my @sa= $t->seeAlso;
-			for( @sa) { $_= __PACKAGE__->read1( base_dn => $_)}
-			if( @sa) { splice @trees, $i+ 1, 0, @sa}
-		}
-	}
+    if( $C->seeAlso) {
+      my @sa= $t->seeAlso;
+      for( @sa) { $_= __PACKAGE__->read1( base_dn => $_)}
+      if( @sa) { splice @trees, $i+ 1, 0, @sa}
+    }
+  }
 
-	for my $k( sort keys %q) {
-		my $v= $q{$k};
+  for my $k( sort keys %q) {
+    my $v= $q{$k};
 
-		if( $t{$k}) {
-			push @{ $$s{keys} }, Argonaut::Debconf::Key->new2(
-				cn       => $k,
-				question => $q{$k},
-				template => $t{$k},
-			)
-		}
-	}
+    if( $t{$k}) {
+      push @{ $$s{keys} }, Argonaut::Debconf::Key->new2(
+        cn       => $k,
+        question => $q{$k},
+        template => $t{$k},
+      )
+    }
+  }
 
-	Net::LDAP::Class::SimpleIterator->new(
-		code => sub { shift @{ $$s{keys}}}
-	)
+  Net::LDAP::Class::SimpleIterator->new(
+    code => sub { shift @{ $$s{keys}}}
+  )
 }
 
 
@@ -145,8 +145,8 @@ and eliminate runtime warnings.
 =cut
 
 sub DESTROY {
-	my $s= shift;
-	$$s{qi}->finish if $$s{qi}
+  my $s= shift;
+  $$s{qi}->finish if $$s{qi}
 }
 
 1
@@ -158,7 +158,8 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
 Copyright 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,

@@ -28,37 +28,37 @@ my $ldap_password                   =   $confighash->val( ldap => "password"    
 my ($base,$ldapuris) = argonaut_ldap_parse_config( $ldap_configfile );
 
 our %config= (
-	ldap_host           => $ldapuris,
-	ldap_base           => $base,
-	ldap_systems_base   => 'ou=systems,'.$base,
+  ldap_host           => $ldapuris,
+  ldap_base           => $base,
+  ldap_systems_base   => 'ou=systems,'.$base,
 
   ldap_config         => $ldap_configfile,
-	ldap_binddn         => $ldap_dn,
-	ldap_bindpw         => $ldap_password,
+  ldap_binddn         => $ldap_dn,
+  ldap_bindpw         => $ldap_password,
 
-	ldap_scheme         => 'ldap', # ldaps, ldapi
-	ldap_timeout        => 120,
-	ldap_protocol       => 3,
-	ldap_onerror        => 'warn', # die, warn, undef, sub{}
-	ldap_raw            => qr/(?i:^jpegPhoto|;binary)/,
+  ldap_scheme         => 'ldap', # ldaps, ldapi
+  ldap_timeout        => 120,
+  ldap_protocol       => 3,
+  ldap_onerror        => 'warn', # die, warn, undef, sub{}
+  ldap_raw            => qr/(?i:^jpegPhoto|;binary)/,
 
-	debconf_rdn         => 'ou=debconf',
-	questions_rdn       => 'ou=questions',
-	templates_rdn       => 'ou=templates',
+  debconf_rdn         => 'ou=debconf',
+  questions_rdn       => 'ou=questions',
+  templates_rdn       => 'ou=templates',
 
-	seeAlso             => 1,
+  seeAlso             => 1,
 
-	preseed_cgi         => {
-		flag              => 'preseed',
-		debug             => 0,
-		must_exist        => 1,
-	},
+  preseed_cgi         => {
+    flag              => 'preseed',
+    debug             => 0,
+    must_exist        => 1,
+  },
 
-	pxelinux_cfg        => {
-		debug             => 1,
-		dynamic           => 1,
-		mount_point       => '/srv/tftp/pxelinux.cfg',
-	},
+  pxelinux_cfg        => {
+    debug             => 1,
+    dynamic           => 1,
+    mount_point       => '/srv/tftp/pxelinux.cfg',
+  },
 );
 
 1
@@ -70,7 +70,8 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
 Copyright 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,

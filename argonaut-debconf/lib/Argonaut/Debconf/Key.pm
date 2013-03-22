@@ -40,14 +40,14 @@ the part you omitted).
 =cut
 
 sub new {
-	( my $s, local %_)= @_;
-	my $o= {
-		%_,
-		question => $_{question}// _question( %_),
-		template => $_{template}// _template( %_),
-	};
+  ( my $s, local %_)= @_;
+  my $o= {
+    %_,
+    question => $_{question}// _question( %_),
+    template => $_{template}// _template( %_),
+  };
 
-	bless $o, $s
+  bless $o, $s
 }
 
 =head2 new2
@@ -61,18 +61,18 @@ to save on making a duplicate call.
 =cut
 
 sub new2 {
-	( my $s, local %_)= @_;
-	my $ret;
+  ( my $s, local %_)= @_;
+  my $ret;
 
-	$_{question} and $_{cn}= $_{question}->cn unless $_{cn};
-	$_{template} and $_{cn}= $_{template}->cn unless $_{cn};
+  $_{question} and $_{cn}= $_{question}->cn unless $_{cn};
+  $_{template} and $_{cn}= $_{template}->cn unless $_{cn};
 
-	$s->new(
-		base_dn  => $_{base_dn}, # May be undef
-		cn       => $_{cn},
-		question => $_{question},
-		template => $_{template}
-	)
+  $s->new(
+    base_dn  => $_{base_dn}, # May be undef
+    cn       => $_{cn},
+    question => $_{question},
+    template => $_{template}
+  )
 }
 
 
@@ -134,19 +134,19 @@ called manually.
 =cut
 
 sub _question {
-	my $s= { @_};
-	Argonaut::Debconf::Question->find2(
-		base_dn => DN( $C->questions_rdn, $$s{base_dn}),
-		cn      => $$s{cn},
-	)
+  my $s= { @_};
+  Argonaut::Debconf::Question->find2(
+    base_dn => DN( $C->questions_rdn, $$s{base_dn}),
+    cn      => $$s{cn},
+  )
 }
 
 sub _template {
-	my $s= { @_};
-	Argonaut::Debconf::Template->find2(
-		base_dn => DN( $C->templates_rdn, $$s{base_dn}),
-		cn      => $$s{cn},
-	)
+  my $s= { @_};
+  Argonaut::Debconf::Template->find2(
+    base_dn => DN( $C->templates_rdn, $$s{base_dn}),
+    cn      => $$s{cn},
+  )
 }
 
 
@@ -166,25 +166,25 @@ they're saved.
 =cut
 
 sub add {
-	my( $s, $a, $v)= @_;
-	my @o= $s->$a// ();
-	if( not @o or not grep { $_ eq $v } @o) { push @o, $v}
-	$s->set( $a, @o);
-	@o
+  my( $s, $a, $v)= @_;
+  my @o= $s->$a// ();
+  if( not @o or not grep { $_ eq $v } @o) { push @o, $v}
+  $s->set( $a, @o);
+  @o
 }
 
 sub remove {
-	my( $s, $a, $v)= @_;
-	my @o= $s->$a// ();
-	my @n= @o ? grep { $_ ne $v } @o : ();
-	if( @o and @n< @o) { $s->set( $a, @n)}
-	@n
+  my( $s, $a, $v)= @_;
+  my @o= $s->$a// ();
+  my @n= @o ? grep { $_ ne $v } @o : ();
+  if( @o and @n< @o) { $s->set( $a, @n)}
+  @n
 }
 
 sub set {
-	my( $s, $a, @v)= @_;
-	$s->$a( @v > 1 ? [ @v]: @v);
-	@v
+  my( $s, $a, @v)= @_;
+  $s->$a( @v > 1 ? [ @v]: @v);
+  @v
 }
 
 =head2 delete, update, create, read_or_create, dump, save
@@ -195,42 +195,42 @@ objects.
 =cut
 
 sub delete {
-	my $s= shift;
-	for(qw/template question/) { $$s{$_}->delete if $$s{$_}}
-	$s= undef
+  my $s= shift;
+  for(qw/template question/) { $$s{$_}->delete if $$s{$_}}
+  $s= undef
 }
 
 sub update {
-	my $s= shift;
-	for(qw/template question/) { $$s{$_}->update if $$s{$_}}
+  my $s= shift;
+  for(qw/template question/) { $$s{$_}->update if $$s{$_}}
 }
 
 sub create {
-	my $s= shift;
-	for(qw/template question/) { $$s{$_}->create if $$s{$_}}
+  my $s= shift;
+  for(qw/template question/) { $$s{$_}->create if $$s{$_}}
 }
 
 sub read_or_create {
-	my $s= shift;
-	for(qw/template question/) { $$s{$_}->read_or_create if $$s{$_}}
+  my $s= shift;
+  for(qw/template question/) { $$s{$_}->read_or_create if $$s{$_}}
 }
 
 sub dump { warn Dumper (shift)}
 
 sub save {
-	my $s= shift;
+  my $s= shift;
 
-	for(qw/template question/) {
-		my $i;
-		next unless $i= $$s{$_};
+  for(qw/template question/) {
+    my $i;
+    next unless $i= $$s{$_};
 
-		unless( $i->ldap_entry) {
-			warn "Will CREATE $i";
-			$i->create;
-		} else {
-			$i->update
-		}
-	}
+    unless( $i->ldap_entry) {
+      warn "Will CREATE $i";
+      $i->create;
+    } else {
+      $i->update
+    }
+  }
 }
 
 1
@@ -242,7 +242,8 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
 Copyright 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,

@@ -2,7 +2,7 @@
 #
 # Argonaut::ClientDaemon -- Action to done on clients
 #
-# Copyright (C) 2011 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2011-2013 FusionDirectory project <contact@fusiondirectory.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

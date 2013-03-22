@@ -2,7 +2,7 @@
 #
 # Argonaut::Quota packages - functions to get info for quota from ldap
 #
-# Copyright (c) 2012 FusionDirectory project
+# Copyright (c) 2012-2013 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #

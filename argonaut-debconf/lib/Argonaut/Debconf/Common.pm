@@ -21,9 +21,9 @@ my @EXPORT_PUBLIC= qw/$C $ldap $mesg &DN &ND &AND &HDOC/;
 
 our @EXPORT_OK= ( @EXPORT_INTERNAL, @EXPORT_PUBLIC);
 our %EXPORT_TAGS= (
-	internal  => [ @EXPORT_INTERNAL ],
-	public    => [ @EXPORT_PUBLIC ],
-	all       => [ @EXPORT_INTERNAL, @EXPORT_PUBLIC ],
+  internal  => [ @EXPORT_INTERNAL ],
+  public    => [ @EXPORT_PUBLIC ],
+  all       => [ @EXPORT_INTERNAL, @EXPORT_PUBLIC ],
 );
 
 our( $C, $ldap, $mesg);
@@ -43,13 +43,13 @@ and $object->option.
 =cut
 
 sub new {
-	my $s= bless { %config}, (shift);
+  my $s= bless { %config}, (shift);
 
-	for( keys %config) {
-		eval "sub $_ { (shift)->{$_}}"
-	}
+  for( keys %config) {
+    eval "sub $_ { (shift)->{$_}}"
+  }
 
-	$s
+  $s
 }
 
 =head1 METHODS
@@ -62,17 +62,17 @@ by init_config(), hence the "_" prefix.
 =cut
 
 sub _init {
-	$ldap= Net::LDAP->new( $C->ldap_host);
-	$mesg= $ldap->bind(
-		$C->ldap_binddn,
-		password    => $C->ldap_bindpw,
-		scheme      => $C->ldap_scheme,
-		timeout     => $C->ldap_timeout,
-		protocol    => $C->ldap_protocol,
-		onerror     => $C->ldap_onerror,
-		raw         => $C->ldap_raw,
-	);
-	shift
+  $ldap= Net::LDAP->new( $C->ldap_host);
+  $mesg= $ldap->bind(
+    $C->ldap_binddn,
+    password    => $C->ldap_bindpw,
+    scheme      => $C->ldap_scheme,
+    timeout     => $C->ldap_timeout,
+    protocol    => $C->ldap_protocol,
+    onerror     => $C->ldap_onerror,
+    raw         => $C->ldap_raw,
+  );
+  shift
 }
 
 =head2 init_config
@@ -91,11 +91,11 @@ automatically triggering LDAP connections.
 =cut
 
 sub init_config {
-	$C->_init;
-	Argonaut::Debconf::Question->_init;
-	Argonaut::Debconf::Template->_init;
-	Argonaut::Debconf::System->_init;
-	Argonaut::Debconf::Tree->_init;
+  $C->_init;
+  Argonaut::Debconf::Question->_init;
+  Argonaut::Debconf::Template->_init;
+  Argonaut::Debconf::System->_init;
+  Argonaut::Debconf::Tree->_init;
 }
 
 =head1 FUNCTIONS
@@ -112,9 +112,9 @@ of the arguments passed to it.
 sub DN { join ',', @_}
 sub ND { join ',', reverse @_}
 sub AND{
-	@_ = grep { $_} @_;
-	for( @_) { $_ = '('. $_ . ')' if substr( $_, 0, 1) ne '('}
-	'(&'. ( join '', @_). ')';
+  @_ = grep { $_} @_;
+  for( @_) { $_ = '('. $_ . ')' if substr( $_, 0, 1) ne '('}
+  '(&'. ( join '', @_). ')';
 }
 
 =head2 HDOC
@@ -134,12 +134,12 @@ Use as e.g.:
 =cut
 
 sub HDOC {
-	my $howmany= shift if @_> 1;
-	my $body= shift;
-	my $what= substr $body, 0, 1;
-	$body=~ s/^($what+)/ $howmany= length $1 unless $howmany; '' /me;
-	$body=~ s/^${what}{$howmany}//gm;
-	$body
+  my $howmany= shift if @_> 1;
+  my $body= shift;
+  my $what= substr $body, 0, 1;
+  $body=~ s/^($what+)/ $howmany= length $1 unless $howmany; '' /me;
+  $body=~ s/^${what}{$howmany}//gm;
+  $body
 }
 
 1
@@ -151,7 +151,8 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
 Copyright 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,

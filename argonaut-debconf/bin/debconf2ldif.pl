@@ -22,37 +22,37 @@ use Net::LDAP::LDIF qw//;
 my $RAW            = qr/(?i:^jpegPhoto|;binary)/;
 
 my %options= (
-	diff             => undef,
-	base             => '',
-	templates_tree   => 'ou=templates',
-	questions_tree   => 'ou=questions',
-	flag             => 'preseed',
-	templates_file   => '/var/log/installer/cdebconf/templates.dat',
-	questions_file   => '/var/log/installer/cdebconf/questions.dat',
-	keys_file        => undef,
-	prefer_preseed   => 0,
+  diff             => undef,
+  base             => '',
+  templates_tree   => 'ou=templates',
+  questions_tree   => 'ou=questions',
+  flag             => 'preseed',
+  templates_file   => '/var/log/installer/cdebconf/templates.dat',
+  questions_file   => '/var/log/installer/cdebconf/questions.dat',
+  keys_file        => undef,
+  prefer_preseed   => 0,
 );
 
 unless( GetOptions(
-	'diff!'                         => \$options{diff},
-	'flag|f=s'                      => \$options{flag},
-	'base|b=s'                      => \$options{base},
-	'templates-tree|templates|t=s'  => \$options{templates_tree},
-	'questions-tree|questions|q=s'  => \$options{questions_tree},
-	'templates-file=s'              => \$options{templates_file},
-	'questions-file=s'              => \$options{questions_file},
-	'keys-file|k=s'                 => \$options{keys_file},
-	'prefer-preseed|p!'             => \$options{prefer_preseed},
-	'debconf|d'                     => sub {
-		$options{templates_file}= '/var/cache/debconf/templates.dat';
-		$options{questions_file}= '/var/cache/debconf/config.dat';
-		$options{flag}=           '';
-	},
-	'cdebconf|c'                    => sub {
-		$options{templates_file}= '/var/log/installer/cdebconf/templates.dat';
-		$options{questions_file}= '/var/log/installer/cdebconf/questions.dat';
-		$options{flag}=           'preseed';
-	}
+  'diff!'                         => \$options{diff},
+  'flag|f=s'                      => \$options{flag},
+  'base|b=s'                      => \$options{base},
+  'templates-tree|templates|t=s'  => \$options{templates_tree},
+  'questions-tree|questions|q=s'  => \$options{questions_tree},
+  'templates-file=s'              => \$options{templates_file},
+  'questions-file=s'              => \$options{questions_file},
+  'keys-file|k=s'                 => \$options{keys_file},
+  'prefer-preseed|p!'             => \$options{prefer_preseed},
+  'debconf|d'                     => sub {
+    $options{templates_file}= '/var/cache/debconf/templates.dat';
+    $options{questions_file}= '/var/cache/debconf/config.dat';
+    $options{flag}=           '';
+  },
+  'cdebconf|c'                    => sub {
+    $options{templates_file}= '/var/log/installer/cdebconf/templates.dat';
+    $options{questions_file}= '/var/log/installer/cdebconf/questions.dat';
+    $options{flag}=           'preseed';
+  }
 )) { die "Can't parse options: $!\n"};
 
 my( %open, %data, %add_domain);
@@ -66,14 +66,14 @@ $options{domain_part}= ','. $options{base} if length $options{base};
 #
 
 for my $section( qw/templates questions/) {
-	my $ckey= $section.'_file';
-	open $open{$section}, $options{$ckey} or
-		warn "Can't rdopen '$options{$ckey}' ($!). Can proceed without it ".
-			"if -k FILE is specified.\n";
+  my $ckey= $section.'_file';
+  open $open{$section}, $options{$ckey} or
+    warn "Can't rdopen '$options{$ckey}' ($!). Can proceed without it ".
+      "if -k FILE is specified.\n";
 
-	while( my ($name, $entry)= Debconf::Format::822::read( '', $open{$section})) {
-		$data{$section}{$name}= $entry
-	}
+  while( my ($name, $entry)= Debconf::Format::822::read( '', $open{$section})) {
+    $data{$section}{$name}= $entry
+  }
 }
 
 #
@@ -84,8 +84,8 @@ my ( @all, %diff);
 
 my %lists;
 for my $section( qw/templates questions/) {
-	$lists{$section}= { map{ $_ => 1} ( keys %{ $data{$section}})};
-	push @all, keys %{ $data{$section}};
+  $lists{$section}= { map{ $_ => 1} ( keys %{ $data{$section}})};
+  push @all, keys %{ $data{$section}};
 }
 
 
@@ -95,29 +95,29 @@ for my $section( qw/templates questions/) {
 #
 
 if( $options{diff}) {
-	for my $key( @all) {
-		my ( $exists, $place)= (1, undef);
-		for my $group( keys %lists){ 
-			#print "GROUP $group KEY $key\n";
-			if( $exists) {
-				unless( $exists= exists $lists{$group}{$key}) {
-					$place= $group;
-				}
-			}
-		}
-		if( not $exists) {
-			$diff{ $key}= $place
-		}
-	}
+  for my $key( @all) {
+    my ( $exists, $place)= (1, undef);
+    for my $group( keys %lists){
+      #print "GROUP $group KEY $key\n";
+      if( $exists) {
+        unless( $exists= exists $lists{$group}{$key}) {
+          $place= $group;
+        }
+      }
+    }
+    if( not $exists) {
+      $diff{ $key}= $place
+    }
+  }
 
-	print "Missing items:\n";
-	while( my( $k, $v)= each %diff) {
-		$v= ucfirst( substr $v, 0, 1);
-		print "$v: $k\n";
-	}
-	print "\n";
+  print "Missing items:\n";
+  while( my( $k, $v)= each %diff) {
+    $v= ucfirst( substr $v, 0, 1);
+    print "$v: $k\n";
+  }
+  print "\n";
 
-	exit 0
+  exit 0
 }
 
 
@@ -137,34 +137,34 @@ my %filter;
 my $with_domain= 1;
 
 if( my $f= $options{keys_file}) { # Specify subset of all keys
-	open my $kin, $f or die "Can't rdopen '$f' ($!)\n";
-	while( $_= <$kin>) {
-	 if( /^#.*DOMAIN=(\d)/) { $with_domain= $1}
+  open my $kin, $f or die "Can't rdopen '$f' ($!)\n";
+  while( $_= <$kin>) {
+   if( /^#.*DOMAIN=(\d)/) { $with_domain= $1}
 
-		next if /^[#\s]/; # hash space tab
-		chomp;
-		my @in= split /\s/, $_, 4;
+    next if /^[#\s]/; # hash space tab
+    chomp;
+    my @in= split /\s/, $_, 4;
 
-		# If preseed file was given in
-		if( defined $in[1]) {
-			$filter{$in[1]}= {
-				owners => $in[0],
-				type   => $in[2],
-				value  => $in[3],
-			};
+    # If preseed file was given in
+    if( defined $in[1]) {
+      $filter{$in[1]}= {
+        owners => $in[0],
+        type   => $in[2],
+        value  => $in[3],
+      };
 
-			# Should we add domain to this DN?
-			$add_domain{$in[1]}= $with_domain;
+      # Should we add domain to this DN?
+      $add_domain{$in[1]}= $with_domain;
 
-		# Else if it was one-per-line spec
-		} else {
-			$filter{$in[0]}= {}
-		}
-	}
-	close $kin or die "Can't rdclose '$f' ($!)\n";
+    # Else if it was one-per-line spec
+    } else {
+      $filter{$in[0]}= {}
+    }
+  }
+  close $kin or die "Can't rdclose '$f' ($!)\n";
 
 } else { # All keys
-	$filter{$_}= {} for @all
+  $filter{$_}= {} for @all
 }
 
 
@@ -181,104 +181,104 @@ open my $qsh, '>', \$qs;
 # Perform the work
 
 for my $key( sort keys %filter) {
-	my $t= $data{templates}{$key};
-	my $q= $data{questions}{$key};
-	#use Data::Dumper;
-	#print Dumper $q;
+  my $t= $data{templates}{$key};
+  my $q= $data{questions}{$key};
+  #use Data::Dumper;
+  #print Dumper $q;
 
-	# If preseed file was passed in and --prefer-preseed specified, allow 
-	# type/value specs from preseed file to have precedence over values from
-	# /var/log/installer/cdebconf/...
-	# (The important one here is primarily 'value' field, but we also pick up
-	# the type not to end up in a situation where we overwrite the value but
-	# miss to spot that the type has changed as well-- it shouldn't happen
-	# generally, but let's be on the cautious side).
-	$$t{fields}{type}= $filter{$key}{type} if
-		( $options{prefer_preseed} and defined $filter{$key}{type}) or
-		not defined $$t{fields}{type};
+  # If preseed file was passed in and --prefer-preseed specified, allow
+  # type/value specs from preseed file to have precedence over values from
+  # /var/log/installer/cdebconf/...
+  # (The important one here is primarily 'value' field, but we also pick up
+  # the type not to end up in a situation where we overwrite the value but
+  # miss to spot that the type has changed as well-- it shouldn't happen
+  # generally, but let's be on the cautious side).
+  $$t{fields}{type}= $filter{$key}{type} if
+    ( $options{prefer_preseed} and defined $filter{$key}{type}) or
+    not defined $$t{fields}{type};
 
-	$$q{fields}{value}= $filter{$key}{value} if
-		( $options{prefer_preseed} and defined $filter{$key}{value}) or
-		not defined $$q{fields}{value};
+  $$q{fields}{value}= $filter{$key}{value} if
+    ( $options{prefer_preseed} and defined $filter{$key}{value}) or
+    not defined $$q{fields}{value};
 
-	# Here we know that $filter{$key}{owners} is a string and only one value
-	# because that comes from the preseed file.
-	# Note that owner is substituted only if no owner is found in the
-	# installer logs. The -p option has no effect on owner.
-	{ my $owner= $filter{$key}{owners} || 'd-i';
+  # Here we know that $filter{$key}{owners} is a string and only one value
+  # because that comes from the preseed file.
+  # Note that owner is substituted only if no owner is found in the
+  # installer logs. The -p option has no effect on owner.
+  { my $owner= $filter{$key}{owners} || 'd-i';
 
-		$$q{owners}= { $owner => 1} unless(
-			defined $$q{owners} and keys %{ $$q{owners}});
-	}
+    $$q{owners}= { $owner => 1} unless(
+      defined $$q{owners} and keys %{ $$q{owners}});
+  }
 
-	my $domain_part= $add_domain{$key} ? $options{domain_part} : '';
+  my $domain_part= $add_domain{$key} ? $options{domain_part} : '';
 
-	# Turn Debconf Template into LDAP form
+  # Turn Debconf Template into LDAP form
 
-	my $te= new Net::LDAP::Entry;
-	$te->dn( "cn=$key,$options{templates_tree}$domain_part");
-	$te->add( objectClass => [ 'top', 'debConfDbEntry']);
+  my $te= new Net::LDAP::Entry;
+  $te->dn( "cn=$key,$options{templates_tree}$domain_part");
+  $te->add( objectClass => [ 'top', 'debConfDbEntry']);
 
-	$te->add( cn          => $key);
+  $te->add( cn          => $key);
 
-	$te->add( choices     => [ $$t{fields}{choices}])
-		if defined $$t{fields}{choices};
+  $te->add( choices     => [ $$t{fields}{choices}])
+    if defined $$t{fields}{choices};
 
-	$te->add( default     => [ $$t{fields}{default}])
-		if defined $$t{fields}{default};
+  $te->add( default     => [ $$t{fields}{default}])
+    if defined $$t{fields}{default};
 
-	$te->add( description => [ $$t{fields}{description}])
-		if defined $$t{fields}{description};
+  $te->add( description => [ $$t{fields}{description}])
+    if defined $$t{fields}{description};
 
-	$te->add( extendedDescription => [ $$t{fields}{extended_description}])
-		if defined $$t{fields}{extended_description};
+  $te->add( extendedDescription => [ $$t{fields}{extended_description}])
+    if defined $$t{fields}{extended_description};
 
-	$te->add( type        => [ $$t{fields}{type}])
-		if defined $$t{fields}{type};
+  $te->add( type        => [ $$t{fields}{type}])
+    if defined $$t{fields}{type};
 
-	$writer= new Net::LDAP::LDIF( $tsh, 'w', change => 0, raw => $RAW);
-	if(!( $writer->write_entry( $te))) {
-		warn "Can't write_entry('$te->dn') to scalar\n";
-	}
-	$writer->done;
-	
-	# Turn Debconf Question into LDAP form
+  $writer= new Net::LDAP::LDIF( $tsh, 'w', change => 0, raw => $RAW);
+  if(!( $writer->write_entry( $te))) {
+    warn "Can't write_entry('$te->dn') to scalar\n";
+  }
+  $writer->done;
 
-	my $qe= new Net::LDAP::Entry;
-	$qe->dn( "cn=$key,$options{questions_tree}$domain_part");
-	$qe->add( objectClass => [ 'top', 'debConfDbEntry']);
+  # Turn Debconf Question into LDAP form
 
-	$qe->add( cn          => $key);
+  my $qe= new Net::LDAP::Entry;
+  $qe->dn( "cn=$key,$options{questions_tree}$domain_part");
+  $qe->add( objectClass => [ 'top', 'debConfDbEntry']);
 
-	$qe->add( flags       => [ keys %{$$q{flags}}, $options{flag}])
-		if keys %{$$q{flags}} or $options{flag};
+  $qe->add( cn          => $key);
 
-	#print STDERR "1) $key ", keys %{$$q{owners}}, "\n";
-	#print STDERR "2) $key ", $filter{$key}{owners}, "\n";
-	$qe->add( owners      => [ keys %{$$q{owners}}])
-		if keys %{$$q{owners}};
+  $qe->add( flags       => [ keys %{$$q{flags}}, $options{flag}])
+    if keys %{$$q{flags}} or $options{flag};
 
-	$qe->add( template    => [ $$q{fields}{template}])
-		if defined $$q{fields}{template};
+  #print STDERR "1) $key ", keys %{$$q{owners}}, "\n";
+  #print STDERR "2) $key ", $filter{$key}{owners}, "\n";
+  $qe->add( owners      => [ keys %{$$q{owners}}])
+    if keys %{$$q{owners}};
 
-	$qe->add( value       => [ $$q{fields}{value}])
-		if defined $$q{fields}{value};
-	
-	my @vars;
-	if ( keys %{$$q{variables}}) {
-		while( my( $k, $v)= each %{$$q{variables}}){
-			push @vars, "$k=$v";
-		}
-	}
-	$qe->add( variables   => [ @vars]) if @vars;
+  $qe->add( template    => [ $$q{fields}{template}])
+    if defined $$q{fields}{template};
 
-	# Write as LDIF
+  $qe->add( value       => [ $$q{fields}{value}])
+    if defined $$q{fields}{value};
 
-	$writer= new Net::LDAP::LDIF( $qsh, 'w', change => 0, raw => $RAW);
-	if(!( $writer->write_entry( $qe))) {
-		warn "Can't write_entry('$qe->dn') to scalar\n";
-	}
-	$writer->done;
+  my @vars;
+  if ( keys %{$$q{variables}}) {
+    while( my( $k, $v)= each %{$$q{variables}}){
+      push @vars, "$k=$v";
+    }
+  }
+  $qe->add( variables   => [ @vars]) if @vars;
+
+  # Write as LDIF
+
+  $writer= new Net::LDAP::LDIF( $qsh, 'w', change => 0, raw => $RAW);
+  if(!( $writer->write_entry( $qe))) {
+    warn "Can't write_entry('$qe->dn') to scalar\n";
+  }
+  $writer->done;
 }
 
 
@@ -295,7 +295,8 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
 Copyright 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,

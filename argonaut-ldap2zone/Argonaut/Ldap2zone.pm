@@ -2,7 +2,7 @@
 #
 # Argonaut::Ldap2zone -- create zone files from LDAP DNS zones
 #
-# Copyright (C) 2012 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2013 FusionDirectory project <contact@fusiondirectory.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

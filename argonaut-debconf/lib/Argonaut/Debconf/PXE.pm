@@ -19,7 +19,7 @@ use Argonaut::Debconf::Common   qw/:public/;
 use base qw/Argonaut::Debconf::Config/;
 
 sub new {
-	(shift)->SUPER::new( filter => 'flags=append', @_)
+  (shift)->SUPER::new( filter => 'flags=append', @_)
 }
 
 sub as_config { (shift)->as_pxelinux_cfg( @_)}
@@ -33,7 +33,8 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
 Copyright 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,

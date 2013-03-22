@@ -3,7 +3,7 @@
 # Argonaut::Utils package -- Calculate the progress bar for fai install.
 #
 # Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
-# Copyright (C) 2011 FusionDirectory project
+# Copyright (C) 2011-2013 FusionDirectory project
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

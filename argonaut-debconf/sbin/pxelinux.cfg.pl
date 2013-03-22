@@ -43,25 +43,25 @@ sub W { warn @_, "\n" if $c{debug}}
 # Directory tree. We define just the "/" statically and everything else
 # is produced via a lookup into ldap.
 my %files= (
-	'/'       => {
-		type    => 0040,
-		mode    => 0755,
-		ctime   => time,
-		getdir  => \&pxeconfigs,
-	},
+  '/'       => {
+    type    => 0040,
+    mode    => 0755,
+    ctime   => time,
+    getdir  => \&pxeconfigs,
+  },
 );
 
 # Run the thing
 Fuse::main(
-	debug       => $c{debug},
-	mountpoint  => $c{mount_point},
-	mountopts   => 'nonempty',
-	threaded    => 0,
-	getattr     => 'main::e_getattr',
-	getdir      => 'main::e_getdir',
-	open        => 'main::e_open',
-	read        => 'main::e_read',
-	statfs      => 'main::e_statfs',
+  debug       => $c{debug},
+  mountpoint  => $c{mount_point},
+  mountopts   => 'nonempty',
+  threaded    => 0,
+  getattr     => 'main::e_getattr',
+  getdir      => 'main::e_getdir',
+  open        => 'main::e_open',
+  read        => 'main::e_read',
+  statfs      => 'main::e_statfs',
 );
 
 exit 0;
@@ -74,72 +74,72 @@ exit 0;
 #
 
 sub e_getattr {
-	my $file= shift;
+  my $file= shift;
 
-	if( $c{dynamic} or not $files{$file}) {
-		# We only perform LDAP lookup for something that ends in dd-dd-dd-dd-dd-dd,
-		# otherwise it's not a MAC address
-		if( $file=~ m#^/((?:\w{2}-)?(?:\w{2}-){5}\w{2})$#) {
-			pxeconfigs $1
-		}
-	}
+  if( $c{dynamic} or not $files{$file}) {
+    # We only perform LDAP lookup for something that ends in dd-dd-dd-dd-dd-dd,
+    # otherwise it's not a MAC address
+    if( $file=~ m#^/((?:\w{2}-)?(?:\w{2}-){5}\w{2})$#) {
+      pxeconfigs $1
+    }
+  }
 
-	my $ref= $files{$file};
+  my $ref= $files{$file};
 
-	unless( $ref) { return -ENOENT()}
+  unless( $ref) { return -ENOENT()}
 
-	my @ret= (
-		dev(     $file),
-		ino(     $file),
-		mode(    $file),
-		nlink(   $file),
-		uid(     $file),
-		gid(     $file),
-		rdev(    $file),
-		size(    $file),
-		atime(   $file),
-		mtime(   $file),
-		ctime(   $file),
-		blksize( $file),
-		blocks(  $file),
-	);
-	( @ret)
+  my @ret= (
+    dev(     $file),
+    ino(     $file),
+    mode(    $file),
+    nlink(   $file),
+    uid(     $file),
+    gid(     $file),
+    rdev(    $file),
+    size(    $file),
+    atime(   $file),
+    mtime(   $file),
+    ctime(   $file),
+    blksize( $file),
+    blocks(  $file),
+  );
+  ( @ret)
 }
 
 sub e_getdir {
-	my $dir= shift;
+  my $dir= shift;
 
-	my( @files, $f);
-	if( ( $c{dynamic} or not $files{$dir}{content}) and
-		( $f= $files{$dir}{getdir} and ref $f eq 'CODE')) {
+  my( @files, $f);
+  if( ( $c{dynamic} or not $files{$dir}{content}) and
+    ( $f= $files{$dir}{getdir} and ref $f eq 'CODE')) {
 
-		@files= &$f;
-		unshift @files, '.';
-		$files{$dir}{content}= \@files;
-	}
+    @files= &$f;
+    unshift @files, '.';
+    $files{$dir}{content}= \@files;
+  }
 
-	@{ $files{$dir}{content}}, 0
+  @{ $files{$dir}{content}}, 0
 }
 
 sub e_open { 0}
 
 sub e_read {
-	my $file= shift;
-	my ($buf, $off) = @_;
+  my $file= shift;
+  my ($buf, $off) = @_;
 
-	my $ref= $files{$file};
+  my $ref= $files{$file};
 
-	unless( $ref) {
-		return -ENOENT()
-	}
+  unless( $ref) {
+    return -ENOENT()
+  }
 
-	if(not $ref or not exists $$ref{content}) {
-		return -EINVAL() if $off> 0
-	}
+  if(not $ref or not exists $$ref{content}) {
+    return -EINVAL() if $off> 0
+  }
 
-	return -EINVAL() if $off> length $$ref{content};
-	return 0 if $off== length $$ref{content};
-	substr $$ref{content}, $off, $buf
+  return -EINVAL() if $off> length $$ref{content};
+  return 0 if $off== length $$ref{content};
+  substr $$ref{content}, $off, $buf
 }
 
 sub e_statfs { return 255, 1, 1, 1, 1, 2}
@@ -149,66 +149,66 @@ sub e_statfs { return 255, 1, 1, 1, 1, 2}
 #
 
 sub size( $) {
-	my $file= shift;
-	my $ref= $files{$file};
-	return $$ref{size} if exists $$ref{size};
-	return exists $$ref{content} ? length( $$ref{content}) : 0
+  my $file= shift;
+  my $ref= $files{$file};
+  return $$ref{size} if exists $$ref{size};
+  return exists $$ref{content} ? length( $$ref{content}) : 0
 }
 sub mode( $) {
-	my $file= shift;
-	my $ref= $files{$file};
-	return( ( $$ref{type}<<9) + $$ref{mode}) if $ref;
-	return 0
+  my $file= shift;
+  my $ref= $files{$file};
+  return( ( $$ref{type}<<9) + $$ref{mode}) if $ref;
+  return 0
 }
 sub dev( $) {
-	my $file= shift;
-	0
+  my $file= shift;
+  0
 }
 sub ino( $) {
-	my $file= shift;
-	0
+  my $file= shift;
+  0
 }
 sub rdev( $) {
-	my $file= shift;
-	0
+  my $file= shift;
+  0
 }
 sub blocks( $) {
-	my $file= shift;
-	1
+  my $file= shift;
+  1
 }
 sub gid( $) {
-	my $file= shift;
-	0
+  my $file= shift;
+  0
 }
 sub uid( $) {
-	my $file= shift;
-	0
+  my $file= shift;
+  0
 }
 sub nlink( $) {
-	my $file= shift;
-	1
+  my $file= shift;
+  1
 }
 sub blksize( $) {
-	my $file= shift;
-	1024
+  my $file= shift;
+  1024
 }
 sub mtime( $) {
-	my $file= shift;
-	my $ref= $files{$file};
-	return $$ref{ctime} if $ref;
-	return time
+  my $file= shift;
+  my $ref= $files{$file};
+  return $$ref{ctime} if $ref;
+  return time
 }
 sub atime( $) {
-	my $file= shift;
-	my $ref= $files{$file};
-	return $$ref{ctime} if $ref;
-	return time
+  my $file= shift;
+  my $ref= $files{$file};
+  return $$ref{ctime} if $ref;
+  return time
 }
 sub ctime( $) {
-	my $file= shift;
-	my $ref= $files{$file};
-	return $$ref{ctime} if $ref;
-	return time
+  my $file= shift;
+  my $ref= $files{$file};
+  return $$ref{ctime} if $ref;
+  return time
 }
 
 #
@@ -219,64 +219,64 @@ sub ctime( $) {
 #
 
 sub pxeconfigs {
-	my $filename= shift;
-	my %found;
+  my $filename= shift;
+  my %found;
 
-	my @search= ( 'objectClass', 'GOhard');
-	my( $mac, $s, $i);
+  my @search= ( 'objectClass', 'GOhard');
+  my( $mac, $s, $i);
 
-	if( $filename){
-		$mac= substr $filename, -17;
-		$mac=~ tr/-/:/;
-		push @search, 'macAddress', $mac;
+  if( $filename){
+    $mac= substr $filename, -17;
+    $mac=~ tr/-/:/;
+    push @search, 'macAddress', $mac;
 
-		my @sys= ( Argonaut::Debconf::System->find2( @search));
-		$i= Net::LDAP::Class::SimpleIterator->new( code => sub { shift @sys});
+    my @sys= ( Argonaut::Debconf::System->find2( @search));
+    $i= Net::LDAP::Class::SimpleIterator->new( code => sub { shift @sys});
 
-	} else {
-		$i= Net::LDAP::Class::Iterator->new(
-			ldap    => $ldap,
-			base_dn => $C->ldap_systems_base,
-			filter  => AND( join '=', @search), # XXX assumes @search==(a,b)
-			class   => 'Argonaut::Debconf::System'
-		)
-	}
+  } else {
+    $i= Net::LDAP::Class::Iterator->new(
+      ldap    => $ldap,
+      base_dn => $C->ldap_systems_base,
+      filter  => AND( join '=', @search), # XXX assumes @search==(a,b)
+      class   => 'Argonaut::Debconf::System'
+    )
+  }
 
-	my @filenames;
-	while( $s= $i->next) {
-		$mac= $s->macAddress or next;
-		$mac=~ s/:/-/g;
+  my @filenames;
+  while( $s= $i->next) {
+    $mac= $s->macAddress or next;
+    $mac=~ s/:/-/g;
 
-		# XXX Retrieving whole config here is expensive, see if we
-		# can just pick out the names, retrieve the config later
-		# if it is actually requested.
-		my $content= $s->PXE;
+    # XXX Retrieving whole config here is expensive, see if we
+    # can just pick out the names, retrieve the config later
+    # if it is actually requested.
+    my $content= $s->PXE;
 
-		# XXX Decide here whether, for hosts with no PXE config, we
-		# return empty contents or we don't even include them in
-		# the directory listing.
-		$content= $content? $content->as_config: '';
+    # XXX Decide here whether, for hosts with no PXE config, we
+    # return empty contents or we don't even include them in
+    # the directory listing.
+    $content= $content? $content->as_config: '';
 
-		# We show filenames which are macAddress, even though
-		# when the PXE requests them, they're in form "01-macAddress".
-		# Actually not, let's provide 01- for a change to see how
-		# it works in practice.
-		my $fn= '01:'. $mac;
-		$fn=~ s/:/-/g;
-		push @filenames, $fn;
+    # We show filenames which are macAddress, even though
+    # when the PXE requests them, they're in form "01-macAddress".
+    # Actually not, let's provide 01- for a change to see how
+    # it works in practice.
+    my $fn= '01:'. $mac;
+    $fn=~ s/:/-/g;
+    push @filenames, $fn;
 
-		$files{'/'. $fn}= {
-			type    => 0100,
-			mode    => 0444,
-			ctime   => time,
-			content => $content,
-			size    => length $content,
-		};
-	}
+    $files{'/'. $fn}= {
+      type    => 0100,
+      mode    => 0444,
+      ctime   => time,
+      content => $content,
+      size    => length $content,
+    };
+  }
 
-	$i->finish;
+  $i->finish;
 
-	( @filenames)
+  ( @filenames)
 }
 
 exit 0
@@ -286,7 +286,8 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
 Copyright 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,

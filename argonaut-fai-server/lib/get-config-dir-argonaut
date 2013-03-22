@@ -2,7 +2,7 @@
 # (c) 2007-2008 Jan-Marek Glogowski <glogow@fbihome.de>
 # (c) 2008 Cajus Pollmeier <pollmeier@gonicus.de>
 # (c) 2009-2010 Benoit Mortier <benoit.mortier@opensides.be>
-# (c) 2011 The FusionDirectory Project <contact@fusiondirectory.org>
+# (c) 2011-2013 The FusionDirectory Project <contact@fusiondirectory.org>
 
 trap '' INT
 

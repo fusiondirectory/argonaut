@@ -42,13 +42,13 @@ provide at least the base_dn to retrieve. Filter is
 =cut
 
 sub read1 {
-	( my $s, local %_)= @_;
-	($s->find(
-		ldap    => $ldap,
-		base_dn => $_{base_dn},
-		scope   => 'base',
-		filter  => 'objectClass=*',
-		%_))[0]
+  ( my $s, local %_)= @_;
+  ($s->find(
+    ldap    => $ldap,
+    base_dn => $_{base_dn},
+    scope   => 'base',
+    filter  => 'objectClass=*',
+    %_))[0]
 }
 
 =head2 new2( key => value, ...)
@@ -86,27 +86,27 @@ of calling find1().
 =cut
 
 sub find2 {
-	( my $s, local %_)= @_;
-	my @seeAlso= ( $_{base_dn});
-	for( @seeAlso) {
-		$_{base_dn}= $_;
+  ( my $s, local %_)= @_;
+  my @seeAlso= ( $_{base_dn});
+  for( @seeAlso) {
+    $_{base_dn}= $_;
 
-		# $ret is Net::LDAP::Class-based object here, if found.
-		# Don't let find1 fool you; it's used only for traversing
-		# the seeAlsos.
-		my $ret= $s->new( ldap => $ldap, %_)->read;
-		return $ret if $ret or not $C->seeAlso;
+    # $ret is Net::LDAP::Class-based object here, if found.
+    # Don't let find1 fool you; it's used only for traversing
+    # the seeAlsos.
+    my $ret= $s->new( ldap => $ldap, %_)->read;
+    return $ret if $ret or not $C->seeAlso;
 
-		if( my $e= find1(
-			base  => $_,
-			scope => 'base',
-			filter=> '(objectClass=*)', #organizationalUnit)',
-			attrs => 'seeAlso',
-		)) {
-			my @sa= ( $e->get_value( 'seeAlso'));
-			push @seeAlso, @sa if @sa
-		}
-	}
+    if( my $e= find1(
+      base  => $_,
+      scope => 'base',
+      filter=> '(objectClass=*)', #organizationalUnit)',
+      attrs => 'seeAlso',
+    )) {
+      my @sa= ( $e->get_value( 'seeAlso'));
+      push @seeAlso, @sa if @sa
+    }
+  }
 }
 
 =head2 dn
@@ -137,25 +137,25 @@ and remove().
 =cut
 
 sub add {
-	my( $s, $a, $v)= @_;
-	my @o= $s->$a// ();
-	if( not @o or not grep { $_ eq $v } @o) { push @o, $v}
-	$s->set( $a, @o);
-	@o
+  my( $s, $a, $v)= @_;
+  my @o= $s->$a// ();
+  if( not @o or not grep { $_ eq $v } @o) { push @o, $v}
+  $s->set( $a, @o);
+  @o
 }
 
 sub remove {
-	my( $s, $a, $v)= @_;
-	my @o= $s->$a// ();
-	my @n= @o ? grep { $_ ne $v } @o : ();
-	if( @o and @n< @o) { $s->set( $a, @n)}
-	@n
+  my( $s, $a, $v)= @_;
+  my @o= $s->$a// ();
+  my @n= @o ? grep { $_ ne $v } @o : ();
+  if( @o and @n< @o) { $s->set( $a, @n)}
+  @n
 }
 
 sub set {
-	my( $s, $a, @v)= @_;
-	$s->$a( @v > 1 ? [ @v]: @v);
-	@v
+  my( $s, $a, @v)= @_;
+  $s->$a( @v > 1 ? [ @v]: @v);
+  @v
 }
 
 
@@ -171,23 +171,23 @@ they already have.
 =cut
 
 sub action_for_update {
-	my $s= shift;
-	$s->ldap_entry->update( $ldap);
-	return
+  my $s= shift;
+  $s->ldap_entry->update( $ldap);
+  return
 }
 
 sub action_for_create {
-	my $s= shift;
+  my $s= shift;
 
-	my $e= Net::LDAP::Entry->new(
-		DN( 'cn='. $$s{_not_yet_set}{cn}, $$s{base_dn}), # DN
-		objectClass => [qw/top debConfDbEntry/],         #
-		%{ $$s{_not_yet_set}}                            # Attrs
-	);
+  my $e= Net::LDAP::Entry->new(
+    DN( 'cn='. $$s{_not_yet_set}{cn}, $$s{base_dn}), # DN
+    objectClass => [qw/top debConfDbEntry/],         #
+    %{ $$s{_not_yet_set}}                            # Attrs
+  );
 
-	$mesg= $e->update( $ldap);
-	$mesg->code and warn $mesg->error;
-	return
+  $mesg= $e->update( $ldap);
+  $mesg->code and warn $mesg->error;
+  return
 }
 
 1
@@ -199,9 +199,10 @@ __END__
 
 SPINLOCK - Advanced GNU/Linux networks in commercial and education sectors.
 
-Copyright 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>
+Copyright (C) 2011-2013 FusionDirectory project
 
-Copyright 2011, SPINLOCK Solutions,
+Copyright (C) 2011, SPINLOCK Solutions,
   http://www.spinlocksolutions.com/,
   http://techpubs.spinlocksolutions.com/
 

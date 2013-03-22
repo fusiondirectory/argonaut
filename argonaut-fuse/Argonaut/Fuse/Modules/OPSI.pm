@@ -5,7 +5,7 @@
 # Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
 # Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
 # Copyright (c) 2008,2009, 2010 by Jan Wenzel <wenzel@gonicus.de>
-# Copyright (C) 2011 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2011-2013 FusionDirectory project <contact@fusiondirectory.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

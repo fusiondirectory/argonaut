@@ -2,6 +2,7 @@
 #
 # Copyright (C) 2011 Davor Ocelic <docelic@spinlocksolutions.com>.
 #                    Spinlock Solutions, http://www.spinlocksolutions.com/
+# Copyright (C) 2011-2013 FusionDirectory project
 
 =head1 NAME
 
@@ -60,17 +61,17 @@ name.
 =cut
 
 sub new {
-	my( $s, %p)= @_;
+  my( $s, %p)= @_;
 
-	unless( $p{group}) {
-		if( $p{name}=~ /temp/i)          { $p{group}= 'templates'}
-		elsif( $p{name}=~ /conf|ques/i)  { $p{group}= 'questions'}
-		else {
-			die "Need Group: in debconf.conf, can't determine it from '$p{name}'.\n"
-		}
-	}
+  unless( $p{group}) {
+    if( $p{name}=~ /temp/i)          { $p{group}= 'templates'}
+    elsif( $p{name}=~ /conf|ques/i)  { $p{group}= 'questions'}
+    else {
+      die "Need Group: in debconf.conf, can't determine it from '$p{name}'.\n"
+    }
+  }
 
-	$s->SUPER::new( %p)
+  $s->SUPER::new( %p)
 }
 
 =head2 init
@@ -82,22 +83,22 @@ its complete config.
 =cut
 
 sub init {
-	my $s= shift;
+  my $s= shift;
 
-	unless( $$s{ip}) {
-		require 'Net::Address::IP::Local';
-		$$s{ip}= Net::Address::IP::Local->public;
-	}
+  unless( $$s{ip}) {
+    require 'Net::Address::IP::Local';
+    $$s{ip}= Net::Address::IP::Local->public;
+  }
 
-	$ip or die "Need Ip: in debconf.conf, unable to determine it.\n"
+  $ip or die "Need Ip: in debconf.conf, unable to determine it.\n"
 
-	$$s{system}= FusionDirectory::Plugin::Debconf::System
-		->new2( ipHostNumber => $ip)
-		->read;
+  $$s{system}= FusionDirectory::Plugin::Debconf::System
+    ->new2( ipHostNumber => $ip)
+    ->read;
 
-		my $i= $$s{system}->${\( ucfirst $$s{group} )};
+    my $i= $$s{system}->${\( ucfirst $$s{group} )};
 
-		while( my $e= $i->next) { $$s{items}{$e->cn}= $e}
+    while( my $e= $i->next) { $$s{items}{$e->cn}= $e}
 }
 
 =head1 METHODS
@@ -113,8 +114,8 @@ undef -- marked as deleted in the cache, so does not exist (XXX not implemented)
 =cut
 
 sub exists {
-	my( $s, $item)= @_;
-	exists( $$s{items}{$item})|| 0
+  my( $s, $item)= @_;
+  exists( $$s{items}{$item})|| 0
 }
 
 =head2 addowner( item, owner, type)
@@ -303,40 +304,40 @@ Returns true unless any of the operations fail.
 =cut
 
 sub shutdown {
-	my $s= shift;
-	W 'SHUTDOWN';
-	
-	return if $s->{readonly};
+  my $s= shift;
+  W 'SHUTDOWN';
 
-	my $c= $$s{items};
+  return if $s->{readonly};
 
-	while( my( $k, $v)= each %$c) {
-		$v->save
-	}
+  my $c= $$s{items};
 
-	1
+  while( my( $k, $v)= each %$c) {
+    $v->save
+  }
+
+  1
 }
 
 sub iterator {
-	my( $s, $si)= @_;
+  my( $s, $si)= @_;
 
-	my @items= keys %{$$s{items}};
+  my @items= keys %{$$s{items}};
 
-	my $i= Debconf::Iterator->new(callback => sub {
-		while( my $item= pop @items) {
-			next unless defined $$s{items}{$item};
-			return $item
-		}
-		return unless $si;
+  my $i= Debconf::Iterator->new(callback => sub {
+    while( my $item= pop @items) {
+      next unless defined $$s{items}{$item};
+      return $item
+    }
+    return unless $si;
 
-		my $ret;
-		do { $ret= $si->iterate } while
-			defined $ret and exists $$s{items}{$ret};
+    my $ret;
+    do { $ret= $si->iterate } while
+      defined $ret and exists $$s{items}{$ret};
 
-		return $ret
-	});
+    return $ret
+  });
 
-	$i
+  $i
 }
 
 1

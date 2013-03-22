@@ -3,7 +3,7 @@
 #
 # Ldap2Zone - write DNS Zone file from LDAP informations
 #
-# Copyright (C) 2011 FusionDirectory project
+# Copyright (C) 2011-2013 FusionDirectory project
 #
 # Author: Come Bernigaud
 #
@@ -79,7 +79,7 @@ B<--verbose>
 =head1 EXAMPLES
 
  argonaut-ldap2zone --verbose fusiondirectory.org.
- 
+
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
