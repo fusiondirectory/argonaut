@@ -337,22 +337,37 @@ sub reinstall {
       my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
         base    => $softlistdn,
         scope   => 'base',
-        filter  => "(objectClass=opsiSoftwareList)",
-        attrs   => ['fdOpsiLocalbootProduct']
+        filter  => "(|(objectClass=opsiSoftwareList)(objectClass=opsiOnDemandList))",
+        attrs   => ['fdOpsiLocalbootProduct', 'cn', 'fdOpsiOnDemandShowDetails']
       );
+      my $ocs = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct", asref => 1);
       my $localboots = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct", asref => 1);
       if (not defined $localboots) {
         next;
       }
-      foreach my $localboot (@{$localboots}) {
-        my ($product, $action) = split('\|',$localboot);
-        push @$infos, {
-          "productId"     => $product,
-          "clientId"      => $self->{'fqdn'},
-          "actionRequest" => $action,
-          "type"          => "ProductOnClient",
-          "productType"   => "LocalbootProduct"
-        };
+      if (grep {$_ eq 'opsiSoftwareList'} @$ocs) {
+        foreach my $localboot (@{$localboots}) {
+          my ($product, $action) = split('\|',$localboot);
+          push @$infos, {
+            "productId"     => $product,
+            "clientId"      => $self->{'fqdn'},
+            "actionRequest" => $action,
+            "type"          => "ProductOnClient",
+            "productType"   => "LocalbootProduct"
+          };
+        }
+      } else {
+        # Handle OnDemandList
+        my $groupid     = 'fd_ondemand_'.($mesg->entries)[0]->get_value('cn');
+        my $showdetails = ($mesg->entries)[0]->get_value('fdOpsiOnDemandShowDetails');
+        $res = $self->launch('group_createProductGroup',[$groupid]); # TODO : delete it first if non-existing
+        foreach my $localboot (@{$localboots}) {
+          $res = $self->launch('objectToGroup_create',['ProductGroup', $groupid, $localboot]);
+        }
+        # TODO first do a delete to these settings?
+        $res = $self->launch('configState_create',['software-on-demand.active', $self->{'fqdn'}, 1]);
+        $res = $self->launch('configState_create',['software-on-demand.product-group-ids', $self->{'fqdn'}, [$groupid]]);
+        $res = $self->launch('configState_create',['software-on-demand.show-details', $self->{'fqdn'}, $showdetails]);
       }
     }
     $res = $self->launch('productOnClient_updateObjects',[$infos]);
