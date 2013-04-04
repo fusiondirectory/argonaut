@@ -1,6 +1,0 @@
-bin/argonaut-fai-progress		usr/bin
-pic/logo_debian.png			usr/share/graphics
-pic/warning_icon.png			usr/share/graphics
-pic/note_icon.png			usr/share/graphics
-directfbrc				etc
-gtkrc					etc/gtk-2.0

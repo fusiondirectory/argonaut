@@ -1,2 +1,0 @@
-argonaut-fai-progress: no-debconf-config
-argonaut-fai-progress: debconf-is-not-a-registry usr/bin/fai-progress
