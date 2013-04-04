@@ -784,24 +784,6 @@ sub argonaut_get_client_settings {
 }
 
 #------------------------------------------------------------------------------
-# get ldap2repository argonaut settings
-#
-sub argonaut_get_ldap2repository_settings {
-  return argonaut_get_generic_settings(
-    'argonautMirrorConfig',
-    {
-      'mirrordir'       => 'argonautMirrorDir',
-      'errors'          => 'argonautLdap2repErrors',
-      'source'          => 'argonautLdap2repSource',
-      'gpgcheck'        => 'argonautLdap2repGPGCheck',
-      'contents'        => 'argonautLdap2repContents',
-      'verbose'         => 'argonautLdap2repVerbose',
-    },
-    @_
-  );
-}
-
-#------------------------------------------------------------------------------
 # get crawler argonaut settings
 #
 sub argonaut_get_crawler_settings {
