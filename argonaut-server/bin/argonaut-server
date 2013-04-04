@@ -470,7 +470,7 @@ POE::Session->create(
                 (grep {$_ eq $action} @{$heap->{scheduled_only}})) {
                 # If the action is scheduled_only and there is no timestamp
                 # We schedule it for now
-                $data->{timestamp} = time();
+                $data->{timestamp} = time()+5;
             }
 
             if(defined $data->{timestamp} && $data->{timestamp} ne "") {
