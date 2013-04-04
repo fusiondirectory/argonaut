@@ -1,4 +1,0 @@
-#NAME:Adapting USB service
-if [ -x /usr/sbin/argonaut-start-usb ]; then
-	sudo /usr/sbin/argonaut-start-usb
-fi

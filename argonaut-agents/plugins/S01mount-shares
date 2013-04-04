@@ -1,6 +1,0 @@
-#NAME:Mounting network shares
-if [ -x /usr/sbin/argonaut-mount-shares ]; then
-		xhost +localhost
-		sudo /usr/sbin/argonaut-mount-shares
-		xhost -localhost
-fi

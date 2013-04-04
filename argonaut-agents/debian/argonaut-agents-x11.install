@@ -1,2 +1,0 @@
-xorg.conf.in		etc/X11
-modules/xserver 	etc/argonaut/modules

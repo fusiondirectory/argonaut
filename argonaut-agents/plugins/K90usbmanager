@@ -1,4 +1,0 @@
-#NAME:Adapting USB service
-if [ -x /usr/sbin/argonaut-stop-usb ]; then
-  sudo /usr/sbin/argonaut-stop-usb
-fi

@@ -1,7 +1,0 @@
-argonaut-agents-kde: binary-without-manpage usr/bin/argonaut-arrange-icons
-argonaut-agents-kde: binary-without-manpage usr/bin/argonaut-end-session
-argonaut-agents-kde: binary-without-manpage usr/bin/argonaut-start-session
-argonaut-agents-kde: binary-without-manpage usr/bin/argonaut-update-login
-argonaut-agents-kde: binary-without-manpage usr/bin/argonaut-update-mime-links
-argonaut-agents-kde: binary-without-manpage usr/bin/argonaut-update-mime-links-starter
-
