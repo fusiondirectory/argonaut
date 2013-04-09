@@ -109,7 +109,7 @@ sub get_quota_settings {
             filter => "(&(objectClass=quotaService)(ipHostNumber=$ip))",
             attrs => [  'cn','quotaDeviceParameters',
                         'quotaLdapSearchIdAttribute',
-                        'quotaLdapServerURI','quotaLdapServerUserDn',
+                        'quotaLdapServer','quotaLdapServerUserDn',
                         'quotaLdapServerUserPassword','quotaMsgCharsetSupport',
                         'quotaMsgContactSupport','quotaMsgContentSupport',
                         'quotaMsgFromSupport','quotaMsgSignatureSupport',
@@ -120,15 +120,8 @@ sub get_quota_settings {
   my $settings = {};
 
   if(scalar($mesg->entries)==1) {
-    my $uri = URI->new(($mesg->entries)[0]->get_value('quotaLdapServerURI'));
-
-    $settings = {
-      'hostname'              => ($mesg->entries)[0]->get_value("cn"),
-      'ldap_basedn'           => $uri->dn,
-      'ldap_host'             => $uri->host,
-      'ldap_port'             => $uri->port,
-    };
     my %keys = (
+      'hostname'              => 'cn',
       'mail_cmd'              => "quotaMailCommand",
       'cc_to'                 => "quotaCarbonCopyMail",
       'from'                  => "quotaMsgFromSupport",
@@ -142,7 +135,7 @@ sub get_quota_settings {
       'ldap_userpwd'          => "quotaLdapServerUserPassword",
     );
     while (my ($key, $value) = each(%keys)) {
-      if (($mesg->entries)[0]->get_value($value)) {
+      if (($mesg->entries)[0]->exists($value)) {
         $settings->{$key} = ($mesg->entries)[0]->get_value($value);
       } else {
         $settings->{$key} = "";
@@ -154,6 +147,21 @@ sub get_quota_settings {
     } else {
       $settings->{'device_parameters'} = [];
     }
+
+    my $ldap_dn = ($mesg->entries)[0]->get_value('quotaLdapServer');
+    $mesg = $ldap->search( # perform a search
+      base    => $ldap_dn,
+      scope   => 'base',
+      filter  => "(objectClass=goLdapServer)",
+      attrs   => ['goLdapBase','goLdapURI']
+    );
+    if ($mesg->count <= 0) {
+      die "Could not found LDAP server $ldap_dn\n";
+    }
+    my $uri = URI->new(($mesg->entries)[0]->get_value('goLdapURI'));
+    $settings->{'ldap_basedn'}  = ($mesg->entries)[0]->get_value('goLdapBase');
+    $settings->{'ldap_host'}    = $uri->host;
+    $settings->{'ldap_port'}    = $uri->port;
   } else {
     die "This computer ($ip) is not configured in LDAP to run quota (missing service quotaService).";
   }
