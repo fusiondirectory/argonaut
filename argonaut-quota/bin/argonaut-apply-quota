@@ -30,8 +30,9 @@ use Config::IniFiles;
 
 use Argonaut::Quota qw(get_quota_settings write_warnquota_file apply_quotas);
 
-my $warnquota_file = "/etc/warnquota.conf";
-my $configfile = "/etc/argonaut/argonaut.conf";
+my $warnquota_file  = "/etc/warnquota.conf";
+my $quotatab_file   = "/etc/quotatab";
+my $configfile      = "/etc/argonaut/argonaut.conf";
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
 my $client_ip               =   $config->val( client => "client_ip" ,"");
@@ -42,5 +43,6 @@ my $ldap_password           =   $config->val( ldap => "password"    ,"");
 my $settings = get_quota_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
 
 write_warnquota_file ($settings,$warnquota_file);
+write_quotatab_file ($settings,$quotatab_file);
 
 apply_quotas ($ldap_configfile,$ldap_dn,$ldap_password,$settings->{'hostname'});
