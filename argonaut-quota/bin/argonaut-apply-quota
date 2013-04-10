@@ -28,7 +28,7 @@ use 5.008;
 
 use Config::IniFiles;
 
-use Argonaut::Quota qw(get_quota_settings write_warnquota_file apply_quotas);
+use Argonaut::Quota qw(get_quota_settings write_warnquota_file write_quotatab_file apply_quotas);
 
 my $warnquota_file  = "/etc/warnquota.conf";
 my $quotatab_file   = "/etc/quotatab";
