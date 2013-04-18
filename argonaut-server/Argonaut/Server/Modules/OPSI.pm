@@ -79,8 +79,6 @@ sub get_opsi_settings {
       {
         'server-dn'   => "fdOpsiServerDn",
         'profile-dn'  => "fdOpsiProfileDn",
-        'description' => "description",
-        'cn'          => 'cn',
       },
       @_
     );
@@ -94,8 +92,6 @@ sub get_opsi_settings {
           'server-uri'      => "fdOpsiServerURI",
           'server-usr'      => "fdOpsiServerUser",
           'server-pwd'      => "fdOpsiServerPassword",
-          'description'     => "description",
-          'cn'              => 'cn',
         },
         @_
       );
@@ -103,6 +99,22 @@ sub get_opsi_settings {
     if ($@) {
       die $error;
     };
+  };
+  eval {
+    my $host_settings = argonaut_get_generic_settings(
+      'sambaSamAccount',
+      {
+        'cn'              => 'cn',
+        'description'     => "description",
+      },
+      @_,
+      0
+    );
+    $settings->{'cn'} = $host_settings->{'cn'};
+    $settings->{'description'} = $host_settings->{'description'};
+  };
+  if ($@) {
+    die $@;
   };
   my $cn = $settings->{'cn'};
   $cn =~ s/\$$//;
