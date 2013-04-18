@@ -325,8 +325,10 @@ sub reinstall {
       }]
     );
     foreach my $product (@$productOnClients) {
-      $product->{"actionRequest"} = "uninstall";
-      $main::log->debug("[OPSI] uninstall ".$product->{"productId"});
+      if (($product->{"productId"} ne 'opsi-client-agent') && ($product->{"productId"} ne 'opsi-winst')) {
+        $product->{"actionRequest"} = "uninstall";
+        $main::log->debug("[OPSI] uninstall ".$product->{"productId"});
+      }
     }
     $res = $self->launch('productOnClient_updateObjects', [$productOnClients]);
   }
