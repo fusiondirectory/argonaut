@@ -133,8 +133,8 @@ sub get_opsi_settings {
 sub get_winstation_fqdn_settings {
   my $settings;
   eval {
-    my $settings = argonaut_get_generic_settings(
-      'sambaSamAccount',
+    $settings = argonaut_get_generic_settings(
+      '*',
       {
         'cn'              => 'cn',
         'description'     => 'description',
