@@ -62,12 +62,13 @@ sub new
 
 sub needs_host_param
 {
-  my ($self, $action) = @_;
+  my ($self, $action, $params) = @_;
   #Right now update_or_insert and host_getObjects are the only actions
   # that does not require the host as first parameter
   return 0 if ($action eq 'productProperty_getObjects');
   return 0 if ($action eq 'host_getObjects');
   return 0 if ($action eq 'product_getObjects');
+  return 0 if (($action eq 'host_delete') && (@$params > 0));
   return 1;
 }
 
@@ -100,24 +101,6 @@ sub get_opsi_settings {
       die $error;
     };
   };
-  eval {
-    my $host_settings = argonaut_get_generic_settings(
-      'sambaSamAccount',
-      {
-        'cn'              => 'cn',
-        'description'     => "description",
-      },
-      @_,
-      0
-    );
-    $settings->{'cn'} = $host_settings->{'cn'};
-    $settings->{'description'} = $host_settings->{'description'};
-  };
-  if ($@) {
-    die $@;
-  };
-  my $cn = $settings->{'cn'};
-  $cn =~ s/\$$//;
 
   my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
 
@@ -139,6 +122,38 @@ sub get_opsi_settings {
     $settings->{'server-uri'} = ($mesg->entries)[0]->get_value("fdOpsiServerURI");
     $settings->{'server-usr'} = ($mesg->entries)[0]->get_value("fdOpsiServerUser");
     $settings->{'server-pwd'} = ($mesg->entries)[0]->get_value("fdOpsiServerPassword");
+  }
+
+  my $host_settings = get_winstation_fqdn_settings(@_);
+  @$settings{keys %$host_settings} = @$host_settings{keys %$host_settings};
+
+  return $settings;
+}
+
+sub get_winstation_fqdn_settings {
+  my $settings;
+  eval {
+    my $settings = argonaut_get_generic_settings(
+      'sambaSamAccount',
+      {
+        'cn'              => 'cn',
+        'description'     => 'description',
+      },
+      @_,
+      0
+    );
+  };
+  if ($@) {
+    die $@;
+  };
+  my $cn = $settings->{'cn'};
+  $cn =~ s/\$$//;
+
+  my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
+
+  if ($ldapinfos->{'ERROR'} > 0) {
+    $main::log->notice("[OPSI] Client with OPSI activated but LDAP ERROR while searching server : ".$ldapinfos->{'ERRORMSG'});
+    die $ldapinfos->{'ERRORMSG'}."\n";
   }
 
   my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
@@ -447,12 +462,24 @@ sub do_action {
     if (scalar @$params < 2) {
       $params->[1] = {'type' => 'LocalbootProduct'};
     }
+  } elsif (($action eq 'OPSI.delete') && (scalar @$params > 0)) {
+    my @fqdns = ();
+    foreach my $host (@{$params->[0]}) {
+      if (lc($host) =~ m/([0-9a-f]{2}:){5}[0-9a-f]{2}/) { # If host is a macAddress
+        my $ip = main::getIpFromMac($host);
+        my $host_settings = get_winstation_fqdn_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+        push @fqdns, $host_settings->{'fqdn'};
+      } else {
+        push @fqdns, $host;
+      }
+    }
+    $params->[0] = \@fqdns;
   }
   if (ref $actions->{$action} eq ref "") {
     if ($action eq 'ping') {
       $params = ['1000'];
     }
-    my $hostParam = $self->needs_host_param($actions->{$action});
+    my $hostParam = $self->needs_host_param($actions->{$action}, $params);
     if ($hostParam) {
       unshift @$params, $self->{'fqdn'};
     }
