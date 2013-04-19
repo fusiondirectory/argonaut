@@ -73,8 +73,8 @@ our $log = Log::Handler->create_logger("argonaut-server");
 $log->add(
     file => {
         filename => "$logdir/$logfile",
-        #~ maxlevel => "debug",
-        maxlevel => "info",
+        maxlevel => "debug",
+        #~ maxlevel => "info",
         minlevel => "emergency",
         newline  => 1,
     }
@@ -86,7 +86,7 @@ $App::Daemon::as_user = "root";
 
 argonaut_create_dir($piddir);
 
-daemonize();
+#~ daemonize();
 
 
 =pod
