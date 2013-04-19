@@ -433,9 +433,6 @@ Parameters : ip,action,params
 =cut
 sub do_action {
   my ($self, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
-  if (not defined $params) {
-    $params = [];
-  }
 
   if ($self->{'locked'} && not (grep {$_ eq $action} @locked_actions)) {
     die 'This computer is locked';
