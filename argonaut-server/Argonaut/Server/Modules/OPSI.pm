@@ -185,6 +185,7 @@ sub handle_client {
   eval { #try
     my $settings = get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
     %$self = %$settings;
+    $self->{action} = $action;
   };
   if ($@) { #catch
     $main::log->debug("[OPSI] Can't handle client : $@");
@@ -429,13 +430,12 @@ sub reinstall {
 =pod
 =item do_action
 Execute a JSON-RPC method on a client which the ip is given.
-Parameters : ip,action,params
+Parameters :$target,$taskid,$params
 =cut
 sub do_action {
-  my ($self, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
-  if (not defined $params) {
-    $params = [];
-  }
+  my ($self, $params) = @_;
+  my $action = $self->{action};
+  my $taskid = $self->{taskid};
 
   if ($self->{'locked'} && not (grep {$_ eq $action} @locked_actions)) {
     die 'This computer is locked';

@@ -48,6 +48,7 @@ use Argonaut::Packages qw(get_packages_info store_packages_file);
 # where to look for modules files
 use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', instantiate => 'new', except => 'Argonaut::Server::Modules::Argonaut';
 use Argonaut::Server::Modules::Argonaut;
+use Argonaut::Server::ModulesPool;
 
 use constant ETH_P_ALL => 0x0003;
 use constant PF_PACKET => 17;
@@ -333,6 +334,8 @@ POE::Session->create(
                                             Authenticate => \&ldap_authenticate,)
                                         : ()
             );
+            $_[HEAP]{modulepool} = Argonaut::Server::ModulesPool->new(
+            );
             $_[HEAP]{scheduled_only} = [
                 "Deployment.update",
                 "Deployment.reinstall",
@@ -579,7 +582,7 @@ POE::Session->create(
               if(defined $data->{args}) {
                 $args = $data->{args};
               }
-              $kernel->post("$module" => 'do_action' => $action, $taskid, $args);
+              $kernel->post($heap->{modulepool} => "do" => $module, $taskid, $args);
               last;
             }
           }
