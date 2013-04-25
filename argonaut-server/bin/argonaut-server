@@ -70,16 +70,6 @@ argonaut_create_dir($logdir);
 
 our $log = Log::Handler->create_logger("argonaut-server");
 
-$log->add(
-    file => {
-        filename => "$logdir/$logfile",
-        #~ maxlevel => "debug",
-        maxlevel => "info",
-        minlevel => "emergency",
-        newline  => 1,
-    }
-);
-
 $App::Daemon::pidfile = "$piddir/$pidfile";
 $App::Daemon::logfile = "$logdir/$logfile";
 $App::Daemon::as_user = "root";
@@ -88,6 +78,15 @@ argonaut_create_dir($piddir);
 
 daemonize();
 
+use Log::Log4perl qw(:levels);
+$log->add(
+    file => {
+        filename => "$logdir/$logfile",
+        maxlevel => ($App::Daemon::loglevel == $DEBUG?"debug":"info"),
+        minlevel => "emergency",
+        newline  => 1,
+    }
+);
 
 =pod
 =item readConfig
@@ -258,7 +257,7 @@ sub refresh_task {
   if($entry->{progress} >= 100) {
     $entry->{status} = "processed";
     if($delete_finished_tasks) {
-      delete $heap->{tasks}->{$id};
+      $kernel->call($session => 'delete_task' => $id);
     }
   }
 }
@@ -325,7 +324,7 @@ POE::Session->create(
                     'remove_entries' => 'remove_entries',
                     'process_entries_now' => 'process_entries',
                     'get_my_id' => 'id_of_mac',
-                    'set_task_substatus' => 'set_task_substatus',
+                    'set_task_substatus' => 'jsonrpc_set_task_substatus',
                     'set_error' => 'set_error',
                     'get_packages' => 'get_packages'
                 },
@@ -358,27 +357,14 @@ POE::Session->create(
             $kernel->post( $jsonrpc => 'result' => $id, @params );
         },
         ping => sub {
-            my ($kernel, $session, $jsonrpc, $id, @params) = @_[KERNEL,SESSION, ARG0..$#_ ];
+            my ($kernel, $session, $heap, $jsonrpc, $id, @params) = @_[KERNEL,SESSION,HEAP, ARG0..$#_ ];
             my ($mac) = @params;
             $log->info("ping $mac");
-            #~ my $ok = "OK";
-            eval { # try
-                #~ my $res = do_action(getIpFromMac($mac),"echo",$ok);
-                #~ $kernel->post( $jsonrpc => 'result' => $id, ($ok eq $res) );
-              my $error = "";
-              my $result;
-              my $data = {'args' => []};
-              ($result,$error) = POE::Kernel->call($session=>action=>undef,'ping',$mac,$data); # synchronous call
-              if($error ne "") {
-                $kernel->post( $jsonrpc => 'error' => $id, $error );
-              } else {
-                $kernel->post( $jsonrpc => 'result' => $id, $result );
-              }
-            };
-            if ($@) { # catch
-              $log->notice("Error occured : ".$@);
-              $kernel->post( $jsonrpc => 'error' => $id, $@);
-            };
+            my $data = {'args' => []};
+            my $taskid = $kernel->call($session => 'get_new_task_id');
+            $heap->{tasks}->{$taskid}->{jsonid} = $id;
+            $heap->{tasks}->{$taskid}->{jsonsession} = $jsonrpc;
+            POE::Kernel->post($session => action => $taskid,'ping',$mac,$data);
         },
         id_of_mac => sub {
             my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL,HEAP, ARG0..$#_ ];
@@ -395,32 +381,40 @@ POE::Session->create(
             }
             $kernel->post( $jsonrpc => 'error' => $id, "Mac were not found in queue");
         },
-        set_task_substatus => sub {
+        jsonrpc_set_task_substatus => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($taskid,$substatus,$progress) = @params;
 
-            if(defined $progress) {
-                $log->info("setting task $taskid substatus to '$substatus' ($progress %)");
-            } else {
-                $log->info("setting task $taskid substatus to '$substatus'");
+            if(!defined $heap->{tasks}->{$taskid}) {
+              $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
+              return;
             }
 
-            if(!defined $heap->{tasks}->{$taskid}) {
-                $kernel->post( $jsonrpc => 'error' => $id, "This task does not exists");
-            } else {
-                $heap->{tasks}->{$taskid}->{substatus} = $substatus;
-                if(defined $progress) {
-                    $heap->{tasks}->{$taskid}->{progress} = $progress;
-                    if($progress>=100) {
-                        flag($heap->{tasks}->{$taskid}->{target},"localboot");
-                        $heap->{tasks}->{$taskid}->{status} = "processed";
-                        if($delete_finished_tasks) {
-                            delete $heap->{tasks}->{$taskid};
-                        }
-                    }
-                }
-                $kernel->post( $jsonrpc => 'result' => $id, "ok");
+            $kernel->call($session => 'set_task_substatus' => $taskid,$substatus,$progress);
+
+            $kernel->post($jsonrpc => 'result' => $id, "ok");
+        },
+        set_task_substatus => sub {
+          my ($kernel, $heap, $session, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
+          my ($taskid,$substatus,$progress) = @params;
+
+          if (defined $progress) {
+            $log->info("setting task $taskid substatus to '$substatus' ($progress %)");
+          } else {
+            $log->info("setting task $taskid substatus to '$substatus'");
+          }
+
+          $heap->{tasks}->{$taskid}->{substatus} = $substatus;
+          if (defined $progress) {
+            $heap->{tasks}->{$taskid}->{progress} = $progress;
+            if ($progress >= 100) {
+              flag($heap->{tasks}->{$taskid}->{target},"localboot");
+              $heap->{tasks}->{$taskid}->{status} = "processed";
+              if ($delete_finished_tasks) {
+                $kernel->call($session => 'delete_task' => $taskid);
+              }
             }
+          }
         },
         set_error => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
@@ -436,99 +430,94 @@ POE::Session->create(
                 $kernel->post( $jsonrpc => 'result' => $id, "ok");
             }
         },
+        set_task_handler => sub {
+          my ($heap,$taskid,$handler) = @_[HEAP,ARG0 .. $#_];
+          $heap->{tasks}->{$taskid}->{handler} = $handler;
+        },
         schedule => sub {
-            my ($session,$heap,$date,$action,$target,$data) = @_[SESSION,HEAP,ARG0 .. $#_];
-            while (defined $heap->{tasks}->{$heap->{id}}) {
-                $heap->{id}++;
-                if ($heap->{id}>=2147483648) { # limit to 4 bytes
-                    $heap->{id} = 0;
-                }
-            }
-            $heap->{tasks}->{$heap->{id}} = {
-                    handle=>POE::Component::Schedule->add($session, action => $date, ($heap->{id},$action,$target,$data)),
-                    date=>$date,
-                    action=>$action,
-                    target=>$target,
-                    data=>$data,
-                    status=>"waiting",
-                    substatus=>"",
-                    progress=>0,
-                    error=>""
-                };
+          my ($kernel,$session,$heap,$date,$action,$target,$data) = @_[KERNEL,SESSION,HEAP,ARG0 .. $#_];
+          my $taskid = $kernel->call($session => 'get_new_task_id');
+          $heap->{tasks}->{$taskid} = {
+            handle    => POE::Component::Schedule->add($session, action => $date, ($taskid,$action,$target,$data)),
+            date      => $date,
+            action    => $action,
+            target    => $target,
+            data      => $data,
+            status    => "waiting",
+            substatus => "",
+            progress  => 0,
+            error     => ""
+          };
         },
         add => sub {
-            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
-            my ($action,$targets,$data) = @params;
+          my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
+          my ($action,$targets,$data) = @params;
 
-            if (ref $data ne ref {}) {
-              #If data is not an hash reference, make it so to avoid errors.
-              $data = {};
-            }
-            $log->info("adding action $action");
+          if (ref $data ne ref {}) {
+            #If data is not an hash reference, make it so to avoid errors.
+            $data = {};
+          }
+          $log->info("adding action $action");
 
-            if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) &&
-                (grep {$_ eq $action} @{$heap->{scheduled_only}})) {
-                # If the action is scheduled_only and there is no timestamp
-                # We schedule it for now
-                $data->{timestamp} = time()+5;
-            }
+          if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) &&
+              (grep {$_ eq $action} @{$heap->{scheduled_only}})) {
+              # If the action is scheduled_only and there is no timestamp
+              # We schedule it for now
+              $data->{timestamp} = time();
+          }
 
-            if(defined $data->{timestamp} && $data->{timestamp} ne "") {
-                $kernel->post( $jsonrpc => 'result' => $id, "OK" ); # asynchronous
+          if(defined $data->{timestamp} && ($data->{timestamp} ne "")) {
+            $kernel->post( $jsonrpc => 'result' => $id, "OK" ); # asynchronous
 
-                my $date = DateTime->from_epoch(epoch => $data->{timestamp});
-                if(defined $data->{periodic} && $data->{periodic} =~ /^(\d+)_(\w+)$/) {
-                    my $periodic_nb = $1;
-                    my $periodic_keyword = $2;
-                    foreach my $target (@{$targets}) {
-                        POE::Kernel->yield(schedule=>DateTime::Set->from_recurrence(
-                                after      => $date,
-                                recurrence => sub {
-                                    return $_[0]->add( $periodic_keyword => $periodic_nb )
-                                },
-                            ),$action,$target,$data);
-                    }
-                } else {
-                    foreach my $target (@{$targets}) {
-                        POE::Kernel->yield(schedule=>DateTime::Set->from_datetimes(dates => [ $date ]),
-                            $action,lc($target),$data);
-                    }
-                }
-                $log->info("action $action scheduled");
+            my $date = DateTime->from_epoch(epoch => $data->{timestamp});
+            my $datetime;
+            if (defined $data->{periodic} && ($data->{periodic} =~ /^(\d+)_(\w+)$/)) {
+              my $periodic_nb = $1;
+              my $periodic_keyword = $2;
+              $datetime = DateTime::Set->from_recurrence (
+                after      => $date,
+                recurrence => sub {
+                  return $_[0]->add( $periodic_keyword => $periodic_nb )
+                },
+              );
             } else {
-                my $errors = "";
-                my @results;
-                foreach my $target (@{$targets}) {
-                    my ($result,$error) = POE::Kernel->call($session=>action=>undef,$action,$target,$data); # synchronous call
-                    $errors.=$error;
-                    push @results,$result;
-                }
-                if($errors ne "") {
-                    $kernel->post( $jsonrpc => 'error' => $id, $errors );
-                } else {
-                    $kernel->post( $jsonrpc => 'result' => $id, \@results );
-                }
+              $datetime = DateTime::Set->from_datetimes(dates => [ $date ])
             }
+            foreach my $target (@{$targets}) {
+              $kernel->yield(schedule => $datetime, $action, lc($target), $data);
+            }
+            $log->info("action $action scheduled");
+          } else {
+            my $errors = "";
+            my @results;
+            my $taskid = $kernel->call($session => 'get_new_task_id');
+            $heap->{tasks}->{$taskid}->{nb_targets} = scalar(@$targets);
+            $heap->{tasks}->{$taskid}->{jsonid} = $id;
+            $heap->{tasks}->{$taskid}->{jsonsession} = $jsonrpc;
+            foreach my $target (@{$targets}) {
+              $kernel->yield('action' => $taskid,$action,lc($target),$data);
+            }
+          }
         },
         get_entries_by_id => sub {
-            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, SESSION, ARG0..$#_ ];
-            my ($ids) = @params;
-            my $entries = [];
-            while (my ($id,$entry) = each(%{$heap->{tasks}})) {
-                if((!defined $ids) || (grep {$_ == $id} $ids)) {
-                    refresh_task($kernel,$heap,$session,$id,$entry);
-                    push @{$entries}, convert_entry($entry,$id);
-                }
+          my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, SESSION, ARG0..$#_ ];
+          my ($ids) = @params;
+          my $entries = [];
+          while (my ($id,$entry) = each(%{$heap->{tasks}})) {
+            if ((not defined $entry->{jsonid}) && ((!defined $ids) || (grep {$_ == $id} $ids))) {
+              refresh_task($kernel,$heap,$session,$id,$entry);
+              push @{$entries}, convert_entry($entry,$id);
             }
-            #~ say Dumper($entries);
-            $kernel->post( $jsonrpc => 'result' => $id, $entries);
+          }
+          $kernel->post( $jsonrpc => 'result' => $id, $entries);
         },
         get_entries_by_mac => sub { # this has not been tested
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, SESSION, ARG0..$#_ ];
             my ($macs) = @params;
             my $entries = [];
             while (my ($id,$entry) = each(%{$heap->{tasks}})) {
-                if((!defined $macs) || (grep {lc($_) eq $entry->{'target'}} $macs)) {
+              print Dumper($entry);
+                if ((not defined $entry->{jsonid}) && ((!defined $macs) || (grep {lc($_) eq $entry->{'target'}} $macs))) {
                     refresh_task($kernel,$heap,$session,$id,$entry);
                     push @{$entries}, convert_entry($entry,$id);
                 }
@@ -536,11 +525,13 @@ POE::Session->create(
             $kernel->post( $jsonrpc => 'result' => $id, $entries);
         },
         remove_entries => sub {
-            my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL, HEAP,ARG0..$#_ ];
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, SESSION, ARG0..$#_ ];
             my ($ids) = @params;
 
             foreach my $id (@{$ids}) {
-                delete $heap->{tasks}->{$id} if defined $id;
+              if ((defined $id) && (defined $heap->{tasks}->{$id})) {
+                $kernel->call($session => 'delete_task' => $id);
+              }
             }
 
             $kernel->post( $jsonrpc => 'result' => $id, "ok");
@@ -571,52 +562,105 @@ POE::Session->create(
             }
         },
         action => sub {
-            my ($kernel,$heap,$session,$taskid,$action,$target,$data) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          my ($kernel,$heap,$session,$taskid,$action,$target,$data) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
 
-            my $handled = 0;
-            my $res = 0;
+          $heap->{tasks}->{$taskid}->{action} = $action;
 
-            eval { # try
-              my @modules = modules();
-              push @modules, Argonaut::Server::Modules::Argonaut->new();
-              foreach my $module (@modules) {
-                #~ Is this module the one for this client and action?
-                if ($module->handle_client($target,$action)) {
-                  $handled = 1;
-                  #~ If it is, send him the infos
-                  if(defined $data->{args}) {
-                    $res = $module->do_action($kernel,$heap,$session,$target,$action,$taskid,$data->{args});
-                  } else {
-                    $res = $module->do_action($kernel,$heap,$session,$target,$action,$taskid);
-                  }
-                  last;
-                }
-              }
-              unless ($handled) {
-                die "No client module can handle action $action for target $target";
-              }
-            };
-            if ($@) { # catch
-              $log->warning("Error occured : ".$@);
-              if(defined $taskid) {
-                $heap->{tasks}->{$taskid}->{status} = "error";
-                $heap->{tasks}->{$taskid}->{error} = $@;
-              }
-              return (0,$@);
-            };
+          my $handled = 0;
 
-            if((defined $taskid) && !(defined $data->{periodic})) {
-                $heap->{tasks}->{$taskid}->{error} = "";
-                if(grep {$_ eq $action} @{$heap->{scheduled_only}}) {
-                    $heap->{tasks}->{$taskid}->{status} = "processing";
-                } else {
-                    $heap->{tasks}->{$taskid}->{status} = "processed";
-                    if($delete_finished_tasks) {
-                        delete $heap->{tasks}->{$taskid};
-                    }
-                }
+          my @modules = modules();
+          push @modules, Argonaut::Server::Modules::Argonaut->new();
+          foreach my $module (@modules) {
+            # Is this module able to handle this client and action?
+            if ($module->handle_client($target,$action)) {
+              $handled = 1;
+              # If it is, send him the infos
+              my $args = undef;
+              if(defined $data->{args}) {
+                $args = $data->{args};
+              }
+              $kernel->post("$module" => 'do_action' => $action, $taskid, $args);
+              last;
             }
-            return ($res,"");
+          }
+          unless ($handled) {
+            $kernel->yield('set_task_error' => $taskid, "No client module can handle action $action for target $target");
+          }
+        },
+        set_task_error => sub {
+          my ($kernel,$heap,$session,$taskid,$error) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          if (defined $heap->{tasks}->{$taskid}->{jsonid}) {
+            $heap->{tasks}->{$taskid}->{error} .= $error;
+            $kernel->call($session => 'send_result' => $taskid);
+          } else {
+            $log->warning("Error occured : ".$error);
+            $heap->{tasks}->{$taskid}->{status} = "error";
+            $heap->{tasks}->{$taskid}->{error} = $error;
+          }
+        },
+        set_task_result => sub {
+          my ($kernel,$heap,$session,$taskid,$res) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          $log->debug("Setting task result '$res' for task '$taskid'");
+          if (defined $heap->{tasks}->{$taskid}->{jsonid}) {
+            push @{$heap->{tasks}->{$taskid}->{result}}, $res;
+            $kernel->call($session => 'send_result' => $taskid);
+          } else {
+            $heap->{tasks}->{$taskid}->{error} = "";
+            if (grep {$_ eq $heap->{tasks}->{$taskid}->{action}} @{$heap->{scheduled_only}}) {
+              $heap->{tasks}->{$taskid}->{status} = "processing";
+            } else {
+              $heap->{tasks}->{$taskid}->{status} = "processed";
+              if($delete_finished_tasks) {
+                $kernel->call($session => 'delete_task' => $taskid);
+              }
+            }
+          }
+        },
+        send_result => sub {
+          my ($kernel,$heap,$session,$taskid) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          if (--$heap->{tasks}->{$taskid}->{nb_targets} == 0) {
+            if ($heap->{tasks}->{$taskid}->{error} ne "") {
+              $kernel->post(
+                $heap->{tasks}->{$taskid}->{jsonsession} => 'error' =>
+                $heap->{tasks}->{$taskid}->{jsonid},
+                $heap->{tasks}->{$taskid}->{error}
+              );
+            } else {
+              $kernel->post(
+                $heap->{tasks}->{$taskid}->{jsonsession} => 'result' =>
+                $heap->{tasks}->{$taskid}->{jsonid},
+                $heap->{tasks}->{$taskid}->{result}
+              );
+            }
+            $kernel->call($session => 'delete_task' => $taskid);
+          }
+        },
+        delete_task => sub {
+          my ($kernel,$heap,$session,$taskid) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          if (not defined $heap->{tasks}->{$taskid}) {
+            return;
+          }
+          $log->debug("deleting task $taskid");
+          if (defined $heap->{tasks}->{$taskid}->{handler}) {
+            $kernel->call("".$heap->{tasks}->{$taskid}->{handler} => 'stop');
+            delete $heap->{tasks}->{$taskid}->{handler};
+          }
+          delete $heap->{tasks}->{$taskid};
+        },
+        get_new_task_id => sub {
+          my $heap = $_[HEAP];
+          while (defined $heap->{tasks}->{$heap->{id}}) {
+            $heap->{id}++;
+            if ($heap->{id}>=2147483648) { # limit to 4 bytes
+              $heap->{id} = 0;
+            }
+          }
+          $heap->{tasks}->{$heap->{id}} = {
+            'error'       => '',
+            'result'      => [],
+            'nb_targets'  => 1
+          };
+          return $heap->{id};
         },
         get_packages => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
@@ -670,7 +714,7 @@ POE::Session->create(
                     'remove_entries' => 'remove_entries',
                     'process_entries_now' => 'process_entries',
                     'get_my_id' => 'id_of_mac',
-                    'set_task_substatus' => 'set_task_substatus',
+                    'set_task_substatus' => 'jsonrpc_set_task_substatus',
                     'set_error' => 'set_error',
                     'get_packages' => 'get_packages'
                 },
