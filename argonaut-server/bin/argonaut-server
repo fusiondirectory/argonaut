@@ -28,7 +28,7 @@
 use strict;
 use warnings;
 
-use 5.008;
+use 5.010;
 
 use POE qw(Component::Schedule Component::Server::JSONRPC::Http);
 use DateTime;
@@ -363,11 +363,7 @@ POE::Session->create(
             my ($kernel, $session, $heap, $jsonrpc, $id, @params) = @_[KERNEL,SESSION,HEAP, ARG0..$#_ ];
             my ($mac) = @params;
             $log->info("ping $mac");
-            my $data = {'args' => []};
-            my $taskid = $kernel->call($session => 'get_new_task_id');
-            $heap->{tasks}->{$taskid}->{jsonid} = $id;
-            $heap->{tasks}->{$taskid}->{jsonsession} = $jsonrpc;
-            POE::Kernel->post($session => action => $taskid,'ping',$mac,$data);
+            $kernel->yield(add => $jsonrpc, $id, 'ping', [$mac], {'args' => []});
         },
         id_of_mac => sub {
             my ($kernel, $heap, $jsonrpc, $id, @params) = @_[KERNEL,HEAP, ARG0..$#_ ];

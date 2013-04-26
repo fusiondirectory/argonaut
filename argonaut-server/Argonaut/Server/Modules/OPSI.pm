@@ -441,13 +441,7 @@ sub do_action {
     die 'This computer is locked';
   }
 
-  if(defined $taskid) {
-    $heap->{tasks}->{$taskid}->{handler} = $self;
-  }
-
-  my $ip = main::getIpFromMac($target);
-
-  #~ %$self = get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+  $self->{task}->{handler} = 1;
 
   my $res;
 
@@ -521,7 +515,7 @@ sub do_action {
 Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
-sub launch { # if ip pings, send the request
+sub launch {
   my ($self, $action,$params) = @_;
   if (not defined $params) {
     $params = [];

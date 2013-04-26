@@ -50,6 +50,7 @@ sub handle_client {
   eval { #try
     my $settings = argonaut_get_client_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
     %$self = %$settings;
+    $self->{action} = $action;
   };
   if ($@) { #catch
     return 0;
@@ -64,7 +65,8 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub do_action {
-  my ($self, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
+  my ($self, $params) = @_;
+  my $action = $self->{action};
 
   if ($self->{'locked'} && (grep {$_ eq $action} @unlocked_actions)) {
     die 'This computer is locked';
@@ -72,10 +74,10 @@ sub do_action {
 
   if ($action eq 'ping') {
     my $ok = 'OK';
-    my $res = $self->launch($target,'echo',$ok);
+    my $res = $self->launch('echo',$ok);
     return ($res eq $ok);
   } else {
-    return $self->launch($target,$action,$params);
+    return $self->launch($action,$params);
   }
 }
 
@@ -85,7 +87,7 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub launch { # if ip pings, send the request
-  my ($self, $target,$action,$params) = @_;
+  my ($self, $action,$params) = @_;
 
   if ($action =~ m/^[^.]+\.[^.]+$/) {
     $action = 'Argonaut.ClientDaemon.Modules.'.$action;

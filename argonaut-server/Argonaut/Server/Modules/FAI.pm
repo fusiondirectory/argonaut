@@ -49,6 +49,7 @@ sub handle_client {
         $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip
       );
       %$self = %$settings;
+      $self->{action} = $action;
     };
     if ($@) { #catch
       return 0;
@@ -65,16 +66,14 @@ Execute a JSON-RPC method on a client which the ip is given.
 Parameters : ip,action,params
 =cut
 sub do_action {
-  my ($self, $kernel,$heap,$session,$target,$action,$taskid,$params) = @_;
+  my ($self, $params) = @_;
 
   if ($self->{'locked'}) {
     die 'This computer is locked';
   }
 
-  my $substatus = $self->handler_fai($kernel,$session,$taskid,$target,$action,$params);
-  if(defined $taskid) {
-    $heap->{tasks}->{$taskid}->{substatus} = $substatus;
-  }
+  my $substatus = $self->handler_fai($self->{taskid},$self->{action},$params);
+  $self->{task}->{substatus} = $substatus;
   return 0;
 }
 
@@ -84,7 +83,7 @@ Put the right boot mode in the ldap and send the right thing to the client.
 Parameters : the targetted mac address, the action received, the args received for it (args are currently unused).
 =cut
 sub handler_fai {
-  my($self, $kernel,$session,$taskid,$target,$action,$args) = @_;
+  my($self, $taskid,$action,$args) = @_;
   my $fai_state = {
     "Deployment.reinstall"  => "install",
     "Deployment.update"     => "softupdate",
@@ -94,20 +93,20 @@ sub handler_fai {
 
   my $need_reboot = ($action ne "Deployment.wake");
 
-  $self->flag($target,$fai_state->{$action});
+  $self->flag($fai_state->{$action});
 
   eval { # try
     if($need_reboot) {
-      $kernel->call($session=>action=>$taskid,"System.reboot",$target,{'args'=>[]});
+      #~ $kernel->call($session => action => $taskid, "System.reboot", $self->{'mac'}, {'args' => []});
       return "rebooting";
     } else {
-      main::wakeOnLan($target);
+      main::wakeOnLan($self->{'mac'});
       return "wake on lan";
     }
   };
   if ($@) { # catch
     $main::log->notice("Got $@ while trying to reboot, trying wake on lan");
-    main::wakeOnLan($target);
+    main::wakeOnLan($self->{'mac'});
     return "wake on lan";
   };
 }
@@ -116,12 +115,12 @@ sub handler_fai {
 
 =cut
 sub flag {
-  my ($self, $target,$fai_state) = @_;
+  my ($self, $fai_state) = @_;
   my ($ldap,$ldap_base) = bindLdap();
 
   my $mesg = $ldap->modify($self->{'dn'}, replace => {"FAIstate" => $fai_state});
 
-  $mesg->code && die "Error while setting FAIstate for target address '$target' :".$mesg->error;
+  $mesg->code && die "Error while setting FAIstate for object '".$self->{'dn'}."' :".$mesg->error;
 
   $mesg = $ldap->unbind;   # take down session
 }
