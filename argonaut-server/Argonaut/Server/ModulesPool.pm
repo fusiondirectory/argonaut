@@ -102,7 +102,14 @@ sub module_thread_result_handler {
     if (defined $object->{task}->{substatus}) {
       $kernel->post( $_[HEAP]->{sender}, "set_task_substatus", $object->{taskid}, $object->{task}->{substatus}, $object->{task}->{progress});
     }
-    # TODO : gérer le handler
+    if ($object->{task}->{handler}) {
+      $kernel->post( $_[HEAP]->{sender}, "set_task_handler", $object->{taskid}, $object);
+    }
+  }
+  if (defined $object->{launch_actions}) {
+    foreach my $action (@{$object->{launch_actions}}) {
+      $kernel->post( $_[HEAP]->{sender}, "add", undef, undef, @$action);
+    }
   }
   $kernel->post( $_[HEAP]->{sender}, "set_task_result", $object->{taskid}, $result);
 }

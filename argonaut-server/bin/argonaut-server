@@ -251,12 +251,12 @@ sub ldap_authenticate {
 }
 
 sub refresh_task {
-  my ($kernel,$heap,$session,$id,$entry) = @_;
-  if (defined $entry->{'handler'}) {
-    $entry->{'handler'}->update_task($kernel,$heap,$session,$id);
+  my ($kernel,$heap,$session,$id) = @_;
+  if (defined $heap->{tasks}->{$id}->{'handler'}) {
+    $heap->{tasks}->{$id} = $heap->{tasks}->{$id}->{'handler'}->update_task($heap->{tasks}->{$id});
   }
-  if($entry->{progress} >= 100) {
-    $entry->{status} = "processed";
+  if($heap->{tasks}->{$id}->{progress} >= 100) {
+    $heap->{tasks}->{$id}->{status} = "processed";
     if($delete_finished_tasks) {
       $kernel->call($session => 'delete_task' => $id);
     }
@@ -502,10 +502,10 @@ POE::Session->create(
           my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, SESSION, ARG0..$#_ ];
           my ($ids) = @params;
           my $entries = [];
-          while (my ($id,$entry) = each(%{$heap->{tasks}})) {
-            if ((not defined $entry->{jsonid}) && ((!defined $ids) || (grep {$_ == $id} $ids))) {
-              refresh_task($kernel,$heap,$session,$id,$entry);
-              push @{$entries}, convert_entry($entry,$id);
+          foreach my $id (keys(%{$heap->{tasks}})) {
+            if ((not defined $heap->{tasks}->{$id}->{jsonid}) && ((!defined $ids) || (grep {$_ == $id} $ids))) {
+              refresh_task($kernel,$heap,$session,$id);
+              push @{$entries}, convert_entry($heap->{tasks}->{$id},$id);
             }
           }
           $kernel->post( $jsonrpc => 'result' => $id, $entries);
@@ -514,12 +514,11 @@ POE::Session->create(
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL, HEAP, SESSION, ARG0..$#_ ];
             my ($macs) = @params;
             my $entries = [];
-            while (my ($id,$entry) = each(%{$heap->{tasks}})) {
-              print Dumper($entry);
-                if ((not defined $entry->{jsonid}) && ((!defined $macs) || (grep {lc($_) eq $entry->{'target'}} $macs))) {
-                    refresh_task($kernel,$heap,$session,$id,$entry);
-                    push @{$entries}, convert_entry($entry,$id);
-                }
+            foreach my $id (keys(%{$heap->{tasks}})) {
+              if ((not defined $heap->{tasks}->{$id}->{jsonid}) && ((!defined $macs) || (grep {lc($_) eq $heap->{tasks}->{$id}->{'target'}} $macs))) {
+                refresh_task($kernel,$heap,$session,$id);
+                push @{$entries}, convert_entry($heap->{tasks}->{$id},$id);
+              }
             }
             $kernel->post( $jsonrpc => 'result' => $id, $entries);
         },

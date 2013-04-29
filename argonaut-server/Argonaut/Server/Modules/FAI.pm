@@ -97,7 +97,7 @@ sub handler_fai {
 
   eval { # try
     if($need_reboot) {
-      #~ $kernel->call($session => action => $taskid, "System.reboot", $self->{'mac'}, {'args' => []});
+      $self->{launch_actions} = [["System.reboot", [$self->{'mac'}], {'args' => []}]];
       return "rebooting";
     } else {
       main::wakeOnLan($self->{'mac'});

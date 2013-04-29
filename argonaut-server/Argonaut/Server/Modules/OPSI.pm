@@ -195,20 +195,24 @@ sub handle_client {
   return 1;
 }
 
+=item update_task
+Update a task status.
+Takes the task infos as parameter, return the new tasks infos.
+=cut
 sub update_task {
-  my ($self, $kernel,$heap,$session,$taskid) = @_;
-  if ($heap->{tasks}->{$taskid}->{status} ne 'processing') {
-    return;
+  my ($self, $task) = @_;
+  if ($task->{status} ne 'processing') {
+    return $task;
   }
-  if ($heap->{tasks}->{$taskid}->{action} eq 'Deployment.reinstall') {
+  if ($task->{action} eq 'Deployment.reinstall') {
     my $attrs = [
       'actionResult',
       'actionRequest',
       'actionProgress',
       'installationStatus',
     ];
-    $heap->{tasks}->{$taskid}->{progress} = 0;
-    $heap->{tasks}->{$taskid}->{substatus} = "";
+    $task->{progress} = 0;
+    $task->{substatus} = "";
     if (defined $self->{'netboot'}) {
       my $filter = {
         "productId"     => $self->{'netboot'},
@@ -218,15 +222,15 @@ sub update_task {
       my $results = $self->launch('productOnClient_getObjects',[$attrs, $filter]);
       my $res = shift @$results;
       if ($res->{'actionRequest'} eq 'setup') {
-        $heap->{tasks}->{$taskid}->{substatus} = $res->{'actionProgress'};
-        $heap->{tasks}->{$taskid}->{progress} = 10;
+        $task->{substatus} = $res->{'actionProgress'};
+        $task->{progress} = 10;
         return;
       } elsif ($res->{'installationStatus'} eq 'installed') {
-        $heap->{tasks}->{$taskid}->{substatus} = 'netboot installed';
-        $heap->{tasks}->{$taskid}->{progress} = 50;
+        $task->{substatus} = 'netboot installed';
+        $task->{progress} = 50;
       } elsif ($res->{'actionResult'} eq 'failed') {
-        $heap->{tasks}->{$taskid}->{status} = "error";
-        $heap->{tasks}->{$taskid}->{error} = $res->{'actionProgress'};
+        $task->{status} = "error";
+        $task->{error} = $res->{'actionProgress'};
       }
     }
     my $nblocals = 0;
@@ -250,20 +254,21 @@ sub update_task {
         } elsif ($res->{'installationStatus'} eq 'installed') {
           $nbinstalled++;
         } elsif ($res->{'actionResult'} eq 'failed') {
-          $heap->{tasks}->{$taskid}->{status} = "error";
-          $heap->{tasks}->{$taskid}->{error} = $res->{'actionProgress'};
+          $task->{status} = "error";
+          $task->{error} = $res->{'actionProgress'};
         }
       }
     }
     if ($nblocals eq 0) {
-      $heap->{tasks}->{$taskid}->{progress} = 100;
+      $task->{progress} = 100;
     } else {
-      $heap->{tasks}->{$taskid}->{progress} += (100 - $heap->{tasks}->{$taskid}->{progress})*$nbinstalled/$nblocals;
+      $task->{progress} += (100 - $task->{progress})*$nbinstalled/$nblocals;
       if ($status ne "") {
-        $heap->{tasks}->{$taskid}->{substatus} = $status;
+        $task->{substatus} = $status;
       }
     }
   }
+  return $task;
 }
 
 sub update_or_insert {
