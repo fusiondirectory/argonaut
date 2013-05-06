@@ -4,7 +4,7 @@ use strict;
 use diagnostics;
 use POE qw( Component::Pool::Thread );
 use threads::shared;
-use Argonaut::Server::Modules::OPSI;
+use Module::Pluggable search_path => 'Argonaut::Server::Modules', require => 1;
 
 sub rclone {
   my $ref = shift;
