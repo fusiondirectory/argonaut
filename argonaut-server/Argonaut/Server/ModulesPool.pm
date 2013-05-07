@@ -6,6 +6,8 @@ use POE qw( Component::Pool::Thread );
 use threads::shared;
 use Module::Pluggable search_path => 'Argonaut::Server::Modules', require => 1;
 
+BEGIN { plugins(); } # To be sure server modules are required
+
 sub rclone {
   my $ref = shift;
   my $type = ref $ref;
@@ -59,8 +61,6 @@ sub new {
         my ($kernel, $heap, $sender, $object, $taskid, $args) =
             @_[ KERNEL, HEAP, SENDER, ARG0 .. $#_ ];
         $heap->{sender} = $sender;
-
-        print "Launching thread for task $taskid, action '".$object->{action}."'\n";
 
         $args ||= [];
         $object->{taskid} = $taskid;
