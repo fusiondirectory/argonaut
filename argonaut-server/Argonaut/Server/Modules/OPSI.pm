@@ -105,8 +105,7 @@ sub get_opsi_settings {
   my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
 
   if ($ldapinfos->{'ERROR'} > 0) {
-    $main::log->notice("[OPSI] Client with OPSI activated but LDAP ERROR while searching server : ".$ldapinfos->{'ERRORMSG'});
-    die $ldapinfos->{'ERRORMSG'}."\n";
+    die "[OPSI] LDAP error : ".$ldapinfos->{'ERRORMSG'}."\n";
   }
 
   if (not defined $settings->{'server-uri'}) {
@@ -117,7 +116,7 @@ sub get_opsi_settings {
       attrs   => ['fdOpsiServerURI', 'fdOpsiServerUser', 'fdOpsiServerPassword']
     );
     if ($mesg->count <= 0) {
-      $main::log->notice("[OPSI] Client with OPSI activated but server ".$settings->{'server-dn'}." not found");
+      die "[OPSI] Client with OPSI activated but server ".$settings->{'server-dn'}." not found";
     }
     $settings->{'server-uri'} = ($mesg->entries)[0]->get_value("fdOpsiServerURI");
     $settings->{'server-usr'} = ($mesg->entries)[0]->get_value("fdOpsiServerUser");
@@ -131,44 +130,35 @@ sub get_opsi_settings {
 }
 
 sub get_winstation_fqdn_settings {
-  my $settings;
-  eval {
-    $settings = argonaut_get_generic_settings(
-      '*',
-      {
-        'cn'              => 'cn',
-        'description'     => 'description',
-      },
-      @_,
-      0
-    );
-  };
-  if ($@) {
-    die $@;
-  };
+  my $settings = argonaut_get_generic_settings(
+    '*',
+    {
+      'cn'              => 'cn',
+      'description'     => 'description',
+    },
+    @_,
+    0
+  );
   my $cn = $settings->{'cn'};
   $cn =~ s/\$$//;
 
   my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
 
   if ($ldapinfos->{'ERROR'} > 0) {
-    $main::log->notice("[OPSI] Client with OPSI activated but LDAP ERROR while searching server : ".$ldapinfos->{'ERRORMSG'});
-    die $ldapinfos->{'ERRORMSG'}."\n";
+    die "[OPSI] LDAP error : ".$ldapinfos->{'ERRORMSG'}."\n";
   }
 
   my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
     base    => $ldapinfos->{'BASE'},
-    filter  => "(&(relativeDomainName=$cn)(aRecord=".$settings->{'ip'}."))",
+    filter  => "(&(relativeDomainName=$cn)(aRecord=".$settings->{'ip'}.")(zoneName=*))",
     attrs   => ['zoneName']
   );
-  if (($mesg->entries)[0]->get_value("zoneName")) {
-    my $zoneName = ($mesg->entries)[0]->get_value("zoneName");
-    $zoneName =~ s/\.$//;
-    $settings->{'fqdn'} = $cn.'.'.$zoneName;
-  } else {
-    $main::log->notice("[OPSI] Client with OPSI activated but no DNS name");
-    die "Client with OPSI activated but no DNS name";
+  if ($mesg->count <= 0) {
+    die "[OPSI] Could not find any DNS domain name for $cn";
   }
+  my $zoneName = ($mesg->entries)[0]->get_value("zoneName");
+  $zoneName =~ s/\.$//;
+  $settings->{'fqdn'} = $cn.'.'.$zoneName;
 
   return $settings;
 }
@@ -188,7 +178,11 @@ sub handle_client {
     $self->{action} = $action;
   };
   if ($@) { #catch
-    $main::log->debug("[OPSI] Can't handle client : $@");
+    if ($@ =~ /^[OPSI]/) {
+      $main::log->notice($@);
+    } else {
+      $main::log->debug("[OPSI] Can't handle client : $@");
+    }
     return 0;
   };
 
