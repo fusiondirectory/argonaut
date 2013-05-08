@@ -30,6 +30,8 @@ use Argonaut::Common qw(:ldap :file);
 
 my @unlocked_actions = ['System.halt', 'System.reboot'];
 
+my @deployment_actions = ['Deployment.reboot', 'Deployman.wake'];
+
 sub new
 {
   my ($class) = @_;
@@ -41,7 +43,9 @@ sub new
 sub handle_client {
   my ($self, $mac,$action) = @_;
 
-  if ($action =~ m/^Deployment.*/) {
+  if ($action =~ m/^Deployment.(reboot|wake)$/) {
+    $action =~ s/^Deployment./System./;
+  } elsif ($action =~ m/^Deployment./) {
     return 0;
   }
 
