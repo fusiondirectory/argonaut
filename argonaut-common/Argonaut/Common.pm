@@ -59,7 +59,6 @@ BEGIN
       &argonaut_get_client_settings
       &argonaut_get_server_settings
       &argonaut_get_crawler_settings
-      &argonaut_get_ldap2repository_settings
       &argonaut_get_ldap2zone_settings
       &argonaut_get_fuse_settings
     )],
