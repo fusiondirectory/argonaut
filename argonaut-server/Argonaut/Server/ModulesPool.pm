@@ -36,7 +36,6 @@ sub thread_sendobject {
 sub thread_getobject {
   my $blob = shift;
   my $object  = rclone($blob->{object});
-  my $class   = ref $object;
   bless $object, $blob->{class};
   return $object;
 }
@@ -74,8 +73,9 @@ sub new {
 }
 
 sub module_thread_entry_point {
-  my ($o, $args) = @_;
-  my $object = thread_getobject($o);
+  my ($o, $a) = @_;
+  my $object  = thread_getobject($o);
+  my $args    = rclone($a);
   my $res :shared;
   eval {
     $res = shared_clone($object->do_action($args));
