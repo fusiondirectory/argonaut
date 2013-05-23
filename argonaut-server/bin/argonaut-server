@@ -447,6 +447,7 @@ POE::Session->create(
             progress  => 0,
             error     => ""
           };
+          $log->debug("action $action scheduled on target $target");
         },
         add => sub {
           my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
@@ -483,7 +484,7 @@ POE::Session->create(
               $datetime = DateTime::Set->from_datetimes(dates => [ $date ])
             }
             foreach my $target (@{$targets}) {
-              $kernel->yield(schedule => $datetime, $action, lc($target), $data);
+              $kernel->yield(schedule => $datetime->clone, $action, lc($target), $data);
             }
             $log->info("action $action scheduled");
           } else {
