@@ -46,6 +46,7 @@ sub handle_client {
   if ($action =~ m/^Deployment.(reboot|wake)$/) {
     $action =~ s/^Deployment./System./;
   } elsif ($action =~ m/^Deployment./) {
+    $main::log->debug("[Argonaut] Can't handle Deployment actions");
     return 0;
   }
 
@@ -57,6 +58,7 @@ sub handle_client {
     $self->{action} = $action;
   };
   if ($@) { #catch
+    $main::log->debug("[Argonaut] Can't handle client : $@");
     return 0;
   };
 

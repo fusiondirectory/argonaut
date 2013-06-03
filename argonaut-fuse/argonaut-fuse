@@ -134,13 +134,13 @@ $log->info("Argonaut-Fuse Mounting $tftp_root\n");
 
 # Mount FUSE Filesystem
 Fuse::main(
-  mountpoint=>$tftp_root,
-  mountopts => "nonempty,allow_other",
-  getattr => \&getattr,
-  read => \&read,
-  getdir => \&getdir,
-  debug => 0,
-  threaded => 0,
+  mountpoint  => $tftp_root,
+  mountopts   => "nonempty,allow_other",
+  getattr     => \&getattr,
+  read        => \&read,
+  getdir      => \&getdir,
+  debug       => 0,
+  threaded    => 0,
 );
 
 exit 0;
@@ -163,10 +163,10 @@ sub readConfig
 {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-    $client_ip                       =   $config->val( client => "client_ip" ,"");
-    $ldap_configfile                 =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
-    $ldap_dn                         =   $config->val( ldap => "dn"          ,"");
-    $ldap_password                   =   $config->val( ldap => "password"    ,"");
+    $client_ip                       =   $config->val( client => "client_ip", "");
+    $ldap_configfile                 =   $config->val( ldap => "config",      "/etc/ldap/ldap.conf");
+    $ldap_dn                         =   $config->val( ldap => "dn",          "");
+    $ldap_password                   =   $config->val( ldap => "password",    "");
 
     my $settings = argonaut_get_fuse_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
 
@@ -345,7 +345,7 @@ sub getattr {
 
   if ( @path_elements > 1 ) {
     foreach my $path_element (@path_elements[1..$#path_elements]) {
-      if ($path_element =~ /^[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}-[0-9a-f]{1,2}$/i) {
+      if ($path_element =~ /^([0-9a-f]{1,2}-){5}[0-9a-f]{1,2}$/i) {
         # Always generate a fresh config
         delete $current->{$path_element} if(exists($current->{$path_element}));
 

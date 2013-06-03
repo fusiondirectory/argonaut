@@ -108,6 +108,9 @@ sub module_thread_result_handler {
   }
   if (defined $object->{launch_actions}) {
     foreach my $action (@{$object->{launch_actions}}) {
+      if (not defined $action->[2]->{timestamp}) {
+        $action->[2]->{timestamp} = time();
+      }
       $kernel->post( $_[HEAP]->{sender}, "add", undef, undef, @$action);
     }
   }

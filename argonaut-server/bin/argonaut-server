@@ -481,7 +481,7 @@ POE::Session->create(
                 },
               );
             } else {
-              $datetime = DateTime::Set->from_datetimes(dates => [ $date ])
+              $datetime = DateTime::Set->from_datetimes(dates => [ $date ]);
             }
             foreach my $target (@{$targets}) {
               $kernel->yield(schedule => $datetime->clone, $action, lc($target), $data);

@@ -169,12 +169,15 @@ reconnect:
       my $group_entry;
       if (1 == $mesg->count) {
         $group_entry = ($mesg->entries)[0];
-        $kernel = $group_entry->get_value('gotoBootKernel')
-        if (! defined $kernel);
-          $cmdline = $group_entry->get_value('gotoKernelParameters')
-        if (! defined $cmdline);
-          $ldap_srv = @{$group_entry->get_value( 'gotoLdapServer', asref => 1)}[0]
-        if (defined($group_entry->get_value( 'gotoLdapServer', asref => 1)) and not defined $ldap_srv );
+        if (! defined $kernel) {
+          $kernel = $group_entry->get_value('gotoBootKernel');
+        }
+        if (! defined $cmdline) {
+          $cmdline = $group_entry->get_value('gotoKernelParameters');
+        }
+        if (defined($group_entry->get_value( 'gotoLdapServer', asref => 1)) and not defined $ldap_srv ) {
+          $ldap_srv = @{$group_entry->get_value( 'gotoLdapServer', asref => 1)}[0];
+        }
       }
 
       # Jump over all checks - we should have sane defaults

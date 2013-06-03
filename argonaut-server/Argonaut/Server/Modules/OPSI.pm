@@ -44,11 +44,11 @@ my $actions = {
   'OPSI.get_product_properties' => 'productProperty_getObjects',
 };
 
-my @locked_actions = [
+my @locked_actions = (
   'ping',
   'OPSI.update_or_insert', 'OPSI.delete',
   'OPSI.host_getObjects', 'OPSI.get_netboots', 'OPSI.get_localboots',
-];
+);
 
 my $settings;
 

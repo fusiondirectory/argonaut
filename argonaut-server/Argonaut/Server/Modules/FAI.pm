@@ -28,7 +28,7 @@ use 5.008;
 
 use Argonaut::Common qw(:ldap :file);
 
-my @fai_actions = ["Deployment.reinstall", "Deployment.update", "Deployment.wake", "Deployment.reboot"];
+my @fai_actions = ("Deployment.reinstall", "Deployment.update", "Deployment.wake", "Deployment.reboot");
 
 sub new
 {
@@ -52,10 +52,12 @@ sub handle_client {
       $self->{action} = $action;
     };
     if ($@) { #catch
+      $main::log->debug("[FAI] Can't handle client : $@");
       return 0;
     };
     return 1;
   } else {
+    $main::log->debug("[FAI] Can't handle action '$action'");
     return 0;
   }
 }
@@ -116,13 +118,17 @@ sub handler_fai {
 =cut
 sub flag {
   my ($self, $fai_state) = @_;
-  my ($ldap,$ldap_base) = bindLdap();
+  my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
 
-  my $mesg = $ldap->modify($self->{'dn'}, replace => {"FAIstate" => $fai_state});
+  if ($ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."\n";
+  }
+
+  my $mesg = $ldapinfos->{'HANDLE'}->modify($self->{'dn'}, replace => {"FAIstate" => $fai_state});
 
   $mesg->code && die "Error while setting FAIstate for object '".$self->{'dn'}."' :".$mesg->error;
 
-  $mesg = $ldap->unbind;   # take down session
+  $mesg = $ldapinfos->{'HANDLE'}->unbind;   # take down session
 }
 
 1;
