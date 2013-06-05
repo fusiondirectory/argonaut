@@ -48,8 +48,6 @@ use Argonaut::Common qw(:ldap :file);
 
 use constant USEC => 1000000;
 
-use Argonaut::Fuse::Common;
-
 # Predefined variables for config
 our ($default_mode, $tftp_root, $tftp_static_root);
 our $client_ip;
