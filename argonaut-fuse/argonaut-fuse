@@ -345,7 +345,7 @@ sub getattr {
 
   if ( @path_elements > 1 ) {
     foreach my $path_element (@path_elements[1..$#path_elements]) {
-      if ($path_element =~ /^([0-9a-f]{1,2}-){5}[0-9a-f]{1,2}$/i) {
+      if ($path_element =~ /^([0-9a-f]{1,2}-){6}[0-9a-f]{1,2}$/i) {
         # Always generate a fresh config
         delete $current->{$path_element} if(exists($current->{$path_element}));
 
