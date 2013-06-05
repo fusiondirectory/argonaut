@@ -28,6 +28,8 @@ use 5.008;
 
 use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
 
+use Argonaut::Common qw(:ldap);
+
 =item create_mailbox
 Creates the folder so that Dovecot will be able of creating the mailbox on first connection
 =cut
