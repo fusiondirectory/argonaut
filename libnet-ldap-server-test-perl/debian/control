@@ -1,0 +1,19 @@
+Source: libnet-ldap-server-test-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 7)
+Build-Depends-Indep: libdata-dump-perl, libnet-ldap-perl,
+ libnet-ldap-server-perl (>= 0.3), perl
+Maintainer: Benoit Mortier <benoit.mortier@opensides.be>
+Standards-Version: 3.9.1
+Homepage: http://search.cpan.org/dist/Net-LDAP-Server-Test/
+
+Package: libnet-ldap-server-test-perl
+Architecture: all
+Depends: ${misc:Depends}, ${perl:Depends}, libdata-dump-perl, libnet-ldap-perl,
+ libnet-ldap-server-perl (>= 0.3), perl
+Description: test Net::LDAP code
+ Now you can test your Net::LDAP code without having a real LDAP server
+ available.
+ .
+ This description was automagically extracted from the module by dh-make-perl.

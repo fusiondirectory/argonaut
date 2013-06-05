@@ -1,0 +1,5 @@
+libnet-ldap-server-test-perl (0.19-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Benoit Mortier <benoit.mortier@opensides.be>  Wed, 5 Jun 2013 11:28:48 +0200

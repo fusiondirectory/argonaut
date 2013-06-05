@@ -1,0 +1,5 @@
+libnet-ldap-class-perl (0.26-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Benoit Mortier <benoit.mortier@opensides.be>  Wed, 5 Jun 2013 11:25:51 +0200
