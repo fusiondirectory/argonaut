@@ -16,4 +16,3 @@ Description: test Net::LDAP code
  Now you can test your Net::LDAP code without having a real LDAP server
  available.
  .
- This description was automagically extracted from the module by dh-make-perl.

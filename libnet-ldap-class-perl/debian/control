@@ -25,4 +25,3 @@ Description: object-relational mapper for Net::LDAP
  The architecture of this package is based on Rose::DB::Object, which the
  author uses to great effect for RDBMS management.
  .
- This description was automagically extracted from the module by dh-make-perl.

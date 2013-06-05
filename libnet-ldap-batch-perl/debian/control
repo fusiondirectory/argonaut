@@ -25,4 +25,3 @@ Description: perform a batch of LDAP actions
  more than one client attempting to make changes on the same server at the
  same time. You have been warned.
  .
- This description was automagically extracted from the module by dh-make-perl.
