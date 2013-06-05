@@ -29,7 +29,6 @@ use 5.008;
 use JSON::RPC::Server::Daemon;
 use Config::IniFiles;
 use Log::Handler;
-use File::Pid;
 use App::Daemon qw(daemonize);
 
 use Argonaut::Common qw(:ldap :file);

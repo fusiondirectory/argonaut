@@ -111,6 +111,7 @@ if ($pidrunning) {
   die "Argonaut Server is already running $pidrunning\n";
 }
 
+$pid->pid($$);
 $pid->write;
 
 $filesystem = {
