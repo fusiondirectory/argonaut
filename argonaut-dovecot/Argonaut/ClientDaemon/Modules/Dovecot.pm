@@ -36,10 +36,14 @@ Creates the folder so that Dovecot will be able of creating the mailbox on first
 sub create_mailbox : Public {
   my ($s, $args) = @_;
   my ($account_id, $uid, $gid) = @{$args};
-  $main::log->notice("Creating mailbox folder for user $account_id");
+  my $msg = "Creating mailbox folder for user $account_id";
+  if ($uid) {
+    $msg .= " for uid $uid of gid $gid";
+  }
+  $main::log->notice($msg);
   mkdir get_maildir().'/'.$account_id or die 'Could not create directory: '.$!;
   if ($uid) {
-    chown $uid, $gid, get_maildir().'/'.$account_id;
+    chown $uid, $gid, get_maildir().'/'.$account_id or die 'Could not change directory owner: '.$!;
   }
   return 1;
 }
