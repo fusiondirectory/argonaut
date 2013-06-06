@@ -41,7 +41,7 @@ sub create_mailbox : Public {
     $msg .= " with uid '$uid' of gid '$gid'";
   }
   $main::log->notice($msg);
-  mkdir get_maildir().'/'.$account_id or die 'Could not create directory: '.$!;
+  mkdir get_maildir().'/'.$account_id, 2700 or die 'Could not create directory: '.$!;
   if ($uid) {
     chown $uid, $gid, get_maildir().'/'.$account_id or die 'Could not change directory owner: '.$!;
   }
