@@ -30,8 +30,6 @@ use Argonaut::Common qw(:ldap :file);
 
 my @unlocked_actions = ['System.halt', 'System.reboot'];
 
-my @deployment_actions = ['Deployment.reboot', 'Deployman.wake'];
-
 sub new
 {
   my ($class) = @_;
@@ -48,6 +46,12 @@ sub handle_client {
   } elsif ($action =~ m/^Deployment./) {
     $main::log->debug("[Argonaut] Can't handle Deployment actions");
     return 0;
+  }
+
+  if ($action eq 'System.wake') {
+    $self->{mac}    = $mac;
+    $self->{action} = $action;
+    return 1;
   }
 
   my $ip = main::getIpFromMac($mac);
@@ -73,6 +77,11 @@ Parameters : ip,action,params
 sub do_action {
   my ($self, $params) = @_;
   my $action = $self->{action};
+
+  if ($action eq 'System.wake') {
+    main::wakeOnLan($self->{'mac'});
+    return 1;
+  }
 
   if ($self->{'locked'} && (grep {$_ eq $action} @unlocked_actions)) {
     die 'This computer is locked';
