@@ -132,15 +132,21 @@ if (!opendir($tftp_static_root_handle, $tftp_static_root)) {
 $log->info("Argonaut-Fuse Mounting $tftp_root\n");
 
 # Mount FUSE Filesystem
-Fuse::main(
-  mountpoint  => $tftp_root,
-  mountopts   => "nonempty,allow_other",
-  getattr     => \&getattr,
-  read        => \&read,
-  getdir      => \&getdir,
-  debug       => 0,
-  threaded    => 0,
-);
+eval {
+  Fuse::main(
+    mountpoint  => $tftp_root,
+    mountopts   => "nonempty,allow_other",
+    getattr     => \&getattr,
+    read        => \&read,
+    getdir      => \&getdir,
+    debug       => 0,
+    threaded    => 0,
+  );
+};
+if ($@) {
+  $log->error("Fuse error: $@\n");
+  die $@;
+}
 
 exit 0;
 
