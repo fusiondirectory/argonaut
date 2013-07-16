@@ -235,7 +235,7 @@ sub generate_cronjob_script {
         $root = $3;
         $root =~ s|/$||; # Remove potential slash at the end
       } else {
-        $error = "Could not parse '".$par_repo->{'uri'}."' as a valid repo URI.\n";
+        my $error = "Could not parse '".$par_repo->{'uri'}."' as a valid repo URI.\n";
         print $error;
         $log->info($error);
         next;
