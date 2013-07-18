@@ -146,7 +146,7 @@ sub argonaut_ldap_init {
       $prompt_pwd, $bind_pwd, $obfuscate_pwd ) = @_;
   my %results;
 
-  undef $bind_dn if ($bind_dn == '');
+  undef $bind_dn if ($bind_dn eq '');
 
   # Parse ldap config
   my ($base,$ldapuris) = argonaut_ldap_parse_config( $ldap_conf );
