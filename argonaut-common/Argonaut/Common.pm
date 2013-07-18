@@ -712,8 +712,10 @@ sub argonaut_get_generic_settings {
               filter => "ipHostNumber=$ip",
               attrs => [ 'dn', 'macAddress', 'gotoMode' ]
               );
-    if(scalar($mesg->entries)!=1) {
+    if (scalar($mesg->entries)>1) {
       die "Several computers are associated to IP $ip.";
+    } elsif (scalar($mesg->entries)<1) {
+      die "There is no computer associated to IP $ip.";
     }
     $settings->{'dn'} = ($mesg->entries)[0]->dn();
     $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
