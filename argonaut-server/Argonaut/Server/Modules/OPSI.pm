@@ -526,6 +526,7 @@ sub launch {
   $host =~ s|^http(s?)://||;
   $host =~ s|/.*$||;
   $client->ua->credentials($host, "OPSI Service", $self->{'server-usr'}, $self->{'server-pwd'});
+  $client->ua->ssl_opts(verify_hostname => 0); # Do not check certificate hostname match
 
   my $callobj = {
     method  => $action,
