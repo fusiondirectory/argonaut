@@ -488,7 +488,7 @@ sub do_action {
           $res = $result;
         } elsif (defined $result->{'error'}) {
           $main::log->error("[OPSI] Error : ".$result->{'error'});
-          die "Error : ", $result->{'error'}."\n";
+          die "Error while sending '".$actions->{$action}."' to '".$self->{'fqdn'}."' : ", $result->{'error'}."\n";
         } elsif (defined $result->{'result'}) {
           $res = $result->{'result'};
         } else {
