@@ -189,7 +189,6 @@ sub readConfig
     #~ $password               =   $settings->{"opsi_password"};
     #~ $lang                   =   $settings->{"opsi_lang"};
 
-    #~ $ltspserver             =   $settings->{"ltsp_server"};
 
     $logdir                 =   $settings->{"logdir"};
 }
