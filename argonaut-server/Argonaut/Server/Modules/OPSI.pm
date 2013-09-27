@@ -400,7 +400,7 @@ sub reinstall_or_update {
         foreach my $localboot (@{$localboots}) {
           my ($product, $action) = split('\|',$localboot);
           push @{$self->{'localboots'}}, $localboot;
-          if ($reinstall || (! defined $productStates->{$product}) || ($productStates->{$product} ne 'installed')) {
+          if ($reinstall || ($action ne 'setup') || (! defined $productStates->{$product}) || ($productStates->{$product} ne 'installed')) {
             push @$infos, {
               "productId"     => $product,
               "clientId"      => $self->{'fqdn'},
