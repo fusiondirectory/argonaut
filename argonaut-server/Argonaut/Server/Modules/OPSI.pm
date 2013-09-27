@@ -36,6 +36,7 @@ my $actions = {
   'System.reboot'               => 'hostControl_reboot',
   'Deployment.reboot'           => 'hostControl_reboot',
   'Deployment.reinstall'        => \&reinstall,
+  'Deployment.update'           => \&update,
   'OPSI.update_or_insert'       => \&update_or_insert,
   'OPSI.delete'                 => 'host_delete',
   'OPSI.host_getObjects'        => 'host_getObjects',
@@ -290,8 +291,8 @@ sub update_or_insert {
   return $res;
 }
 
-sub reinstall {
-  my ($self, $action,$params) = @_;
+sub reinstall_or_update {
+  my ($self, $reinstall,$action,$params) = @_;
   my $res;
 
   #1 - fetch the host profile
@@ -309,7 +310,7 @@ sub reinstall {
   );
   $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
   $self->{'softlists'}  = ($mesg->entries)[0]->get_value("fdOpsiSoftwareList", asref => 1);
-  $self->{'localboots'} = ($mesg->entries)[0]->get_value("fdOpsiLocalbootProduct", asref => 1);
+  $self->{'localboots'} = [];
   $self->{'properties'} = ($mesg->entries)[0]->get_value("fdOpsiProductProperty", asref => 1);
   #2 - remove existing setups and properties
   my $productOnClients = $self->launch('productOnClient_getObjects',
@@ -319,7 +320,9 @@ sub reinstall {
       "type"          => "ProductOnClient",
     }]
   );
+  my $productStates = {};
   foreach my $product (@$productOnClients) {
+    $productStates->{$product->{'productId'}} = $product->{'installationStatus'};
     $product->{"actionRequest"} = 'none';
   }
   $res = $self->launch('productOnClient_updateObjects', [$productOnClients]);
@@ -332,7 +335,26 @@ sub reinstall {
   );
   $res = $self->launch('productPropertyState_deleteObjects', [$productOnClients]);
   #3 - set netboot as the profile specifies
-  if (defined $self->{'netboot'}) {
+  if (!$reinstall && defined $self->{'netboot'}) {
+    # Check if netboot is correctly installed
+    my $attrs = [
+      'actionResult',
+      'actionRequest',
+      'actionProgress',
+      'installationStatus',
+    ];
+    my $filter = {
+      "productId"     => $self->{'netboot'},
+      "clientId"      => $self->{'fqdn'},
+      "productType"   => "NetbootProduct",
+    };
+    my $results = $self->launch('productOnClient_getObjects',[$attrs, $filter]);
+    my $res = shift @$results;
+    if ($res->{'installationStatus'} ne 'installed') {
+      $reinstall = 1;
+    }
+  }
+  if ($reinstall && defined $self->{'netboot'}) {
     my $infos = {
       "productId"     => $self->{'netboot'},
       "clientId"      => $self->{'fqdn'},
@@ -359,7 +381,7 @@ sub reinstall {
     }
     $res = $self->launch('productOnClient_updateObjects', [$productOnClients]);
   }
-  #4 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile)
+  #4 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile - see 3 bis)
   if (defined $self->{'softlists'}) {
     my $infos = [];
     foreach my $softlistdn (@{$self->{'softlists'}}) {
@@ -377,13 +399,24 @@ sub reinstall {
       if (grep {$_ eq 'opsiSoftwareList'} @$ocs) {
         foreach my $localboot (@{$localboots}) {
           my ($product, $action) = split('\|',$localboot);
-          push @$infos, {
-            "productId"     => $product,
-            "clientId"      => $self->{'fqdn'},
-            "actionRequest" => $action,
-            "type"          => "ProductOnClient",
-            "productType"   => "LocalbootProduct"
-          };
+          push @{$self->{'localboots'}}, $localboot;
+          if ($reinstall || (! defined $productStates->{$product}) || ($productStates->{$product} ne 'installed')) {
+            push @$infos, {
+              "productId"     => $product,
+              "clientId"      => $self->{'fqdn'},
+              "actionRequest" => $action,
+              "type"          => "ProductOnClient",
+              "productType"   => "LocalbootProduct"
+            };
+          } else {
+            push @$infos, {
+              "productId"     => $product,
+              "clientId"      => $self->{'fqdn'},
+              "actionRequest" => "none",
+              "type"          => "ProductOnClient",
+              "productType"   => "LocalbootProduct"
+            };
+          }
         }
       } else {
         # Handle OnDemandList
@@ -424,6 +457,18 @@ sub reinstall {
   }
 
   return $res;
+}
+
+sub reinstall {
+  my ($self, $action,$params) = @_;
+
+  return $self->reinstall_or_update(1, $action, $params);
+}
+
+sub update {
+  my ($self, $action,$params) = @_;
+
+  return $self->reinstall_or_update(0, $action, $params);
 }
 
 =pod
