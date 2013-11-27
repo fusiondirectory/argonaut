@@ -34,7 +34,7 @@ use 5.008;
 use Config::IniFiles;
 use DNS::ZoneParse;
 
-use Argonaut::Librairies::Common qw(:ldap);
+use Argonaut::Libraries::Common qw(:ldap);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');

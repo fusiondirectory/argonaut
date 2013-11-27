@@ -29,7 +29,7 @@ use 5.008;
 
 use Quota;
 
-use Argonaut::Librairies::Common qw(:ldap);
+use Argonaut::Libraries::Common qw(:ldap);
 
 BEGIN
 {

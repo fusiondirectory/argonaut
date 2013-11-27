@@ -45,8 +45,8 @@ use File::Path;
 use Log::Handler;
 use App::Daemon qw(daemonize);
 
-use Argonaut::Librairies::Common qw(:ldap :file);
-use Argonaut::Librairies::Packages qw(get_packages_info store_packages_file);
+use Argonaut::Libraries::Common qw(:ldap :file);
+use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file);
 
 # where to look for modules files
 use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', instantiate => 'new', except => 'Argonaut::Server::Modules::Argonaut';
