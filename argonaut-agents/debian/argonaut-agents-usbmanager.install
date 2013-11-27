@@ -1,6 +1,0 @@
-usblock			lib/udev
-argonaut-start-usb	usr/sbin
-argonaut-stop-usb	usr/sbin
-plugins/K01usbdev	etc/argonaut/plugins
-plugins/S90usbmanager	etc/argonaut/plugins
-plugins/K90usbmanager	etc/argonaut/plugins

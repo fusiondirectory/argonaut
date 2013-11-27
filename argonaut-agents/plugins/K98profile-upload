@@ -1,7 +1,0 @@
-#NAME:Profile synchronization
-if [ -x /usr/sbin/argonaut-profile-upload ]; then
-  xhost +localhost
-  sudo /usr/sbin/argonaut-profile-upload
-  xhost -localhost
-fi
-

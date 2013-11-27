@@ -1,7 +1,0 @@
-etc/argonaut
-etc/fai/nfsroot-hooks
-etc/fai/nfsroot-templates
-usr/sbin
-usr/lib/fai
-var/lib/fai/config/hooks
-var/lib/fai/config/scripts/DEFAULT

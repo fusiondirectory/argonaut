@@ -1,5 +1,0 @@
-no-hardware
-bg-color=ff000000
-screenshot-dir=/var/log
-disable-module=keyboard
-disable-module=ps2mouse

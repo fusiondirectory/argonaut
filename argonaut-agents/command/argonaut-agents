@@ -1,7 +1,0 @@
-# Use argonaut agent configuration or not
-START=0
-
-# Hide messages and use a dialog style or prefere ordinary init style?
-# 0: use dialog
-# 1: use init style
-VERBOSE=1

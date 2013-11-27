@@ -1,8 +1,0 @@
-# NOEUD-BASE, profiles, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
-dn: cn=NOEUD-BASE,ou=profiles,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
-objectClass: top
-objectClass: FAIclass
-objectClass: FAIprofile
-cn: NOEUD-BASE
-description: noeud de base EDF R&D
-FAIclass: DEBIAN-IMPORTANT DEBIAN-REQUIRED DEBIAN-STANDARD DEBIAN-DISK DEBIAN-GRUB DEBIAN-FIRMWARE-NONFREE LAST DEBIAN-SSH

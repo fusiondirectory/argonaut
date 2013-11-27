@@ -1,4 +1,0 @@
-# profiles, lenny, fai, configs, systems, %LDAP_BASE_COMMENT%
-dn: ou=profiles,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
-objectClass: organizationalUnit
-ou: profiles
