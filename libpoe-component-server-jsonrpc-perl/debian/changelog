@@ -1,5 +1,0 @@
-libpoe-component-server-jsonrpc-perl (0.05-1) unstable; urgency=low
-
-  * Initial Release (Closes: #678641).
-
- -- Benoit Mortier <benoit.mortier@opensides.be>  Sat, 23 Jun 2012 12:27:39 +0200
