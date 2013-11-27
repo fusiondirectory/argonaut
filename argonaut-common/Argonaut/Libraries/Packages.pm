@@ -37,7 +37,7 @@ use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use LWP::Simple;
 
-use Argonaut::Librairies::Common qw(:ldap);
+use Argonaut::Libraries::Common qw(:ldap);
 
 BEGIN
 {
