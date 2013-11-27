@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Argonaut::Quota packages - get quota from ldap
+# Argonaut::Libraries::Quota packages - get quota from ldap
 #
 # Copyright (c) 2012-2013 FusionDirectory project
 #
@@ -20,7 +20,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #######################################################################
 
-package Argonaut::Quota;
+package Argonaut::Libraries::Quota;
 
 use strict;
 use warnings;

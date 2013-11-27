@@ -27,7 +27,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Ldap2zone qw(argonaut_ldap2zone);
+use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 
 my $zone_arg = undef;
 my $verbose_arg = 0;

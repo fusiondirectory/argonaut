@@ -30,7 +30,7 @@ use 5.008;
 
 use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
 
-use Argonaut::Ldap2zone qw(argonaut_ldap2zone);
+use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 
 =item start
 start ldap2zone on the computer and store the result in the right place

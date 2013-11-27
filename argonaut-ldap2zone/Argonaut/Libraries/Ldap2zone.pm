@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Argonaut::Ldap2zone -- create zone files from LDAP DNS zones
+# Argonaut::Libraries::Ldap2zone -- create zone files from LDAP DNS zones
 #
 # Copyright (C) 2012-2013 FusionDirectory project <contact@fusiondirectory.org>
 #
@@ -21,7 +21,7 @@
 #
 #######################################################################
 
-package Argonaut::Ldap2zone;
+package Argonaut::Libraries::Ldap2zone;
 
 use Exporter 'import';              # gives you Exporter's import() method directly
 @EXPORT_OK = qw(&argonaut_ldap2zone);  # symbols to export on request
