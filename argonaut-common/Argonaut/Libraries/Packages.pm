@@ -19,7 +19,7 @@
 #
 #######################################################################
 
-package Argonaut::Packages;
+package Argonaut::Libraries::Packages;
 
 use strict;
 use warnings;
@@ -35,7 +35,7 @@ use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use LWP::Simple;
 
-use Argonaut::Common qw(:ldap);
+use Argonaut::Librairies::Common qw(:ldap);
 
 BEGIN
 {

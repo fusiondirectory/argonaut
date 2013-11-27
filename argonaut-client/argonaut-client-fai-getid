@@ -30,7 +30,7 @@ use JSON::RPC::Client;
 use Config::IniFiles;
 use Log::Handler;
 
-use Argonaut::Common qw(:net :ldap :file);
+use Argonaut::Libraries::Common qw(:net :ldap :file);
 
 =pod
 This program ask the argonaut-server for the assigned taskid for the fai installation.

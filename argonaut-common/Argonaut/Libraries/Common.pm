@@ -24,7 +24,7 @@
 #
 #######################################################################
 
-package Argonaut::Common;
+package Argonaut::Libraries::Common;
 
 use strict;
 use warnings;

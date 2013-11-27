@@ -30,7 +30,7 @@ use JSON::RPC::Client;
 use Config::IniFiles;
 use Log::Handler;
 
-use Argonaut::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :file);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-client-fai-sendmon.log";

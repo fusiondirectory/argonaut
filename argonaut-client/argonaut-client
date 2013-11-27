@@ -31,7 +31,7 @@ use Config::IniFiles;
 use Log::Handler;
 use App::Daemon qw(daemonize);
 
-use Argonaut::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :file);
 
 # where to look for modules files
 use Module::Pluggable search_path => 'Argonaut::ClientDaemon::Modules', sub_name => 'modules';

@@ -28,7 +28,7 @@ use 5.008;
 
 use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
 
-use Argonaut::Common qw(:ldap);
+use Argonaut::Libraries::Common qw(:ldap);
 
 =item getServiceName
 Returns the local name of a service
