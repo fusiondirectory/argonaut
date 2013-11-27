@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Argonaut::ClientDaemon -- Action to done on clients
+# Argonaut::ClientDaemon -- Action to be done on clients
 #
 # Copyright (C) 2011-2013 FusionDirectory project <contact@fusiondirectory.org>
 #

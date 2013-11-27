@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Argonaut::Common package -- Argonaut basic functions.
+# Argonaut::Libraries::Common -- Argonaut basic functions.
 #
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (C) 2011-2013 FusionDirectory project
@@ -931,58 +931,5 @@ END {}
 1;
 
 __END__
-
-=head1 NAME
-
-Argonaut::Common - Argonaut basic functions
-
-=head1 SYNOPSIS
-
-use Argonaut::Utils;
-
-  $result = process_input($line);
-
-=head1 Function C<process_input>
-
-=head2 Syntax
-
-  $result = process_input($line);
-
-=head2 Arguments
-
-C<$line> input line we get
-
-=head2 Return value
-
- true if stream wants us to finish
-
-=head2 Description
-
-C<process_input> parses information from the lines and sets the progress respectively
-
-=head1 BUGS
-
-Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
-
-=head1 LICENCE AND COPYRIGHT
-
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
-
-=over 3
-
-=item Copyright (C) 2008 Landeshauptstadt München
-
-=item Copyright (C) 2011 FusionDirectory project
-
-=back
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-=cut
-
 
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

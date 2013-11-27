@@ -1,8 +1,10 @@
 #######################################################################
 #
-# Argonaut::Packages package -- get and parse Debian Packages.
+# Argonaut::Libraries::Packages -- get and parse Debian Packages.
 #
 # Copyright (C) 2011-2013 FusionDirectory project
+#
+# Author: Côme BERNIGAUD
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

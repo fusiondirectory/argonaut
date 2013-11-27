@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Argonaut::Quota packages - functions to get info for quota from ldap
+# Argonaut::Quota packages - get quota from ldap
 #
 # Copyright (c) 2012-2013 FusionDirectory project
 #
