@@ -515,7 +515,6 @@ argonaut-fuse
 =head1 DESCRIPTION
 
 B<argonaut-fuse> is a modular fuse-tftp-supplicant written in perl which allows one to create pxelinux configurations for different types of clients using external modules.
-There is already written modules for FAI (Fully automated install).
 
 =head1 BUGS
 
@@ -538,7 +537,7 @@ This code was Based on ctftpd
 
 =item Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>
 
-=item Copyright (C) 2011 FusionDirectory project
+=item Copyright (C) 2011-2013 FusionDirectory project
 
 =back
 

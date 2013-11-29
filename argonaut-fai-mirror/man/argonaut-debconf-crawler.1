@@ -123,39 +123,20 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "LDAP2FAI 1"
-.TH LDAP2FAI 1 "2013-11-29" "Argonaut 0.9.1" "Argonaut Documentation"
+.IX Title "ARGONAUT-DEBCONF-CRAWLER 1"
+.TH ARGONAUT-DEBCONF-CRAWLER 1 "2013-11-29" "Argonaut 0.9.1" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-ldap2fai \- read FAI config from LDAP and create config space.
+argonaut\-debconf\-crawler \- Extract debconf templates from packages
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-ldap2fai [\-hnv] [\-d dump_dir] [\-H hostname] \-m <\s-1MAC\s0>
-.SH "OPTIONS"
-.IX Header "OPTIONS"
-\&\fB\-h\fR
-    print out this help message
-.PP
-\&\fB\-v\fR
-    be verbose (multiple v's will increase verbosity)
-.PP
-\&\fB\-n\fR
-    dry run (includes verbose)
-.PP
-\&\fB\-d\fR
-    output dir (default: /var/lib/fai/config)
-.PP
-\&\fB\-H\fR
-    check hostname
-.PP
-\&\fB\-m\fR
-    mac address
+argonaut-debconf-crawler
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-ldap2fai is a script to read the fai config space from \s-1LDAP\s0 and create it on the disk.
+argonaut-debconf-crwaler is a program used to extract debconf templates from packages
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
@@ -163,14 +144,8 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
-.IP "Copyright (c) 2008 Landeshauptstadt Munchen" 3
-.IX Item "Copyright (c) 2008 Landeshauptstadt Munchen"
-.PD 0
-.IP "Copyright (C) 2007\-2010 The GOsa project" 3
-.IX Item "Copyright (C) 2007-2010 The GOsa project"
-.IP "Copyright (C) 2011\-2013 FusionDirectory project" 3
+.IP "Copyright (C) 2011\-2013 FusionDirectory project" 1
 .IX Item "Copyright (C) 2011-2013 FusionDirectory project"
-.PD
 .PP
 This program is distributed in the hope that it will be useful,
 but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty of

@@ -8,6 +8,8 @@
 # Copyrignt (c) 2007,2009 The GOsa project <gosa-devel@oss.gonicus.de>
 # Copyright (C) 2011-2013 FusionDirectory project
 #
+# Author: Come Bernigaud
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 2 of the License, or
@@ -281,7 +283,7 @@ argonaut-repository
 
 =head1 DESCRIPTION
 
-argonaut-repository is a program used to create the cronjob for the local debian repositories used by the argonaut deployement system.
+argonaut-repository is a program used to create the cronjob for creation the local debian mirrors.
 
 =head1 BUGS
 
@@ -298,7 +300,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =item Copyright (C) 2007-2010 The GOsa project
 
-=item Copyright (C) 2011-2012 FusionDirectory project
+=item Copyright (C) 2011-2013 FusionDirectory project
 
 =back
 

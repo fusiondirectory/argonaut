@@ -11,6 +11,7 @@
 # Authors: Jan-Marek Glogowski
 #          Cajus Pollmeier
 #          Benoit Mortier
+#          Come Bernigaud
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -526,17 +527,17 @@ ldap2fai - read FAI config from LDAP and create config space.
 
 =head1 SYNOPSIS
 
-ldap2fai [-hnvW] [-d dump_dir] [-H hostname] -m <MAC>
+ldap2fai [-hnv] [-d dump_dir] [-H hostname] -m <MAC>
 
 =head1 OPTIONS
 
-B<-h>, B<--help>
+B<-h>
     print out this help message
 
-B<-v>, B<--verbose>
+B<-v>
     be verbose (multiple v's will increase verbosity)
 
-B<-n>, B<--foreground>
+B<-n>
     dry run (includes verbose)
 
 B<-d>
@@ -550,7 +551,7 @@ B<-m>
 
 =head1 DESCRIPTION
 
-ldap2fai is a script to create read the fai config from LDAP and create fai config space.
+ldap2fai is a script to read the fai config space from LDAP and create it on the disk.
 
 =head1 BUGS
 
@@ -563,11 +564,11 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =over 3
 
-=item Copyright (c) 2008 Landeshauptstadt München
+=item Copyright (c) 2008 Landeshauptstadt Munchen
 
 =item Copyright (C) 2007-2010 The GOsa project
 
-=item Copyright (C) 2011 FusionDirectory project
+=item Copyright (C) 2011-2013 FusionDirectory project
 
 =back
 
