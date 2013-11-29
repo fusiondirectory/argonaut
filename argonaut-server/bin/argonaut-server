@@ -92,21 +92,11 @@ $log->add(
     }
 );
 
-=pod
-=item readConfig
-Read config infos from the config file and erase them with LDAP infos
-No parameters needed
-=cut
 sub readConfig {
   readConfigFile();
   readLdapConfig();
 }
 
-=pod
-=item readConfigFile
-Read from the config file argonaut.conf all the informations
-No parameters needed
-=cut
 sub readConfigFile {
     my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
@@ -116,11 +106,6 @@ sub readConfigFile {
     $ldap_password          =   $config->val( ldap => "password"                ,"");
 }
 
-=pod
-=item readLdapConfig
-Read config infos from the LDAP
-No parameters needed
-=cut
 sub readLdapConfig {
   my $settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
 
@@ -136,19 +121,11 @@ sub readLdapConfig {
   $packages_folder        = "/var/cache/argonaut/packages";
 }
 
-=item bindLdap
-Connect to ldap and return handle.
-=cut
 sub bindLdap {
     my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
     return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 }
 
-=pod
-=item getIpFromMac
-Search in the ldap for the IP associated to a Mac address.
-Parameter : the mac address
-=cut
 sub getIpFromMac {
   my ($mac) = @_;
 
@@ -177,12 +154,6 @@ sub getIpFromMac {
   return $ip;
 }
 
-=pod
-=item wakeOnLan
-Send a wake on lan package to a mac address
-Parameter : the mac address
-inspired by WakeOnLan.pm file from FusionInventory
-=cut
 sub wakeOnLan {
     my ($macaddress) = @_;
 
@@ -266,45 +237,6 @@ sub refresh_task {
   }
 }
 
-=pod
-=head2 POE Session
-=over
-=item _start
-=item echo
-=item ping
-Ping the jsonrpc daemon of a client.
-=item id_of_mac
-Used by clients to get the taskid associated to them
-=item set_task_substatus
-Used by clients to set the fai status
-=item set_error
-Used by clients to signal fai errors
-=item schedule
-Internal state used for scheduling
-=item add
-Internal state corresponding at external action method call.
-Launch the action or schedule it.
-=item get_entries_by_id
-Used by FD to get a bunch of entries by giving a bunch of ids
-=item get_entries_by_mac
-Used by FD to get a bunch of entries by giving a bunch of macs
-=item remove_entries
-Used by FD to remove entries by giving their ids
-=item process_entries
-Used by FD to ask the immediate launch of a bunch of actions by giving their ids
-=item action
-Internal state called by the scheduler to actually launch the action.
-It calls do_action.
-=item load_dump
-Unused right now
-=item sighup
-When sighup received, reload config. See readConfig above.
-(Also restart the server since its port might have changed)
-=item sigint
-When sigint received, write a json dump before quitting.
-=item _stop
-=back
-=cut
 POE::Session->create(
     inline_states => {
         _start => sub {
@@ -752,4 +684,37 @@ exit 0;
 
 __END__
 
-# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
+=head1 NAME
+
+argonaut-server - Dispatching action received from FusionDirectory to the clients
+
+=head1 SYNOPSIS
+
+argonaut-server 
+
+=head1 DESCRIPTION
+
+argonaut-server - argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular 
+and can load various modules at run time.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 1
+
+=item Copyright (C) 2011-2013 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut

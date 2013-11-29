@@ -123,29 +123,21 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "ARGONAUT-LDAP2ZONE 1"
-.TH ARGONAUT-LDAP2ZONE 1 "2013-11-29" "Argonaut 0.9" "Argonaut Documentation"
+.IX Title "ARGONAUT-SERVER 1"
+.TH ARGONAUT-SERVER 1 "2013-11-29" "Argonaut 0.9" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-argonaut\-ldap2zone \- creating bind zone files and refreshing the server
+argonaut\-server \- Dispatching action received from FusionDirectory to the clients
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-argonaut\-ldap2zone [\-\-verbose] \s-1ZONE\s0
+argonaut-server
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-argonaut\-ldap2zone is a program used to create bind zone files and refresh the bind service
-.SH "OPTIONS"
-.IX Header "OPTIONS"
-\&\fB\-\-verbose\fR
-    be verbose
-.SH "EXAMPLES"
-.IX Header "EXAMPLES"
-.Vb 1
-\& argonaut\-ldap2zone \-\-verbose fusiondirectory.org.
-.Ve
+argonaut-server \- argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular 
+and can load various modules at run time.
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to

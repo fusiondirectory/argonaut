@@ -71,9 +71,6 @@ $App::Daemon::as_user = "root";
 
 daemonize();
 
-=pod
-This just launch a JSONRPC server with ClientDaemon.pm methods.
-=cut
 my $server = JSON::RPC::Server::Daemon->new(
   LocalPort => $client_settings->{'port'},
   ($server_settings->{'protocol'} eq 'https') ? (SSL_server    => 1,
@@ -90,11 +87,7 @@ my $modules = import_modules();
 
 $server->dispatch_to($modules)->handle();
 
-=pod
-=item readConfig
-Read from the config file argonaut.conf all the informations
-No parameters needed
-=cut
+
 sub readConfig {
   my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
@@ -108,9 +101,7 @@ sub readConfig {
   $client_settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
 }
 
-=item import_modules
-Import the available modules
-=cut
+
 sub import_modules {
   foreach my $module (modules()) {
     $log->notice("Loaded module $module");
@@ -118,22 +109,12 @@ sub import_modules {
   return ['Argonaut::ClientDaemon',modules()];
 }
 
-=pod
-
-=item sig_int_handler
-Get the sigint signals, and exit
-=cut
 
 sub sig_int_handler {
   $log->notice("argonaut-client-management on port ".$client_settings->{'port'}." terminated by sigint");
   exit(0);
 }
 
-=pod
-
-=item sig_term_handler
-Get the sigterm signals, and exit
-=cut
 
 sub sig_term_handler {
   $log->notice("argonaut-client-management on port ".$client_settings->{'port'}." terminated by sigterm");
@@ -142,3 +123,38 @@ sub sig_term_handler {
 
 
 __END__
+
+=head1 NAME
+
+argonaut-client - running actions given by the argonaut server
+
+=head1 SYNOPSIS
+
+argonaut-client
+
+=head1 DESCRIPTION
+
+argonaut-client is getting actions from argonaut server and run them. It is modular 
+and can load various modules at run time.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 1
+
+=item Copyright (C) 2011-2013 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut

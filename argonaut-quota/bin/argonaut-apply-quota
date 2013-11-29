@@ -48,3 +48,39 @@ write_warnquota_file ($settings,$warnquota_file);
 write_quotatab_file ($settings,$quotatab_file);
 
 apply_quotas ($ldap_configfile,$ldap_dn,$ldap_password,$settings->{'hostname'});
+
+__END__
+
+=head1 NAME
+
+argonaut-apply-quota - applying quota from data stored in the ldap server
+
+=head1 SYNOPSIS
+
+argonaut-apply-quota
+
+=head1 DESCRIPTION
+
+argonaut-apply-quota is a program used to apply quota on server based on the data stored in the ldap server
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 1
+
+=item Copyright (C) 2011-2013 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
