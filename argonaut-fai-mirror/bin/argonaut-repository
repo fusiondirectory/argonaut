@@ -1,0 +1,312 @@
+#!/usr/bin/perl
+
+#######################################################################
+#
+# argonaut-repository
+#
+# Copyright (c) 2005,2006 Jan-Marek Glogowski <glogow@fbihome.de>
+# Copyrignt (c) 2007,2009 The GOsa project <gosa-devel@oss.gonicus.de>
+# Copyright (C) 2011-2013 FusionDirectory project
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Switch;
+use Net::LDAP;
+use MIME::Base64;
+use Getopt::Std;
+use File::Path;
+use File::Copy;
+use Log::Handler;
+use Config::IniFiles;
+
+use Argonaut::Common qw(:ldap :file :array :net);
+use Argonaut::Packages qw(get_repolines);
+
+use lib "/usr/lib/argonaut";
+
+my ($ldap_configfile, $ldap_dn, $ldap_password);
+my ($archs,$mirrordir,$proxy,$mac,$client_ip);
+my ($verbose,$errors,$source,$gpgcheck,$contents,$pdiff,$logdir);
+my $result;
+my $ldapinfos;
+
+my $configfile = "/etc/argonaut/argonaut.conf";
+my $outdir = "/etc/argonaut/fai";
+my $crond_dir= "/etc/cron.daily";
+my $logfile = "ldap2repository.log";
+
+readConfig($configfile);
+
+argonaut_create_dir($logdir);
+
+my $log = Log::Handler->create_logger("ldap2repository");
+
+$log->add(
+    file => {
+        filename => "$logdir/$logfile",
+        maxlevel => "debug",
+        minlevel => "emergency",
+        newline  => 1,
+    }
+);
+
+$log->info ("ldap2repository started\n");
+
+$ldapinfos = argonaut_ldap_init($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+
+if ( $ldapinfos->{'ERROR'} > 0) {
+  print ( $ldapinfos->{'ERRORMSG'}."\n" );
+  exit ($ldapinfos->{'ERROR'});
+}
+
+my $base = $ldapinfos->{'BASE'};
+
+my $ldapuris = $ldapinfos->{'URIS'};
+
+my $handle = $ldapinfos->{'HANDLE'};
+
+argonaut_create_dir($outdir);
+
+if( $verbose eq "TRUE" ) {
+  print "Generating sources.list and debmirror cronjob for server\n"
+    . "IP:     ${client_ip}\n"
+    . "Base:   ${base}\n"
+    . "Outdir: ${outdir}\n\n";
+}
+
+#generate the cronjob script
+generate_cronjob_script();
+
+#generate the cronjob daily
+generate_cronjob_daily();
+
+# take down ldap session
+$handle->unbind;
+$handle->disconnect;
+
+exit 0;
+
+sub readConfig {
+  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+  $client_ip               =   $config->val( client => "client_ip" ,"");
+  $ldap_configfile         =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
+  $ldap_dn                 =   $config->val( ldap => "dn"          ,"");
+  $ldap_password           =   $config->val( ldap => "password"    ,"");
+
+  my $settings = argonaut_get_ldap2repository_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+
+  $mirrordir              =   $settings->{'mirrordir'};
+  $proxy                  =   $settings->{'proxy'};
+  $errors                 =   $settings->{'errors'};
+  $source                 =   $settings->{'source'};
+  $gpgcheck               =   $settings->{'gpgcheck'};
+  $contents               =   $settings->{'contents'};
+  $verbose                =   $settings->{'verbose'};
+  $mac                    =   $settings->{'mac'};
+
+  $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
+
+  if ($errors eq "TRUE") {
+    $errors = "--ignore-small-errors";
+  } else {
+    $errors = "";
+  }
+
+  if ($source eq "FALSE") {
+    $source = "--nosource";
+  } else {
+    $source = "";
+  }
+
+  if ($gpgcheck eq "FALSE") {
+    $gpgcheck = "--ignore-release-gpg";
+  } else {
+    $gpgcheck = "";
+  }
+
+  if ($contents eq "TRUE") {
+    $contents = "--getcontents";
+  } else {
+    $contents = "";
+  }
+}
+
+#------------------------------------------------------------------------------
+# get ldap2repository argonaut settings
+#
+sub argonaut_get_ldap2repository_settings {
+  return argonaut_get_generic_settings(
+    'argonautMirrorConfig',
+    {
+      'mirrordir'       => 'argonautMirrorDir',
+      'proxy'           => 'argonautLdap2repProxy',
+      'errors'          => 'argonautLdap2repErrors',
+      'source'          => 'argonautLdap2repSource',
+      'gpgcheck'        => 'argonautLdap2repGPGCheck',
+      'contents'        => 'argonautLdap2repContents',
+      'verbose'         => 'argonautLdap2repVerbose',
+    },
+    @_
+  );
+}
+
+sub generate_cronjob_daily {
+  # generate new /etc/cron.d/argonaut-mirror
+  open (CROND, ">${crond_dir}/argonaut-mirror")
+    || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
+
+  print CROND "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
+  print CROND "\@daily root $outdir/mirror-update-cronjob\n";
+  close (CROND);
+}
+
+sub generate_cronjob_script {
+  open (CRON, ">${outdir}/mirror-update-cronjob")
+    || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
+
+  my @repos = get_repolines($mac);
+
+  if (scalar(@repos) == 0) {
+    print( "This server doesn't contain software repositories\n" );
+    $log->info ("This server doesn't contain software repositories\n");
+    close (CRON);
+    unlink "${outdir}/mirror-update-cronjob";
+    exit 0;
+  }
+
+  # Write cron script
+  print CRON "#!/bin/sh\n";
+
+  open (SOURCES, ">${outdir}/sources.list");
+
+  foreach my $repo (@repos) {
+    my $uri = $repo->{'uri'};
+    my ($localuri) = $uri;
+    my $parent_or_opts = $repo->{'parent'};
+    my $dist = $repo->{'dist'};
+    my $sections = join(',',@{$repo->{'sections'}});
+    my (@section_list) = @{$repo->{'sections'}};
+    my $archs = join(',',@{$repo->{'archs'}}); # archs comma-separated
+    my $repoline = $repo->{'line'};
+
+    if ("" eq "$parent_or_opts") {
+      print( "No parent for '$repoline'\n" );
+      $log->info ("No parent for '$repoline'\n");
+      next;
+    }
+
+    print SOURCES "deb $uri $dist @section_list\n";
+
+    print "parent: $parent_or_opts\n" if( $verbose eq "TRUE" );
+    print "sources.list: deb $uri $dist @section_list\n" if( $verbose eq "TRUE" );
+
+
+    my @par_repos = get_repolines(undef,$parent_or_opts);
+    if (scalar(@par_repos) == 0) {
+      print( "Couldn't find parent repository server for '$repoline'\n" );
+      $log->info ("Couldn't find parent repository server for '$repoline'\n");
+      next;
+    }
+
+    foreach my $par_repo (@par_repos) {
+      my ($method,$host,$root);
+      if ($par_repo->{'uri'} =~ m#([^:]+)://([^/]+)(.*)#) {
+        $method = $1;
+        $host = $2;
+        $root = $3;
+        $root =~ s|/$||; # Remove potential slash at the end
+      } else {
+        my $error = "Could not parse '".$par_repo->{'uri'}."' as a valid repo URI.\n";
+        print $error;
+        $log->info($error);
+        next;
+      }
+
+      my $par_dist = $par_repo->{'dist'};
+      my @outline = ();
+      if ("$dist" eq "$par_dist") {
+        foreach my $section (@{$par_repo->{'sections'}}) {
+          if (argonaut_array_find_and_remove( \@section_list, ${section})) {
+            push (@outline, $section);
+            last if (0 == scalar @section_list);
+          }
+        }
+
+        if (0 != scalar @{outline}) {
+          my $cron_line = "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline})
+                    . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/\n";
+          print CRON $cron_line;
+          print "mirror-update-cronjob: ".$cron_line."\n" if( $verbose eq "TRUE" );
+        }
+        last if (0 == scalar @section_list);
+      }
+    }
+
+    if (scalar @section_list != 0) {
+      print "No repository was found in parent $parent_or_opts for release $dist, for sections ".join(",", @section_list)."\n" if( $verbose eq "TRUE" );
+    }
+  }
+  close (SOURCES);
+  close (CRON);
+}
+
+__END__
+
+=head1 NAME
+
+argonaut-repository - creating debian repositories cronjob for the Argonaut deployment system.
+
+=head1 SYNOPSIS
+
+argonaut-repository
+
+=head1 DESCRIPTION
+
+argonaut-repository is a program used to create the cronjob for the local debian repositories used by the argonaut deployement system.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2005-2006 Jan-Marek Glogowski
+
+=item Copyright (C) 2007-2010 The GOsa project
+
+=item Copyright (C) 2011-2012 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

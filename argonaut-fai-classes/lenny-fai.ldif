@@ -1,0 +1,32 @@
+dn: ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+objectClass: FAIbranch
+ou: lenny
+
+dn: ou=packages,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: packages
+
+dn: ou=scripts,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: scripts
+
+dn: ou=hooks,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: hooks
+
+dn: ou=disk,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: disk
+
+dn: ou=variables,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: variables
+
+dn: ou=profiles,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: profiles
+
+dn: ou=templates,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: templates

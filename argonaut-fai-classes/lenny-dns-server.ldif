@@ -1,0 +1,16 @@
+# DEBIAN-REQUIRED, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-DNS-SERVER,ou=packages,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-DNS-SERVER
+description: tache dns-server pour lenny
+FAIpackage: dlint
+FAIpackage: dnsutils
+FAIpackage: lwresd
+FAIpackage: bind9-doc
+FAIpackage: bind9
+FAIdebianRelease: lenny
+FAIdebianSection: main
+FAIinstallMethod: aptitude

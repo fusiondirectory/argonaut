@@ -1,0 +1,20 @@
+# DEBIAN-REQUIRED, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-FILE-SERVER,ou=packages,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-FILE-SERVER
+description: tache file-server pour lenny
+FAIpackage: smbfs
+FAIpackage: netatalk
+FAIpackage: smbclient
+FAIpackage: swat
+FAIpackage: samba-doc
+FAIpackage: winbind
+FAIpackage: nfs-kernel-server
+FAIpackage: samba
+FAIpackage: smartmontools
+FAIdebianRelease: lenny
+FAIdebianSection: main
+FAIinstallMethod: aptitude

@@ -1,0 +1,3 @@
+dn: ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: fai

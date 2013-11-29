@@ -1,0 +1,34 @@
+#!/bin/bash
+
+sendmon "TASKBEGIN extrbase"
+
+fs=$FAI_ROOT/etc/fstab
+
+# What's our mirror?
+mirror="$(sed '1s/^[^ ]* \([^ ]*\).*$/\1/' $FAI/files/etc/apt/sources.list/LAST)"
+options="$(sed -n 's/^FAI_DEBOOTSTRAP_OPTS=.\(.*\).$/\1/p' /etc/fai/make-fai-nfsroot.conf)"
+scriptsdir=$([ -d /usr/lib/debootstrap/scripts/ ] && echo '/usr/lib/debootstrap/scripts/' || echo '/usr/share/debootstrap/scripts/')
+
+if [ "x" = "x${FAIdistributionBase}" ]; then
+  FAIdistributionBase="$FAIclientRelease"
+fi
+
+echo "Bootstrapping Debian base system"
+echo "+ mirror : $mirror"
+echo "+ release: $FAIclientRelease"
+echo "+ base: $FAIdistributionBase"
+echo "- exec (debootstrap $options $FAIclientRelease $FAI_ROOT $mirror ${scriptsdir}${FAIdistributionBase})"
+
+# Run debootstrap - needs to run in a subshell, since env seems to
+# be broken?! debootstrap otherwise cancels after extracting
+debootstrap --verbose $options $FAIclientRelease $FAI_ROOT $mirror "${scriptsdir}${FAIdistributionBase}"
+
+cp /etc/resolv.conf $FAI_ROOT/etc/resolv.conf
+
+# Now we can copy fstab
+[ -f $fs ] && mv $fs $fs.old
+cp -p $LOGDIR/fstab $fs
+
+sendmon "TASKEND extrbase"
+
+skiptask extrbase

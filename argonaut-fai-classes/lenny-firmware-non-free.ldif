@@ -1,0 +1,13 @@
+# DEBIAN-FIRMWARE-NONFREE, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-FIRMWARE-NONFREE,ou=packages,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-FIRMWARE-NONFREE
+FAIdebianRelease: lenny
+FAIdebianSection: main
+FAIdebianSection: contrib
+FAIdebianSection: non-free
+FAIinstallMethod: aptitude
+FAIpackage: firmware-bnx2

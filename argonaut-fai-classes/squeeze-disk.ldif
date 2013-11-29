@@ -1,0 +1,46 @@
+# disk, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: ou=disk,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: organizationalUnit
+ou: disk
+
+# DEBIAN-STD, disk, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-STD,ou=disk,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpartitionTable
+cn: DEBIAN-STD
+description: table des partitions pour squeeze
+
+# disk1, DEBIAN-STD, disk, squeeze, fai, configs, %LDAP_BASE_COMMENT%
+dn: cn=disk1,cn=DEBIAN-STD,ou=disk,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+cn: disk1
+description: simple table de partition
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpartitionDisk
+
+# 1, disk1, DEBIAN-STD, disk, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: FAIpartitionNr=1,cn=disk1,cn=DEBIAN-STD,ou=disk,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+FAIpartitionNr: 1
+FAIpartitionSize: 3192
+FAImountPoint: /
+FAIfsType: ext3
+FAIpartitionType: primary
+FAImountOptions: rw
+FAIfsOptions: -j boot
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpartitionEntry
+cn: 1
+
+# 2, disk1, DEBIAN-STD, disk, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: FAIpartitionNr=2,cn=disk1,cn=DEBIAN-STD,ou=disk,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+FAIpartitionNr: 2
+FAIpartitionSize: 512
+FAImountPoint: swap
+FAIfsType: swap
+FAIpartitionType: logical
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpartitionEntry
+cn: 2

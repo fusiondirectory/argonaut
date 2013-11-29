@@ -1,0 +1,28 @@
+# DEBIAN-REQUIRED, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-LAPTOP,ou=packages,ou=lenny,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-LAPTOP
+description: liste des paquets standard de debian lenny
+FAIpackage: acpi-support
+FAIpackage: hibernate
+FAIpackage: acpi
+FAIpackage: powertop
+FAIpackage: apmd
+FAIpackage: radeontool
+FAIpackage: anacron
+FAIpackage: wireless-tools
+FAIpackage: cpufrequtils
+FAIpackage: nvclock
+FAIpackage: wpasupplicant
+FAIpackage: vbetool
+FAIpackage: acpid
+FAIpackage: pcmciautils
+FAIpackage: toshset
+FAIpackage: bluetooth
+FAIpackage: avahi-autoipd
+FAIdebianRelease: lenny
+FAIdebianSection: main
+FAIinstallMethod: aptitude

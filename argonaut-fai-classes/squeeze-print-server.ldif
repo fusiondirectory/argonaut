@@ -1,0 +1,22 @@
+# DEBIAN-PRINT-SERVER, packages, squeeze, fai, configs, systems, %LDAP_BASE_COMMENT%
+dn: cn=DEBIAN-PRINT-SERVER,ou=packages,ou=squeeze,ou=fai,ou=configs,ou=systems,%LDAP_BASE%
+objectClass: top
+objectClass: FAIclass
+objectClass: FAIpackageList
+objectClass: FAIrepository
+cn: DEBIAN-PRINT-SERVER
+description: installation d'un serveur d'impression
+FAIpackage: hpijs
+FAIpackage: printconf
+FAIpackage: openprinting-ppds
+FAIpackage: foomatic-filters-ppds
+FAIpackage: hplip
+FAIpackage: cups-client
+FAIpackage: hp-ppd
+FAIpackage: cups
+FAIpackage: cups-bsd
+FAIpackage: cups-driver-gutenprint
+FAIpackage: foo2zjs
+FAIdebianRelease: squeeze
+FAIdebianSection: main
+FAIinstallMethod: aptitude

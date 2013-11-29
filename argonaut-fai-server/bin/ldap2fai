@@ -1,0 +1,581 @@
+#!/usr/bin/perl -w
+
+#######################################################################
+#
+# ldap2fai
+#
+# Copyright (c) 2008 Landeshauptstadt München
+# Copyright (c) 2008-2010 GONICUS GmbH  <gosa-devel@oss.gonicus.de>
+# Copyright (c) 2011-2013 The FusionDirectory Project <contact@fusiondirectory.org>
+#
+# Authors: Jan-Marek Glogowski
+#          Cajus Pollmeier
+#          Benoit Mortier
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Net::LDAP;
+use Net::LDAP::Util qw(:escape);
+use Getopt::Long;
+use Config::IniFiles;
+
+use File::Path;
+
+use Argonaut::Common qw(:ldap :net :array);
+use Argonaut::FAI qw(:flags);
+
+my $ldapuris;
+my $dump_dir = "/var/lib/fai/config";
+my $verbose = 0;
+my $print_classes = 0;
+my( $hostname, $host_base, $host_dn, $host_tag );
+my $fai_mirror;
+my $dry_run = 0;
+my $release_var = 'FAIclientRelease';
+my $check_hostname;
+my $kernel;
+my $ldapinfos;
+my $mac;
+
+my $configfile = "/etc/argonaut/argonaut.conf";
+my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+my $ldap_conf               =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
+my $bind_dn                 =   $config->val( ldap => "dn"          ,"");
+my $bind_pwd                =   $config->val( ldap => "password"    ,"");
+
+Getopt::Long::Configure ("bundling");
+
+GetOptions( 'v|verbose'     => \$verbose,
+            'h|help'        => \&usage,
+            'd|dump-dir=s'  => \$dump_dir,
+            'n|dry-run'     => \$dry_run,
+            'H|hostname=s'  => \$check_hostname,
+            'm|mac=s'       => \$mac )
+  or usage( 'Wrong parameters' );
+
+# If we use dry-run, be verbose
+$verbose = 1 if( $dry_run );
+
+if (! defined $mac) {
+  usage( "MAC address not specified." );
+}
+
+if (!($mac =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i)) {
+    usage( "MAC address not valid." );
+}
+
+# Is dump_dir a directory
+if( ! $dry_run ) {
+  -d "$dump_dir"
+    || usage("'$dump_dir' is not a directory.\n");
+}
+
+$ldapinfos = argonaut_ldap_init( $ldap_conf, 0, $bind_dn, 0, $bind_pwd );
+
+if ( $ldapinfos->{'ERROR'} > 0) {
+  print ( $ldapinfos->{'ERRORMSG'}."\n" );
+  exit ($ldapinfos->{'ERROR'});
+}
+
+my $ldap = $ldapinfos->{ 'HANDLE' };
+my $base = $ldapinfos->{ 'BASE' };
+
+# Get FAI object
+my $faiobj = Argonaut::FAI->new( 'LDAP'     => $ldap,
+                                 'base'     => $base,
+                                 'dumpdir'  => $dump_dir );
+
+# Set FAI flags
+$faiobj->flags( FAI_FLAG_VERBOSE ) if( $verbose );
+$faiobj->flags( FAI_FLAG_VERBOSE | FAI_FLAG_DRY_RUN ) if( $dry_run );
+
+my $class_str = get_classes( $mac );
+print( "  + FAIclass string:    $class_str\n" ) if( $verbose );
+
+my ($res_classlist, $release) = $faiobj->resolve_classlist( $class_str );
+if( 'ARRAY' eq ref( $res_classlist ) ) {
+  if( $verbose ) {
+    print( "  + Release:            $release\n" );
+    print( "  + Resolved classlist: " . join( ' ', @$res_classlist ) . "\n" );
+  }
+}
+else { do_exit( 8, $res_classlist ); }
+
+if( ! $dry_run ) {
+  create_dir( "$dump_dir/class" );
+  open (FAICLASS,">$dump_dir/class/${hostname}")
+    || do_exit( 4, "Can't create $dump_dir/class/${hostname}. $!\n" );
+  print( FAICLASS join( ' ', @$res_classlist ) );
+  close( FAICLASS );
+}
+
+$res_classlist = $faiobj->expand_fai_classlist( $res_classlist, $hostname );
+if( 'ARRAY' eq ref( $res_classlist ) ) {
+  print( "  + FAI classlist:      " . join( ' ', @$res_classlist ) . "\n" )
+    if( $verbose );
+}
+
+print( "Extending FAI classtree with real objects...\n" );
+$faiobj->extend_class_cache( $release );
+
+print( "Dumping config space to '$dump_dir'...\n" );
+my( $error, $sections, $customs ) = $faiobj->dump_release( $release, $res_classlist, $hostname );
+print $error . "\n" if( defined $error );
+
+if( defined ${hostname} ) {
+  if( open( HOSTVARS, ">> ${dump_dir}/class/${hostname}.var" ) ) {
+    print( HOSTVARS "FAIclientRelease='$release'\n" );
+    print( HOSTVARS "MAXPACKAGES=20000\n" );
+    print( HOSTVARS "printk=0\n" );
+    print( HOSTVARS "STOP_ON_ERROR=700\n" );
+    close( HOSTVARS );
+  }
+}
+
+generate_sources_list( $sections );
+generate_kernel_packagelist( $kernel );
+
+$ldap->unbind();   # take down session
+$ldap->disconnect();
+
+exit 0;
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub usage
+{
+  (@_) && print STDERR "\n@_\n\n";
+
+  print STDERR << "EOF";
+ usage: $0 [-hnvW] [-d dump_dir] [-H hostname] -m mac_address
+
+  -h  : this (help) message
+  -n  : dry run (includes verbose)
+  -v  : be verbose
+  -d  : dump dir (default: ${dump_dir})
+  -H  : check hostname
+  -m  : mac address
+
+
+EOF
+  exit -1;
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub do_exit {
+  my ($code,$msg) = @_;
+
+  my @exit_msg = (
+    0, # Ok
+    0, # Usage
+    0, # LDAP error
+    0, # No entries found
+    0, # Create file
+    0, # Mkdir (5)
+    0, # LDAP lookup
+    0, # FAI object
+    "No releases found in classlist. Releases are classes starting with ':'.",
+    "Multiple releases found! Fix your classes or profiles.\n",
+    0, # Hostname mismatch (10)
+    0, # Release object not found
+    0, # Multiple profiles
+  );
+
+  if( ! defined $msg ) {
+    if( exists $exit_msg[ $code ] ) {
+      $msg = $exit_msg[ $code ];
+    }
+  }
+  else {
+    if( ! exists $exit_msg[ $code ] ) {
+      $msg .= "\nMissing exit ID - assign one!";
+    }
+    elsif( $exit_msg[ $code ] ) {
+      $msg .= "\n" . $exit_msg[ $code ];
+    }
+  }
+
+  print( "$msg\n" ) if( defined $msg );
+
+  $ldap->unbind() if( defined $ldap );
+
+  exit( -1 * $code );
+}
+
+
+sub create_dir
+{
+  if( ! -d "$_[0]" ) {
+    return if( $dry_run );
+    eval {
+      mkpath "$_[0]";
+    };
+    do_exit( 5, "Can't create dir $_[0]: $!\n" ) if( $@ );
+  }
+}
+
+
+sub get_classes {
+
+  # return list of FAI classes defined for host
+  my $mac = shift;
+  my (@classes,$mesg,$entry);
+  my $host_info;
+  my $real_hostname;
+
+  print( "Lookup host for MAC '$mac'...\n" ) if( $verbose );
+
+  my $filter = "(&(objectClass=goHard)(macAddress=$mac))";
+  $mesg = $ldap->search(
+    base => "$base",
+    filter => $filter,
+    attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror', 'gosaUnitTag', 'gotoBootKernel' ]);
+  $mesg->code && do_exit( 2, sprintf( "LDAP error: %s (%i)", $mesg->error, __LINE__ ) );
+
+  # normally, only one value should be returned
+  if( 1 != $mesg->count ) {
+    if( 0 == $mesg->count ) {
+      do_exit( 3, "LDAP search for client failed!\n"
+        . "No entries have been returned.\n"
+        . "  - Base:   $base\n"
+        . "  - Filter: $filter\n" );
+    }
+    else {
+      do_exit( 3, "LDAP search for client failed!\n"
+        . $mesg->count . " entries have been returned.\n"
+        . "  - Base:   $base\n"
+        . "  - Filter: $filter\n" );
+    }
+  }
+
+  # get the entry, host DN and hostname
+  $entry = ($mesg->entries)[0];
+  $host_dn = $entry->dn;
+  $hostname = $entry->get_value( 'cn' );
+  $host_tag = $entry->get_value( 'gosaUnitTag' );
+  $kernel = $entry->get_value( 'gotoBootKernel' );
+  $real_hostname = $hostname;
+
+  $faiobj->tag( $host_tag ) if( defined $host_tag );
+
+  # set $host_base
+  my @rdn = argonaut_ldap_split_dn( $host_dn );
+  shift( @rdn ); # hostname
+  shift( @rdn ); # servers / workstations / terminals
+  shift( @rdn ); # systems
+  $host_base = join( ',', @rdn );
+
+  # strip domain from LDAP hostname for FAI class
+  $hostname =~ s/\..*//;
+
+  $host_info  = "  + Host DN:            $host_dn\n"
+              . "  + Base:               $host_base\n"
+              . "  + Hostname:           $hostname";
+  $host_info .= ' (' . $real_hostname . ')'
+    if ( $hostname ne $real_hostname );
+  $host_info .= "\n";
+
+  # Check for hostname mismatch
+  if( defined $check_hostname ) {
+    if( $real_hostname !~ m/^${check_hostname}$/i ) {
+      # Try stripped domain (non-FQDN) hostname
+      do_exit( 10, "Hostname mismatch: net='$check_hostname', "
+          . "LDAP='$real_hostname', non-FQDN='$hostname'" )
+        if( $hostname !~ m/^${check_hostname}$/i );
+    }
+  }
+
+  # check, if we have a FAIclass value, otherwise check groups
+  my $fai_class_str = $entry->get_value( 'FAIclass' );
+  if( (! defined $fai_class_str) || ('' eq $fai_class_str) ) {
+    print( "No FAI information stored in host object - looking for host groups...\n" ) if( $verbose );
+
+    $filter = '(&(member=' . escape_filter_value(${host_dn}) . ')(objectClass=gosaGroupOfNames)(gosaGroupObjects=[*])(objectClass=FAIobject))';
+    $mesg = $ldap->search(
+      base => "$base",
+      filter => $faiobj->prepare_filter( $filter ),
+      attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror', 'gotoBootKernel' ]);
+    $mesg->code && do_exit( 2, sprintf( "LDAP error: %s (%i)", $mesg->error, __LINE__ ) );
+
+    if( 1 != $mesg->count ) {
+      if( 0 == $mesg->count ) {
+        do_exit( 3, "LDAP search for object groups with FAIobject containing the client failed!\n"
+        . "No entries have been returned.\n"
+        . "  - Base:   $base\n"
+        . "  - Filter: $filter\n" );
+      }
+      else {
+        do_exit( 3, "LDAP search for object groups with FAIobject containing the client failed!\n"
+          . $mesg->count . " entries have been returned.\n"
+          . "  - Base:   $base\n"
+          . "  - Filter: $filter\n" );
+      }
+    }
+
+    $entry = ($mesg->entries())[0];
+    print( "Found FAI information in object group '" . $entry->get_value( 'cn' )  . "'\n"
+          . '  + Object group:       ' . $entry->dn() . "\n" )
+      if( $verbose );
+
+    if (not defined $kernel){
+      $kernel = $entry->get_value( 'gotoBootKernel' );
+    }
+  }
+
+  if (not defined $kernel){
+      do_exit( 3, "There is no kernel defined for this client: check the gotoBootKernel attribute!\n" );
+  }
+
+  $fai_mirror = $entry->get_value( 'FAIdebianMirror' );
+
+  print( $host_info ) if $verbose;
+
+  return $entry->get_value( 'FAIclass' );
+}
+
+
+sub generate_sources_list {
+  my( $sections ) = @_;
+  my( $line, @deblines, @modsections, @rdns, %saw, $debline );
+
+  # Create unique list
+  undef %saw;
+  @saw{@$sections} = ();
+  @$sections = sort keys %saw;
+
+  if ($verbose) {
+    print "Generate template '/etc/apt/sources.list' for class 'LAST'\n"
+        . " - searching server(s) for\n"
+        . "   + release:  ${release}\n"
+        . "   + sections: @$sections\n";
+  }
+
+  create_dir( "${dump_dir}/files/etc/apt/sources.list" );
+  if( ! $dry_run ) {
+    open (SOURCES,">${dump_dir}/files/etc/apt/sources.list/LAST")
+      || do_exit( 4, "Can't create ${dump_dir}/files/etc/apt/sources.list/LAST. $!\n" );
+  }
+
+  if( "auto" ne "$fai_mirror" ) {
+    if( ! $dry_run ) {
+      print SOURCES "deb $fai_mirror $release @$sections\n";
+      close (SOURCES);
+    }
+    print( " = Using default: $fai_mirror\n" ) if( $verbose );
+    return 0;
+  }
+
+  add_repo_for_release("SOURCES",$release,$sections);
+  foreach my $custom (@$customs) {
+    print "Searching custom $custom for sections @$sections\n";
+    add_repo_for_release("SOURCES",$custom,$sections);
+  }
+
+  close (SOURCES) if( ! $dry_run );
+}
+
+sub add_repo_for_release {
+  my ($filehandle,$release_name,$sections) = @_;
+  my @sec = @$sections; # copying sections
+  my %release_sections = ();
+  my ($mesg,$search_base,@entries);
+  $release_sections{ "$release_name" } = \@sec; #reference the copy
+
+  my $fin = 0;
+
+  while (!$fin) {
+    # Prepare search base
+    if (! defined $search_base) {
+      $search_base = $host_base;
+    } else {
+      my @rdn = argonaut_ldap_split_dn( $search_base );
+      shift( @rdn );
+      $search_base = join( ',', @rdn );
+    }
+
+    print( " - using search start base: $search_base\n" ) if $verbose;
+
+    # Look for repository servers
+    ($mesg,$search_base) = argonaut_ldap_rsearch( $ldap, $host_base, '',
+      $faiobj->prepare_filter( '(objectClass=FAIrepositoryServer)' ),
+      'one', 'ou=servers,ou=systems', [ 'FAIrepository', 'cn' ] );
+
+    goto BAILOUT_CHECK_SERVER if( ! defined $mesg );
+    $mesg->code && do_exit
+      ( 2, sprintf( "LDAP error: %s (%i)", $mesg->error, __LINE__ ) );
+    if (scalar $mesg->entries == 0) {
+      next;
+    }
+
+    # Check all found servers
+    print( " - found matches in base: $search_base\n" )
+       if( $verbose && $mesg->count() );
+
+    $fin = 1;
+    foreach my $entry ($mesg->entries) {
+      print "   - inspecting repository server: "
+        . $entry->get_value('cn') . "\n" if $verbose;
+
+      foreach my $repoline ($entry->get_value('FAIrepository')) {
+        my (@items) = split( '\|', ${repoline} );
+        my (@modsections) = split( ',', $items[3] );
+
+        # Check repository release
+
+        if( exists $release_sections{ $items[2] } ) {
+
+          # Check sections
+          # Idea: try to remove local section from global section list.
+          # If not remove, removed from local list
+          # and add to
+          my $index = 0;
+          foreach my $section (@modsections) {
+            if (argonaut_array_find_and_remove ( $release_sections{ $items[2] }, $section ) )
+            {
+              $index++; # The section is needed, we keep ip
+            } else {
+              splice( @modsections, $index, 1 ); # We don't want this section, remove it
+            }
+          }
+
+          if (scalar $release_sections{$items[2]} == 0) {
+            delete $release_sections{$items[2]};
+          }
+
+          # Add deb-line for server, if we have local sections
+          if( scalar @modsections > 0 ) {
+            my $debline = "deb $items[ 0 ] $items[ 2 ] " . join(' ',@modsections) . "\n";
+            print "   + add: $debline" if $verbose;
+            print SOURCES "$debline" if( ! $dry_run );
+          }
+
+          last if( scalar keys ( %release_sections ) == 0);
+        }
+      }
+
+      # Check, if there we still have some sections in any release
+      $fin = 1;
+      while ( my ($key, $value) = each(%release_sections) ) {
+        if (scalar @$value != 0) {
+          $fin = 0;
+          last;
+        }
+      }
+      last if $fin;
+    }
+  }
+
+BAILOUT_CHECK_SERVER:
+  if( ! $fin ) {
+    if( $verbose ) {
+      print "Missing sections for release:\n";
+      while ( my ($key, $value) = each(%release_sections) ) {
+        print " + $key: @$value\n"
+      }
+    }
+    exit -2;
+  }
+}
+
+
+sub generate_kernel_packagelist {
+  my $kernel= shift;
+  my( $mesg, $entry, $line, @deblines, @modsections, @rdns, %saw, $debline );
+
+  if ($verbose) {
+    print "Generate kernel package script for class 'LAST'\n"
+        . " - kernel: ${kernel}\n"
+  }
+
+  create_dir( "${dump_dir}/scripts/LAST" );
+  if( ! $dry_run ) {
+    open (SOURCES,">${dump_dir}/scripts/LAST/99-install-kernel")
+      || do_exit( 4, "Can't create ${dump_dir}/scripts/LAST/99-install-kernel. $!\n" );
+
+    print SOURCES "#!/bin/sh\n";
+    print SOURCES "# - automatically created by ldap2fai -\n";
+    print SOURCES "\$ROOTCMD aptitude -o \"Aptitude::CmdLine::Ignore-Trust-Violations=yes\" -y install $kernel\n";
+    close (SOURCES);
+    chmod 0700, "${dump_dir}/scripts/LAST/99-install-kernel";
+  }
+}
+
+__END__
+
+=head1 NAME
+
+ldap2fai - read FAI config from LDAP and create config space.
+
+=head1 SYNOPSIS
+
+ldap2fai [-hnvW] [-d dump_dir] [-H hostname] -m <MAC>
+
+=head1 OPTIONS
+
+B<-h>, B<--help>
+    print out this help message
+
+B<-v>, B<--verbose>
+    be verbose (multiple v's will increase verbosity)
+
+B<-n>, B<--foreground>
+    dry run (includes verbose)
+
+B<-d>
+    output dir (default: /var/lib/fai/config)
+
+B<-H>
+    check hostname
+
+B<-m>
+    mac address
+
+=head1 DESCRIPTION
+
+ldap2fai is a script to create read the fai config from LDAP and create fai config space.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (c) 2008 Landeshauptstadt München
+
+=item Copyright (C) 2007-2010 The GOsa project
+
+=item Copyright (C) 2011 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste

@@ -1,0 +1,34 @@
+This is the way how it could be made use of:
+
+8<--------------------------------------------------------------
+FAI_PROGRESS_VT=$(openvt -v 2>&1 -- sh -c "
+        export TERM=linux ;
+        export TERM_UTF8=yes ;
+        export FAI_LOG_PATH=$LOGDIR/fai.log ;
+	[ -f /etc/default/locale ] && eval $(echo -n "export "; grep ^LANG /etc/default/locale) ;
+
+        if [ -c /dev/fb0 ]; then
+                export DEBIAN_FRONTEND=gtk ;
+        else
+                export DEBIAN_FRONTEND=newt ;
+        fi ;
+
+        setterm -blank 0 -powersave off -powerdown 0 ;
+        echo -ne "\033%G" ;
+        touch -f $FAI_LOG_PATH ;
+        /usr/lib/cdebconf/debconf /usr/bin/argonaut-fai-progress ;
+        reset")
+
+FAI_PROGRESS_VT=${FAI_PROGRESS_VT##* }
+echo "${FAI_PROGRESS_VT##/dev/tty}" > $LOGDIR/fai-progress-vt  
+
+chvt ${FAI_PROGRESS_VT##/dev/tty}
+8<--------------------------------------------------------------
+
+
+Switch it off:
+
+echo "fai-progress: hangup" >> /var/log/fai.log
+
+
+
