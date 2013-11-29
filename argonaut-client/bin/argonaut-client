@@ -1,0 +1,160 @@
+#!/usr/bin/perl
+
+#######################################################################
+#
+# argonaut-client-management
+#
+# Copyright (C) 2011-2013 FusionDirectory project <contact@fusiondirectory.org>
+#
+# Author: Côme BERNIGAUD
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use JSON::RPC::Server::Daemon;
+use Config::IniFiles;
+use Log::Handler;
+use App::Daemon qw(daemonize);
+
+use Argonaut::Libraries::Common qw(:ldap :file);
+
+# where to look for modules files
+use Module::Pluggable search_path => 'Argonaut::ClientDaemon::Modules', sub_name => 'modules';
+
+our ($client_settings, $server_settings);
+our ($ldap_configfile, $ldap_dn, $ldap_password);
+my $configfile  = "/etc/argonaut/argonaut.conf";
+my $logfile     = "argonaut-client.log";
+my $piddir      = "/var/run/argonaut";
+my $pidfile     = "argonaut-client.pid";
+
+$SIG{TERM}=\&sig_term_handler;
+
+$SIG{INT}=\&sig_int_handler;
+
+readConfig();
+
+argonaut_create_dir($client_settings->{'logdir'});
+
+our $log = Log::Handler->create_logger("argonaut-client-management");
+
+$log->add(
+  file => {
+    filename => $client_settings->{'logdir'}."/$logfile",
+    maxlevel => "debug",
+    minlevel => "emergency",
+    newline  => 1,
+  }
+);
+
+argonaut_create_dir($piddir);
+$App::Daemon::pidfile = "$piddir/$pidfile";
+$App::Daemon::logfile = $client_settings->{'logdir'}."/$logfile";
+$App::Daemon::as_user = "root";
+
+daemonize();
+
+my $server = JSON::RPC::Server::Daemon->new(
+  LocalPort => $client_settings->{'port'},
+  ($server_settings->{'protocol'} eq 'https') ? (SSL_server    => 1,
+                                                  SSL_key_file  => $client_settings->{'keyfile'},
+                                                  SSL_cert_file => $client_settings->{'certfile'},)
+                                               : ());
+
+$log->notice("argonaut-client-management started on port ".$client_settings->{'port'});
+
+$server->version(0);
+$server->return_die_message(1);
+
+my $modules = import_modules();
+
+$server->dispatch_to($modules)->handle();
+
+
+sub readConfig {
+  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+  my $client_ip           =   $config->val( client => "client_ip"            ,"");
+  my $server_ip           =   $config->val( server => "server_ip"             ,"");
+  $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
+  $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
+  $ldap_password          =   $config->val( ldap => "password"                ,"");
+
+  $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
+  $client_settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+}
+
+
+sub import_modules {
+  foreach my $module (modules()) {
+    $log->notice("Loaded module $module");
+  }
+  return ['Argonaut::ClientDaemon',modules()];
+}
+
+
+sub sig_int_handler {
+  $log->notice("argonaut-client-management on port ".$client_settings->{'port'}." terminated by sigint");
+  exit(0);
+}
+
+
+sub sig_term_handler {
+  $log->notice("argonaut-client-management on port ".$client_settings->{'port'}." terminated by sigterm");
+  exit(0);
+}
+
+
+__END__
+
+=head1 NAME
+
+argonaut-client - running actions given by the argonaut server
+
+=head1 SYNOPSIS
+
+argonaut-client
+
+=head1 DESCRIPTION
+
+argonaut-client is getting actions from argonaut server and run them. It is modular 
+and can load various modules at run time.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 1
+
+=item Copyright (C) 2011-2013 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut

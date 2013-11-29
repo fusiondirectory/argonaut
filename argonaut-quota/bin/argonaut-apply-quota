@@ -1,0 +1,86 @@
+#!/usr/bin/perl
+
+#######################################################################
+#
+# argonaut-apply-quota
+#
+# Copyright (C) 2011-2013 FusionDirectory project
+#
+# Author: Côme BERNIGAUD
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Config::IniFiles;
+
+use Argonaut::Libraries::Quota qw(get_quota_settings write_warnquota_file write_quotatab_file apply_quotas);
+
+my $warnquota_file  = "/etc/warnquota.conf";
+my $quotatab_file   = "/etc/quotatab";
+my $configfile      = "/etc/argonaut/argonaut.conf";
+my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+my $client_ip               =   $config->val( client => "client_ip" ,"");
+my $ldap_configfile         =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
+my $ldap_dn                 =   $config->val( ldap => "dn"          ,"");
+my $ldap_password           =   $config->val( ldap => "password"    ,"");
+
+my $settings = get_quota_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+
+write_warnquota_file ($settings,$warnquota_file);
+write_quotatab_file ($settings,$quotatab_file);
+
+apply_quotas ($ldap_configfile,$ldap_dn,$ldap_password,$settings->{'hostname'});
+
+__END__
+
+=head1 NAME
+
+argonaut-apply-quota - applying quota from data stored in the ldap server
+
+=head1 SYNOPSIS
+
+argonaut-apply-quota
+
+=head1 DESCRIPTION
+
+argonaut-apply-quota is a program used to apply quota on server based on the data stored in the ldap server
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 1
+
+=item Copyright (C) 2011-2013 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut

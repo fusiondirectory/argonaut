@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+#######################################################################
+#
+# Ldap2Zone - write DNS Zone file from LDAP informations
+#
+# Copyright (C) 2011-2013 FusionDirectory project
+#
+# Author: Come Bernigaud
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
+
+my $zone_arg = undef;
+my $verbose_arg = 0;
+
+sub print_usage
+{
+  print "Usage : ldap2zone [--verbose] ZONE\n";
+  exit(0);
+}
+
+my $i_arg = 0;
+
+foreach my $arg ( @ARGV ) {
+  if (lc($arg) eq "--verbose") {
+    $verbose_arg = 1;
+  } elsif ($i_arg==0) {
+    $zone_arg = $arg;
+    $i_arg++;
+  } else {
+    print_usage();
+  }
+}
+
+if (!$zone_arg) {
+  print_usage();
+}
+
+argonaut_ldap2zone($zone_arg,$verbose_arg);
+
+__END__
+
+=head1 NAME
+
+argonaut-ldap2zone - creating bind zone files and refreshing the server
+
+=head1 SYNOPSIS
+
+argonaut-ldap2zone [--verbose] ZONE
+
+=head1 DESCRIPTION
+
+argonaut-ldap2zone is a program used to create bind zone files and refresh the bind service
+
+=head1 OPTIONS
+
+B<--verbose>
+    be verbose
+
+=head1 EXAMPLES
+
+ argonaut-ldap2zone --verbose fusiondirectory.org.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 1
+
+=item Copyright (C) 2011-2013 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
