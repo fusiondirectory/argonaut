@@ -33,7 +33,7 @@ if [ -n "$FAI_LDAP" ]; then
   msg "installing $FAI_LDAP into ${NFSROOT}"
   cp ${FAI_LDAP} ${NFSROOT}/etc/ldap/ldap.conf
 else
-  msg "FAI_LDAP not mentionned in /etc/fai/make-fai-nfsroot.conf"
+  msg "FAI_LDAP not mentionned in /etc/fai/nfsroot.conf"
   msg "installation will not work please indicate the file to be copied into FAI_LDAP"
 fi
 
@@ -42,7 +42,7 @@ if [ -n "$FAI_CERTS" ]; then
   msg "installing ca certinto nfs root"
   cp ${FAI_CERTS} ${NFSROOT}/etc/ssl/certs
 else
-  msg "FAI_CERTS not mentionned in /etc/fai/make-fai-nfsroot.conf"
+  msg "FAI_CERTS not mentionned in /etc/fai/nfsroot.conf"
   msg "installation will not be able to use ssl certs with ldap, please indicate the certs to be copied into FAI_CERTS"
 fi
 
