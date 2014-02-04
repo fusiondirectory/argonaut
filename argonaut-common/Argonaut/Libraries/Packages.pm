@@ -101,12 +101,20 @@ sub get_repolines {
     foreach my $entry ($mesg->entries()) {
       foreach my $repoline ($entry->get_value('FAIrepository')) {
         my ($uri,$parent,$dist,$sections,$install,$local,$archs) = split('\|',$repoline);
+        my $sections_array = [split(',',$sections)];
+        if ($install eq 'update') {
+          foreach my $section (@$sections_array) {
+            if ($section !~ m/^updates/) {
+              $section = "updates/$section";
+            }
+          }
+        }
         my $repo = {
           'line'        => $repoline,
           'uri'         => $uri,
           'parent'      => $parent,
           'dist'        => $dist,
-          'sections'    => [split(',',$sections)],
+          'sections'    => $sections_array,
           'installrepo' => $install,
           'localmirror' => ($local eq "local"),
           'archs'       => [split(',',$archs)]
