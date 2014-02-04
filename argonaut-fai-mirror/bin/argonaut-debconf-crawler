@@ -30,8 +30,8 @@ use 5.008;
 
 use Config::IniFiles;
 
-use Argonaut::Common qw(:net);
-use Argonaut::Packages qw(get_packages_info store_packages_file cleanup_and_extract);
+use Argonaut::Libraries::Common qw(:net);
+use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file cleanup_and_extract);
 
 my $configfile = "/etc/argonaut/argonaut.conf";
 my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);

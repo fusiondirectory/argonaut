@@ -39,8 +39,8 @@ use File::Copy;
 use Log::Handler;
 use Config::IniFiles;
 
-use Argonaut::Common qw(:ldap :file :array :net);
-use Argonaut::Packages qw(get_repolines);
+use Argonaut::Libraries::Common qw(:ldap :file :array :net);
+use Argonaut::Libraries::Packages qw(get_repolines);
 
 use lib "/usr/lib/argonaut";
 

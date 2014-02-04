@@ -35,7 +35,7 @@ use Net::LDAP::Util qw(:escape);
 use JSON::RPC::Client;
 use Log::Handler;
 
-use Argonaut::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :file);
 
 use Exporter;
 our @ISA = ("Exporter");
