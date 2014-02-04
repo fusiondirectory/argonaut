@@ -41,7 +41,7 @@ use Config::IniFiles;
 use File::Path;
 
 use Argonaut::Libraries::Common qw(:ldap :net :array);
-use Argonaut::FAI qw(:flags);
+use Argonaut::Libraries::FAI qw(:flags);
 
 my $ldapuris;
 my $dump_dir = "/var/lib/fai/config";
