@@ -268,7 +268,7 @@ sub generate_cronjob_script {
   }
   close (SOURCES);
   close (CRON);
-  chmod 0755, "${outdir}/mirror-update-cronjob";
+  chmod 0750, "${outdir}/mirror-update-cronjob";
 }
 
 __END__
