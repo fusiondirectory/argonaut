@@ -193,7 +193,6 @@ sub generate_cronjob_script {
 
   open (CRON, ">${outdir}/mirror-update-cronjob")
     || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
-  chmod 0755, CRON;
 
   # Write cron script
   print CRON "#!/bin/sh\n";
@@ -269,6 +268,7 @@ sub generate_cronjob_script {
   }
   close (SOURCES);
   close (CRON);
+  chmod 0755, "${outdir}/mirror-update-cronjob";
 }
 
 __END__
