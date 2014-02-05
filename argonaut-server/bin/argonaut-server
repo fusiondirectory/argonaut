@@ -356,7 +356,7 @@ POE::Session->create(
             $kernel->post( $jsonrpc => 'error' => $id, "Mac were not found in queue");
         },
         id_of_host => sub {
-            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION ARG0..$#_ ];
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
             my ($host) = @params;
 
             $log->info("searching taskid for $host");
@@ -740,11 +740,11 @@ argonaut-server - Dispatching action received from FusionDirectory to the client
 
 =head1 SYNOPSIS
 
-argonaut-server 
+argonaut-server
 
 =head1 DESCRIPTION
 
-argonaut-server - argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular 
+argonaut-server - argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular
 and can load various modules at run time.
 
 =head1 BUGS
