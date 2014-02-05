@@ -154,6 +154,45 @@ sub getIpFromMac {
   return $ip;
 }
 
+=pod
+=item getMacFromCn
+Search in the ldap for the Mac associated to a host name.
+Parameter : the host name
+=cut
+sub getMacFromCn {
+  my ($host, $filter) = @_;
+
+  my ($ldap,$ldap_base) = bindLdap();
+
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(cn=$host)(macAddress=*)$filter)",
+                        attrs => [ 'macAddress' ]
+            );
+
+  $mesg->code && die "Error while searching mac for host '$host' :".$mesg->error;
+
+  if(scalar($mesg->entries)>1) {
+    $log->error("Multiple Macs were found for the host '$host'!");
+    die "Multiple Macs were found for the host '$host'!";
+  } elsif(scalar($mesg->entries)<1) {
+    $log->error("No Macs were found for the host '$host'!");
+    die "No Mads were found for the host '$host'!";
+  }
+
+  my $mac = ($mesg->entries)[0]->get_value("macAddress");
+
+  $mesg = $ldap->unbind;   # take down session
+
+  return $mac;
+}
+
+=pod
+=item wakeOnLan
+Send a wake on lan package to a mac address
+Parameter : the mac address
+inspired by WakeOnLan.pm file from FusionInventory
+=cut
 sub wakeOnLan {
     my ($macaddress) = @_;
 
@@ -260,6 +299,7 @@ POE::Session->create(
                     'remove_entries' => 'remove_entries',
                     'process_entries_now' => 'process_entries',
                     'get_my_id' => 'id_of_mac',
+                    'get_host_id' => 'id_of_host',
                     'set_task_substatus' => 'jsonrpc_set_task_substatus',
                     'set_error' => 'set_error',
                     'get_packages' => 'get_packages'
@@ -314,6 +354,16 @@ POE::Session->create(
                 }
             }
             $kernel->post( $jsonrpc => 'error' => $id, "Mac were not found in queue");
+        },
+        id_of_host => sub {
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION ARG0..$#_ ];
+            my ($host) = @params;
+
+            $log->info("searching taskid for $host");
+
+            my $mac = getMacFromCn($host);
+
+            $kernel->call($session => 'id_of_mac' => $jsonrpc, $id, $mac);
         },
         jsonrpc_set_task_substatus => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];

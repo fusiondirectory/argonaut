@@ -1,0 +1,188 @@
+#!/usr/bin/perl
+
+#######################################################################
+#
+# argonaut-fai-monitor
+#
+# Copyright (C) 2011 FusionDirectory project <contact@fusiondirectory.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use JSON::RPC::Client;
+use Config::IniFiles;
+use Log::Handler;
+
+use Argonaut::Common qw(:ldap :file);
+
+my $configfile = "/etc/argonaut/argonaut.conf";
+my $logfile = "argonaut-fai-monitor.log";
+
+my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+my $server_ip                       =   $config->val( server => "server_ip"           ,"");
+my $client_ip                       =   $config->val( client => "client_ip"           ,"");
+my $ldap_configfile                 =   $config->val( ldap => "config"                ,"/etc/ldap/ldap.conf");
+my $ldap_dn                         =   $config->val( ldap => "dn"                    ,"");
+my $ldap_password                   =   $config->val( ldap => "password"              ,"");
+
+my $client_settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+
+my $logdir        = $client_settings->{'logdir'};
+
+my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
+
+my $server_port   = $server_settings->{'port'};
+my $protocol      = $server_settings->{'protocol'};
+
+my %progress_value = (
+  "confdir"   =>  0,
+  "setup"     =>  1,
+  "defclass"  =>  2,
+  "defvar"    =>  3,
+  "action"    =>  4,
+  "install"   =>  5,
+  "partition" =>  6,
+  "extrbase"  =>  7,
+  "debconf"   =>  15,
+  "prepareapt"=>  16,
+  "updatebase"=>  17,
+  "instsoft"  =>  18,
+  "configure" =>  80,
+  "savelog"   =>  90
+);
+
+argonaut_create_dir($logdir);
+
+my $log = Log::Handler->create_logger("argonaut-fai-monitor");
+
+$log->add(
+  file => {
+    filename => "$logdir/$logfile",
+    maxlevel => "debug",
+    minlevel => "emergency"
+  }
+);
+
+sub get_id
+{
+  my $host = shift;
+  unless (exists $taskids{$host}) {
+    my $client = new JSON::RPC::Client;
+    $client->version('1.0');
+
+    my $callobj = {
+      method  => "get_host_id",
+      params  => [$host],
+    };
+
+    my $taskid = $client->call($protocol.$server_ip.":".$server_port, $callobj);
+
+    if($taskid) {
+      if ($taskid->is_error) {
+        $log->error("Error : ", $taskid->error_message);
+        die "Error : ", $taskid->error_message;
+      } else {
+        $taskids{$host} = $taskid->content->{result};
+        close(ID);
+      }
+    } else {
+      $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
+      die "Error while trying to contact Argonaut server : ".$client->status_line;
+    }
+  }
+  return $taskids{$host};
+}
+
+sub rpc_call
+{
+  my ($method, $params) = @_;
+
+  my $client = new JSON::RPC::Client;
+  $client->version('1.0');
+
+  my $callobj = {
+    method  => "$method",
+    params  => $params,
+  };
+
+  my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
+
+  if($res) {
+    if ($res->is_error) {
+      $log->error("Error : ".$res->error_message);
+      die "Error : ", $res->error_message;
+    }
+  } else {
+    $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
+    die "Error while trying to contact Argonaut server : ".$client->status_line;
+  }
+}
+
+=pod
+This program read on stdin the fai-monitor output, extract useful information and send them to argonaut-server.
+=cut
+
+my %taskids;
+
+while (my $line = <STDIN>) {
+  next if $line =~/^FAI monitoring daemon start/; # ignore start up messages from fai-monitor
+
+  my ($host,$keyword,$taskname,$errorcode) = split(/\s+/,$line);
+
+  my $taskid = get_id($host);
+
+  if($keyword eq "TASKBEGIN") {
+    print "[monitor] Task $taskname begun\n";
+
+    my $progress = undef;
+    if(defined $progress_value{$taskname}) {
+      $progress = $progress_value{$taskname};
+    }
+
+    rpc_call(
+      "set_task_substatus",
+      [$taskid,$taskname,$progress]
+    );
+  } elsif($keyword eq "TASKEND") {
+    print "[monitor] Task $taskname ended\n";
+
+    if($taskname eq "faiend") {
+      rpc_call(
+        "set_task_substatus",
+        [$taskid,$taskname,100]
+      );
+    }
+  } elsif($keyword eq "TASKERROR") {
+    print "[monitor] Task error $taskname $errorcode\n";
+
+    rpc_call(
+      "set_error",
+      [$taskid,$taskname." ".$errorcode],
+    );
+  } else {
+    print "$line\n";
+  }
+}
+
+__END__
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
+
