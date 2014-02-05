@@ -182,18 +182,18 @@ sub generate_cronjob_daily {
 }
 
 sub generate_cronjob_script {
-  open (CRON, ">${outdir}/mirror-update-cronjob")
-    || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
-
   my @repos = get_repolines($mac);
 
   if (scalar(@repos) == 0) {
     print( "This server doesn't contain software repositories\n" );
     $log->info ("This server doesn't contain software repositories\n");
-    close (CRON);
     unlink "${outdir}/mirror-update-cronjob";
     exit 0;
   }
+
+  open (CRON, ">${outdir}/mirror-update-cronjob")
+    || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
+  chmod 0755, CRON;
 
   # Write cron script
   print CRON "#!/bin/sh\n";
