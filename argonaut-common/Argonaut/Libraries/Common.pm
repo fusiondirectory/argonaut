@@ -289,40 +289,6 @@ sub argonaut_ldap_parse_config
   return( $ldap_base, \@ldap_uris, \%tls_options);
 }
 
-#------------------------------------------------------------------------------
-sub argonaut_ldap_parse_config_ex
-{
-  my %result = ();
-
-  my $ldap_info = '/etc/ldap/ldap-shell.conf';
-  if ( -r '/etc/ldap/ldap-offline.conf' ) {
-    $ldap_info = '/etc/ldap/ldap-offline.conf';
-  }
-
-  if (!open( LDAPINFO, "<${ldap_info}" ))
-  {
-     warn "Couldn't open ldap info ($ldap_info): $!\n";
-     return undef;
-  }
-  while( <LDAPINFO> ) {
-    if( $_ =~ m/^([a-zA-Z_0-9]+)="(.*)"$/ ) {
-      if ($1 eq "LDAP_URIS") {
-        my @uris = split(/ /,$2);
-        $result{$1} = \@uris;
-      }
-      else {
-        $result{$1} = $2;
-      }
-    }
-  }
-  close( LDAPINFO );
-  if (not exists($result{"LDAP_URIS"}))
-  {
-    warn "LDAP_URIS missing in file $ldap_info\n";
-  }
-  return \%result;
-}
-
 # Split the dn (works with escaped commas)
 sub argonaut_ldap_split_dn {
   my ($dn) = @_;
@@ -348,82 +314,6 @@ sub argonaut_ldap_split_dn {
   }
 
   return @result_rdns;
-}
-
-#------------------------------------------------------------------------------
-#
-# parse config for user or global config
-#
-sub argonaut_ldap_parse_config_multi
-{
-  my ($ldap_config) = @_;
-
-  # Indicate, if it's a user or global config
-  my $is_user_cfg = 1;
-
-  # If we don't get a config, go searching for it
-  if( ! defined $ldap_config ) {
-
-    # Check the local and users LDAP config name
-    my $ldaprc = ( exists $ENV{ 'LDAPRC' } )
-               ? basename( $ENV{ 'LDAPRC' } ) : 'ldaprc';
-
-    # First check current directory
-    $ldap_config = $ENV{ 'PWD' } . '/' . $ldaprc;
-    goto config_open if( -e $ldap_config );
-
-    # Second - visible in users home
-    $ldap_config = $ENV{ 'HOME' } . '/' . $ldaprc;
-    goto config_open if( -e $ldap_config );
-
-    # Third - hidden in users home
-    $ldap_config = $ENV{ 'HOME' } . '/.' . $ldaprc;
-    goto config_open if( -e $ldap_config );
-
-    # We don't allow BINDDN in global config
-    $is_user_cfg = 0;
-
-    # Global environment config
-    if( exists $ENV{ 'LDAPCONF' } ) {
-      $ldap_config = $ENV{ 'LDAPCONF' };
-      goto config_open if( -e $ldap_config );
-    }
-
-    # Last chance - global config
-    $ldap_config = '/etc/ldap/ldap.conf'
-  }
-
-config_open:
-  # Read LDAP file if it's < 100kB
-  return if( (-s "${ldap_config}" > 100 * 1024)
-          || (! open( LDAPCONF, "<${ldap_config}" )) );
-
-  my @content = <LDAPCONF>;
-  close( LDAPCONF );
-
-  my( $ldap_base, @ldap_uris, $ldap_bind_dn );
-
-  # Parse LDAP config
-  foreach my $line (@content) {
-    $line =~ /^\s*(#|$)/ && next;
-    chomp($line);
-
-    if ($line =~ /^BASE\s+(.*)$/i) {
-      $ldap_base= $1;
-    }
-    elsif( $line =~ /^BINDDN\s+(.*)$/i ) {
-      $ldap_bind_dn = $1 if( $is_user_cfg );
-    }
-    elsif ($line =~ m#^URI\s+(.*)\s*$#i ) {
-      my (@ldap_servers) = split( ' ', $1 );
-      foreach my $server (@ldap_servers) {
-        push( @ldap_uris, $1 )
-          if( $server =~ m#^(ldaps?://([^/:\s]+)(:([0-9]+))?)/?$#i );
-      }
-    }
-  }
-
-  return( $ldap_base, \@ldap_uris, $ldap_bind_dn, $ldap_config );
 }
 
 #------------------------------------------------------------------------------
