@@ -62,10 +62,8 @@ sub get_pxe_config {
   my ($filename) = shift || return undef;
   my $settings = get_module_settings();
   my $nfs_root  = $settings->{'nfs_root'};
-  #~ my $nfs_opts  = $settings->{'nfs_opts'};
   my $nfs_opts  = "";
   my $fai_flags = $settings->{'fai_flags'};
-  #~ my $union     = $settings->{'union'};
   my $union     = "aufs";
   my $mac       = argonaut_get_mac_pxe($filename);
   my $result = undef;
