@@ -149,7 +149,7 @@ sub argonaut_ldap_init {
   undef $bind_dn if ($bind_dn eq '');
 
   # Parse ldap config
-  my ($base,$ldapuris) = argonaut_ldap_parse_config( $ldap_conf );
+  my ($base,$ldapuris,$tlsoptions) = argonaut_ldap_parse_config( $ldap_conf );
   %results = ( 'BASE' => $base, 'URIS' => $ldapuris);
 
   if ( ! defined $base ) {
@@ -163,6 +163,14 @@ sub argonaut_ldap_init {
   }
 
   my $ldap = Net::LDAP->new( $ldapuris );
+  if (scalar($tlsoptions) != 0) {
+    $ldap->start_tls(
+      verify      => $tlsoptions->{'REQCERT'},
+      clientcert  => $tlsoptions->{'CERT'},
+      clientkey   => $tlsoptions->{'KEY'},
+      capath      => $tlsoptions->{'CACERTDIR'}
+    );
+  }
 
   if ( ! defined $ldap ) {
     %results = ( 'ERROR' => 1, 'ERRORMSG' => "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'");
@@ -248,7 +256,7 @@ sub argonaut_ldap_parse_config
   my @content=<LDAPCONF>;
   close(LDAPCONF);
 
-  my ($ldap_base, @ldap_uris);
+  my ($ldap_base, @ldap_uris, %tls_options);
   # Scan LDAP config
   foreach my $line (@content) {
     $line =~ /^\s*(#|$)/ && next;
@@ -270,9 +278,13 @@ sub argonaut_ldap_parse_config
       }
       next;
     }
+    if ($line =~ m/^TLS_(REQCERT|CERT|KEY|CACERTDIR)\s+(.*)\s*$/) {
+      $tls_options{$1} = $2;
+      next;
+    }
   }
 
-  return( $ldap_base, \@ldap_uris );
+  return( $ldap_base, \@ldap_uris, \%tls_options);
 }
 
 #------------------------------------------------------------------------------
