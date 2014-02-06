@@ -178,17 +178,6 @@ sub readConfig
     $tftp_root              =   $settings->{"pxelinux_cfg"};
     $tftp_static_root       =   $settings->{"pxelinux_cfg_static"};
 
-    #~ $fai_flags              =   $settings->{"fai_flags"};
-    #~ $nfs_opts               =   "";
-    #~ $nfs_root               =   $settings->{"nfs_root"};
-    #~ $union                  =   "aufs";
-
-    #~ $opsiserver             =   $settings->{"opsi_server"};
-    #~ $admin                  =   $settings->{"opsi_admin"};
-    #~ $password               =   $settings->{"opsi_password"};
-    #~ $lang                   =   $settings->{"opsi_lang"};
-
-
     $logdir                 =   $settings->{"logdir"};
 }
 
