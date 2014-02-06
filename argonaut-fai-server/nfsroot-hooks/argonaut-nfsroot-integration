@@ -23,7 +23,7 @@
 #######################################################################
 
 msg() {
-  echo "nfsroot-hooks/argonaut-fai-client: $1"
+  echo "nfsroot-hooks/argonaut-nfsroot-integration: $1"
 }
 
 #copy argonaut.conf & ldap.conf
@@ -52,8 +52,7 @@ version=$(echo $NFSROOT/boot/vmlinuz-* | sort -n | head -n1 | cut -d- -f2-)
 # Copy as default kernel
 if [ -f $TFTPROOT/vmlinuz-$version ]; then
   msg "installing vmlinuz-install"
-    rm -f $TFTPROOT/vmlinuz-install
-    ln -s $TFTPROOT/vmlinuz-$version $TFTPROOT/vmlinuz-install
+    cp -f$TFTPROOT/vmlinuz-$version $TFTPROOT/vmlinuz-install
 else
   msg "ERROR: cannot find kernel to use as vmlinuz-install!!!"
 fi
@@ -61,8 +60,7 @@ fi
 # Copy initrd if present
 if [ -f $TFTPROOT/initrd.img-$version ]; then
   msg "installing initrd.img-install"
-    rm -f $TFTPROOT/initrd.img-install
-    ln -s $TFTPROOT/initrd.img-$version $TFTPROOT/initrd.img-install
+    cp -f $TFTPROOT/initrd.img-$version $TFTPROOT/initrd.img-install
 else
   msg "ERROR: cannot find initrd image to use as initrd.img-xx !!!"
 fi
