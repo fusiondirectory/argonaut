@@ -38,6 +38,8 @@ use File::Path;
 
 my $iptool = "ifconfig";
 
+my $die_endl = "\n"; # Change to "" to have verbose dies
+
 BEGIN
 {
   use Exporter ();
@@ -684,7 +686,7 @@ sub argonaut_get_generic_settings {
   my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
 
   if ( $ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."\n";
+    die $ldapinfos->{'ERRORMSG'}."$die_endl";
   }
 
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
@@ -717,7 +719,7 @@ sub argonaut_get_generic_settings {
     return $settings;
   } elsif(scalar($mesg->entries)==0) {
     unless ($inheritance) {
-      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).";
+      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
     }
     $mesg = $ldap->search( # perform a search
               base   => $ldap_base,
@@ -725,9 +727,9 @@ sub argonaut_get_generic_settings {
               attrs => [ 'dn', 'macAddress', 'gotoMode' ]
               );
     if (scalar($mesg->entries)>1) {
-      die "Several computers are associated to IP $ip.";
+      die "Several computers are associated to IP $ip.$die_endl";
     } elsif (scalar($mesg->entries)<1) {
-      die "There is no computer associated to IP $ip.";
+      die "There is no computer associated to IP $ip.$die_endl";
     }
     $settings->{'dn'} = ($mesg->entries)[0]->dn();
     $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
@@ -752,10 +754,10 @@ sub argonaut_get_generic_settings {
       }
       return $settings;
     } else {
-      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).";
+      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
     }
   } else {
-    die "Several computers are associated to IP $ip.";
+    die "Several computers are associated to IP $ip.$die_endl";
   }
 }
 
