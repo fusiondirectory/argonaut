@@ -70,11 +70,6 @@ sub get_pxe_config {
   my $mac       = argonaut_get_mac_pxe($filename);
   my $result = undef;
 
-  # Prepare the ldap handle
-reconnect:
-  return undef if( ! &main::prepare_ldap_handle_retry
-    ( 5 * USEC, -1, 0.5 * USEC, 1.2 ) );
-
   # Search for the host to examine the FAI state
   my $mesg = $main::ldap_handle->search(
     base => "$main::ldap_base",
@@ -82,8 +77,7 @@ reconnect:
     attrs => [ 'FAIstate', 'gotoBootKernel',
     'gotoKernelParameters', 'gotoLdapServer', 'cn', 'ipHostNumber' ] );
 
-  if (0 != $mesg->code) {
-    goto reconnect if( 81 == $mesg->code );
+  if ($mesg->code != 0) {
     $log->warning("$mac - LDAP MAC lookup error $mesg->code : $mesg->error\n");
     return undef;
   }
