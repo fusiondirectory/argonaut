@@ -568,7 +568,7 @@ sub argonaut_ldap_fsearch {
 # generic functions for get settings functions
 #
 sub argonaut_get_generic_settings {
-  my ($objectClass,$params,$ldap_configfile,$ldap_dn,$ldap_password,$ip,$inheritance) = @_;
+  my ($objectClass,$params,$ldap_configfile,$ldap_dn,$ldap_password,$filter,$inheritance) = @_;
   unless (defined $inheritance) {
     $inheritance = 1;
   }
@@ -581,19 +581,25 @@ sub argonaut_get_generic_settings {
 
   my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 
+  if ($filter =~ m/([0-9]{1,3}\.?){4}/) {
+    $filter = "(ipHostNumber=$filter)";
+  } elsif ($filter !~ m/^(/) {
+    $filter = "($filter)";
+  }
+
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
-            filter => "(&(objectClass=$objectClass)(ipHostNumber=$ip))",
-            attrs => ['macAddress','gotoMode',values(%{$params})]
+            filter => "(&(objectClass=$objectClass)$filter)",
+            attrs => ['macAddress','gotoMode','ipHostNumber',values(%{$params})]
             );
 
   my $settings = {
-    'ip' => $ip
   };
 
   if(scalar($mesg->entries)==1) {
-    $settings->{'dn'} = ($mesg->entries)[0]->dn();
-    $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
+    $settings->{'dn'}   = ($mesg->entries)[0]->dn();
+    $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
+    $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
     if (($mesg->entries)[0]->exists('gotoMode')) {
       $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
     } else {
@@ -609,20 +615,21 @@ sub argonaut_get_generic_settings {
     return $settings;
   } elsif(scalar($mesg->entries)==0) {
     unless ($inheritance) {
-      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
+      die "This computer ($filter) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
     }
     $mesg = $ldap->search( # perform a search
               base   => $ldap_base,
-              filter => "ipHostNumber=$ip",
+              filter => $filter,
               attrs => [ 'dn', 'macAddress', 'gotoMode' ]
               );
     if (scalar($mesg->entries)>1) {
-      die "Several computers are associated to IP $ip.$die_endl";
+      die "Several computers matches $filter.$die_endl";
     } elsif (scalar($mesg->entries)<1) {
-      die "There is no computer associated to IP $ip.$die_endl";
+      die "There is no computer matching $filter.$die_endl";
     }
-    $settings->{'dn'} = ($mesg->entries)[0]->dn();
-    $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
+    $settings->{'dn'}   = ($mesg->entries)[0]->dn();
+    $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
+    $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
     if (($mesg->entries)[0]->exists('gotoMode')) {
       $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
     } else {
@@ -644,10 +651,10 @@ sub argonaut_get_generic_settings {
       }
       return $settings;
     } else {
-      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
+      die "This computer ($filter) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
     }
   } else {
-    die "Several computers are associated to IP $ip.$die_endl";
+    die "Several computers matches $filter.$die_endl";
   }
 }
 
@@ -732,8 +739,7 @@ sub argonaut_get_fuse_settings {
     {
       'default_mode'        => 'argonautFuseDefaultMode',
       'logdir'              => 'argonautFuseLogDir',
-      'pxelinux_cfg'        => 'argonautFusePxelinuxCfg',
-      'pxelinux_cfg_static' => 'argonautFusePxelinuxCfgStatic',
+      'pxelinux_cfg'        => 'argonautFusePxelinuxCfg'
     },
     @_
   );

@@ -69,34 +69,20 @@ sub get_pxe_config {
   my $result = undef;
 
   # Search for the host to examine the FAI state
-  my $mesg = $main::ldap_handle->search(
-    base => "$main::ldap_base",
-    filter => "(&(macAddress=$mac)(objectClass=FAIobject))",
-    attrs => [ 'FAIstate', 'gotoBootKernel',
-    'gotoKernelParameters', 'gotoLdapServer', 'cn', 'ipHostNumber' ] );
-
-  if ($mesg->code != 0) {
-    $log->warning("$mac - LDAP MAC lookup error $mesg->code : $mesg->error\n");
-    return undef;
-  }
-
-  my ($entry, $hostname, $status);
-  if ($mesg->count() == 0) {
-    $log->info("No FAI configuration for client with MAC ${mac}\n");
-    return undef;
-  } elsif ($mesg->count() == 1) {
-    $entry = ($mesg->entries)[0];
-    $status = $entry->get_value( 'FAIstate' );
-    $hostname = $entry->get_value( 'cn' );
-  } else {
-    $log->warning("$filename - MAC lookup error: too many LDAP results $mesg->count()\n");
-    return undef;
-  }
-
-  my ($ldap_srv);
+  my $infos = argonaut_get_generic_settings(
+    'FAIobject',
+    {
+      'status'    => 'FAIstate',
+      'kernel'    => 'gotoBootKernel',
+      'cmdline'   => 'gotoKernelParameters',
+      'ldap_srv'  => 'gotoLdapServer',
+      'hostname'  => 'cn',
+    },
+    $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,'(macAddress=$mac)'
+  );
 
   # If we don't have a FAI state
-  if ((! defined($status)) || ("" eq $status)) {
+  if ($infos->{'status'} eq '') {
     # Handle our default action
     if ($main::default_mode eq 'fallback') {
       # Remove PXE config and rely on 'default' fallback
@@ -109,160 +95,83 @@ sub get_pxe_config {
         $log->info("$filename - no LDAP status - continue PXE boot\n");
       }
 
-      ############# break
-      #############
       return 0;
     } else {
       # "Super"-Default is 'localboot' - just use the built in disc
-      $ldap_srv = $main::ldap_uris . '/' . $main::ldap_base;
-      $status = 'localboot';
+      $infos->{'ldap_srv'}  = $main::ldap_uris . '/' . $main::ldap_base;
+      $infos->{'status'}    = 'localboot';
 
       $log->info("$filename - defaulting to localboot\n");
     }
   }
 
-  my( $kernel, $cmdline, $host_dn );
+  my $host_dn = $infos->{'dn'};
 
-  # Skip all data lookup, if we don't have an object
-  goto skipped_data_lookup if (! defined $entry);
+  # Check, if there is still missing information
+  if (($infos->{'kernel'} eq '') || ($infos->{'ldap_srv'} eq '')) {
+    $log->error("$filename - missing information - aborting\n");
 
-  # Collect all vital data
-  # Use first server defined in ldap
-  my $new_ldap = defined($entry->get_value( 'gotoLdapServer', asref => 1 ))?@{ $entry->get_value( 'gotoLdapServer', asref => 1 ) }[0]:undef;
-  $ldap_srv = $new_ldap if( defined $new_ldap );
+    $mesg  = "$filename - missing LDAP attribs:";
+    $mesg .= ' gotoBootKernel' if( $infos->{'kernel'} eq '' );
+    $mesg .= ' gotoLdapServer' if( $infos->{'ldap_srv'} eq '' );
+    $mesg .= "\n";
 
-  $kernel = $entry->get_value( 'gotoBootKernel' );
-  $cmdline = $entry->get_value( 'gotoKernelParameters' );
-  $host_dn = $entry->dn;
-
-  # If any of these values isn't provided by the client check group membership
-  if ((! defined $kernel) || ("" eq $kernel)  ||
-      (! defined $cmdline)  || ("" eq $cmdline) ||
-      (! defined $ldap_srv) || ("" eq $ldap_srv)) {
-      $log->info("$filename - Information for PXE creation is missing\n");
-      $log->info("$filename - Checking group membership...\n");
-
-      my $filter = '(&(member=' . escape_filter_value($host_dn) . ')'
-        . '(objectClass=gosaGroupOfNames)'
-        . '(gosaGroupObjects=[*]))';
-      $mesg = $main::ldap_handle->search(
-        base => $main::ldap_base,
-        filter => $filter,
-        attrs => [ 'gotoBootKernel', 'gotoKernelParameters',
-          'gotoLdapServer', 'cn' ]);
-
-      if (0 != $mesg->code) {
-        goto reconnect if( 81 == $mesg->code );
-        $log->warning("$filename - LDAP group lookup error $mesg->code: $mesg->error\n");
-        return undef;
-      }
-
-      # Get information from group membership
-      my $group_entry;
-      if (1 == $mesg->count) {
-        $group_entry = ($mesg->entries)[0];
-        if (! defined $kernel) {
-          $kernel = $group_entry->get_value('gotoBootKernel');
-        }
-        if (! defined $cmdline) {
-          $cmdline = $group_entry->get_value('gotoKernelParameters');
-        }
-        if (defined($group_entry->get_value( 'gotoLdapServer', asref => 1)) and not defined $ldap_srv ) {
-          $ldap_srv = @{$group_entry->get_value( 'gotoLdapServer', asref => 1)}[0];
-        }
-      }
-
-      # Jump over all checks - we should have sane defaults
-      goto skipped_data_lookup if ($status =~ /^install-init$/);
-
-      # Check, if there is still missing information
-      if (! defined $kernel || ! defined $ldap_srv) {
-        my $single_log;
-        if ($mesg->count == 0){
-          $single_log = "$filename - no group membership found - aborting\n";
-          $log->error($single_log);
-        } elsif ($mesg->count == 1) {
-            $single_log = "$filename - missing information in group - aborting\n";
-            $log->error($single_log);
-        } else {
-          $single_log = "$filename - multiple group memberships found "
-            . "($mesg->count) - aborting!\n";
-          $log->error($single_log);
-          foreach $group_entry ($mesg->entries) {
-            $log->info("$filename - $group_entry->get_value('cn') - group_entry->dn()\n");
-          }
-        }
-
-        $mesg  = "$filename - missing LDAP attribs:";
-        $mesg .= ' gotoBootKernel' if( ! defined $kernel );
-        $mesg .= ' gotoLdapServer' if( ! defined $ldap_srv );
-        $mesg .= "\n";
-
-        $log->info($mesg);
-        return undef;
-      }
+    $log->info($mesg);
+    return undef;
   }
-
-  # We jump here to omit group checks, since we should already have predefined
-  # sane defaults, when we install initially
-  skipped_data_lookup:
-
-  $cmdline = "" if (! defined $cmdline);
 
   # Strip ldap parameter and all multiple and trailing spaces
-  $cmdline =~ s/ldap(=[^\s]*[\s]*|[\s]*$|\s+)//g;
-  $cmdline =~ s/[\s]+$//g;
-  $cmdline =~ s/\s[\s]+/ /g;
+  $infos->{'cmdline'} =~ s/ldap(=[^\s]*[\s]*|[\s]*$|\s+)//g;
+  $infos->{'cmdline'} =~ s/[\s]+$//g;
+  $infos->{'cmdline'} =~ s/\s[\s]+/ /g;
 
   my $tftp_parent;
-    if ($main::tftp_root =~ /^(.*?)\/pxelinux.cfg$/) {
-      $tftp_parent = $1;
-    }
+  if ($main::tftp_root =~ /^(.*?)\/pxelinux.cfg$/) {
+    $tftp_parent = $1;
+  }
 
   # Get kernel and initrd from TFTP root
-  if ((not defined $kernel) || ('default' eq $kernel) ||
-     ($tftp_parent and not -e "$tftp_parent/$kernel")) {
-    $kernel = 'vmlinuz-install';
+  if (($infos->{'kernel'} eq '') || ($infos->{'kernel'} eq 'default') ||
+     ($tftp_parent and not -e "$tftp_parent/$infos->{'kernel'}")) {
+    $infos->{'kernel'} = 'vmlinuz-install';
   }
 
-  if ( $kernel =~ m/^vmlinuz-(.*)$/ ) {
+  if ( $infos->{'kernel'} =~ m/^vmlinuz-(.*)$/ ) {
     if ($tftp_parent and -e "$tftp_parent/initrd.img-$1") {
-      $cmdline .= " initrd=initrd.img-$1";
+      $infos->{'cmdline'} .= " initrd=initrd.img-$1";
     }
   }
 
-  my $code = -1;
   my $chboot_cmd;
-  my ($output);
+  my $output;
   my $valid_status = 1;
 
   # Add NFS options and root, if available
   my $nfsroot_cmdline = (defined $nfs_root && ($nfs_root ne ''));
-  $cmdline .= " nfsroot=$nfs_root" if( $nfsroot_cmdline );
+  $infos->{'cmdline'} .= " nfsroot=$nfs_root" if( $nfsroot_cmdline );
   if (defined $nfs_opts && ($nfs_opts ne '')) {
-    $cmdline .= ' nfsroot=' if( ! $nfsroot_cmdline );
-    $cmdline .= ",$nfs_opts"
-      if (defined $nfs_opts && ($nfs_opts ne ''));
+    $infos->{'cmdline'} .= ' nfsroot=' if( ! $nfsroot_cmdline );
+    $infos->{'cmdline'} .= ",$nfs_opts";
   }
 
-  if ($status =~ /^(install|install-init)$/) {
-    $kernel = "kernel ${kernel}";
-    $cmdline .= " FAI_ACTION=install FAI_FLAGS=${fai_flags} ip=dhcp"
+  if ($infos->{'status'} =~ /^(install|install-init)$/) {
+    $infos->{'kernel'}  = 'kernel '.$infos->{'kernel'};
+    $infos->{'cmdline'} .= " FAI_ACTION=install FAI_FLAGS=${fai_flags} ip=dhcp"
       .  " devfs=nomount root=/dev/nfs boot=live union=$union";
-  } elsif ($status =~ /^(error:|installing:)/) {
+  } elsif ($infos->{'status'} =~ /^(error:|installing:)/) {
     # If we had an error, show an error message
     # The only difference is to install is "faierror" on cmdline
-    my $faierror = ($status =~ /^installing:/) ? 'inst-' : '';
-    $faierror .= (split( ':', $status ))[1];
+    my $faierror = ($infos->{'status'} =~ /^installing:/) ? 'inst-' : '';
+    $faierror .= (split( ':', $infos->{'status'} ))[1];
 
-    $kernel = "kernel ${kernel}";
-    $cmdline .= " FAI_ACTION=install FAI_FLAGS=${fai_flags} ip=dhcp"
+    $infos->{'kernel'} = 'kernel '.$infos->{'kernel'};
+    $infos->{'cmdline'} .= " FAI_ACTION=install FAI_FLAGS=${fai_flags} ip=dhcp"
       .  " devfs=nomount root=/dev/nfs boot=live union=$union faierror:${faierror}";
-  } elsif ($status eq 'softupdate') {
+  } elsif ($infos->{'status'} eq 'softupdate') {
     # Softupdate has to be run by the client, so do a localboot
-    $kernel = 'localboot 0';
-    $cmdline = '';
-  } elsif ($status eq 'sysinfo') {
+    $infos->{'kernel'} = 'localboot 0';
+    $infos->{'cmdline'} = '';
+  } elsif ($infos->{'status'} eq 'sysinfo') {
     # Remove reboot flag in sysinfo mode - doesn't make sense
     my @sysflags = split( ',', ${fai_flags} );
     my $i = 0;
@@ -274,27 +183,25 @@ sub get_pxe_config {
       $i++;
     }
     my $noreboot = join( ',', @sysflags );
-    $kernel = "kernel ${kernel}";
-    $cmdline .= " FAI_ACTION=sysinfo FAI_FLAGS=${noreboot} ip=dhcp"
+    $infos->{'kernel'} = 'kernel '.$infos->{'kernel'};
+    $infos->{'cmdline'} .= " FAI_ACTION=sysinfo FAI_FLAGS=${noreboot} ip=dhcp"
     ." devfs=nomount root=/dev/nfs boot=live union=$union";
 
-  } elsif ($status eq 'localboot') {
-    $kernel = 'localboot 0';
-    $cmdline = '';
+  } elsif ($infos->{'status'} eq 'localboot') {
+    $infos->{'kernel'} = 'localboot 0';
+    $infos->{'cmdline'} = '';
   } else {
     $valid_status = 0;
   }
 
   if ($valid_status) {
-    $log->info("$filename - PXE status: $status\n");
-    $code = &main::write_pxe_config_file( $hostname, $filename, $kernel, $cmdline );
-  }
-
-  if ($code == -1) {
-    $log->error("$filename - unknown FAIstate: $status\n");
-  }
-  if ($code eq 0) {
-    return time;
+    $log->info("$filename - PXE status: $infos->{'status'}\n");
+    my $code = &main::write_pxe_config_file( $infos->{'hostname'}, $filename, $infos->{'kernel'}, $infos->{'cmdline'} );
+    if ($code == 0) {
+      return time;
+    }
+  } else {
+    $log->error("$filename - unknown FAIstate: $infos->{'status'}\n");
   }
 
   return $result;
