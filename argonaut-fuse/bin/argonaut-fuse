@@ -49,7 +49,7 @@ use Argonaut::Libraries::Common qw(:ldap :file);
 use constant USEC => 1000000;
 
 # Predefined variables for config
-our ($default_mode, $tftp_root, $tftp_static_root);
+our ($default_mode, $tftp_root);
 our $client_ip;
 our ($ldap_configfile, $ldap_dn, $ldap_password, $ldap_base, $ldap_handle, $ldap_uris, $ldapinfos);
 
@@ -167,7 +167,6 @@ sub readConfig
 
     $default_mode           =   $settings->{"default_mode"};
     $tftp_root              =   $settings->{"pxelinux_cfg"};
-    $tftp_static_root       =   $settings->{"pxelinux_cfg_static"};
 
     $logdir                 =   $settings->{"logdir"};
 }
