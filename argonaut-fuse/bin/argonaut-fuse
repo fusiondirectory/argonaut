@@ -185,12 +185,8 @@ sub import_modules {
     my $info = eval($module.'::get_module_info()');
     # Only load module if get_module_info() returns a non-null object
     if ($info) {
-      $known_modules->{$module} = $info;
-
-      # Load additional configuration values
       $log->info("Loaded module $module ($info)\n");
-      #$cfg_defaults{$module}= eval($module.'::get_config_sections')
-      #  if(eval($module.'::get_config_sections'));
+      $known_modules->{$module} = $info;
     } else {
       $log->info("$module is not a module\n");
     }
