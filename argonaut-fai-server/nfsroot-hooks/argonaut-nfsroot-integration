@@ -52,7 +52,7 @@ version=$(echo $NFSROOT/boot/vmlinuz-* | sort -n | head -n1 | cut -d- -f2-)
 # Copy as default kernel
 if [ -f $TFTPROOT/vmlinuz-$version ]; then
   msg "installing vmlinuz-install"
-    cp -f$TFTPROOT/vmlinuz-$version $TFTPROOT/vmlinuz-install
+    cp -f $TFTPROOT/vmlinuz-$version $TFTPROOT/vmlinuz-install
 else
   msg "ERROR: cannot find kernel to use as vmlinuz-install!!!"
 fi
