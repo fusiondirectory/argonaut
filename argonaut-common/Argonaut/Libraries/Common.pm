@@ -583,7 +583,7 @@ sub argonaut_get_generic_settings {
 
   if ($filter =~ m/([0-9]{1,3}\.?){4}/) {
     $filter = "(ipHostNumber=$filter)";
-  } elsif ($filter !~ m/^(/) {
+  } elsif ($filter !~ m/^\(/) {
     $filter = "($filter)";
   }
 
