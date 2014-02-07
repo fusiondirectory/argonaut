@@ -120,15 +120,6 @@ $filesystem = {
   }
 };
 
-$log->info("Argonaut-Fuse opening $tftp_static_root");
-
-# Open static directory
-my $tftp_static_root_handle;
-if (!opendir($tftp_static_root_handle, $tftp_static_root)) {
-  $log->error("Could not load tftp static root '$tftp_static_root'");
-  die "Could not load tftp static root '$tftp_static_root'";
-}
-
 $log->info("Argonaut-Fuse Mounting $tftp_root\n");
 
 # Mount FUSE Filesystem
@@ -244,13 +235,6 @@ sub getattr {
           }
         }
       }
-      if (not defined($current->{$path_element})) {
-        if (-r $tftp_static_root.'/'.$path_element) {
-          return stat($tftp_static_root.'/'.$path_element);
-        } else {
-          return -1*ENOENT;
-        }
-      }
       $current_type = $current->{$path_element}->{'type'};
       $last_attred_file = $current->{$path_element} if ($current_type eq 'file');
       $current = $current->{$path_element}->{'content'} if ($current_type eq 'dir');
@@ -294,19 +278,6 @@ sub read {
 
   if (@path_elements > 1) {
     foreach my $path_element (@path_elements[1..$#path_elements]) {
-      if (not defined($current->{$path_element})) {
-        if (-r $tftp_static_root.$pathname) {
-          # TODO: dies when file exceeds buffersize
-          my ($content, $buffer);
-          sysopen(FH, $tftp_static_root.$pathname, O_RDONLY) or return ( -1*ENOENT );
-          binmode(FH);
-          sysread(FH, $content, $requestedsize, $offset);
-          close(FH);
-          return $content;
-        } else {
-          return( -1*ENOENT );
-        }
-      }
       $current = $current->{$path_element}->{'content'};
     }
   }
@@ -328,15 +299,6 @@ sub getdir {
   }
 
   push @result, keys(%{$current});
-
-  if (defined($tftp_static_root_handle)) {
-    foreach my $path_element(readdir($tftp_static_root_handle)) {
-      next if($path_element eq '.');
-      next if($path_element eq '..');
-      push @result, $path_element;
-    }
-    rewinddir($tftp_static_root_handle);
-  }
 
   push @result, 0;
   return @result;
