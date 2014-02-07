@@ -78,7 +78,7 @@ sub get_pxe_config {
       'ldap_srv'  => 'gotoLdapServer',
       'hostname'  => 'cn',
     },
-    $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,'(macAddress=$mac)'
+    $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,"(macAddress=$mac)"
   );
 
   # If we don't have a FAI state
