@@ -111,7 +111,7 @@ sub get_pxe_config {
   if (($infos->{'kernel'} eq '') || ($infos->{'ldap_srv'} eq '')) {
     $log->error("$filename - missing information - aborting\n");
 
-    $mesg  = "$filename - missing LDAP attribs:";
+    my $mesg  = "$filename - missing LDAP attribs:";
     $mesg .= ' gotoBootKernel' if( $infos->{'kernel'} eq '' );
     $mesg .= ' gotoLdapServer' if( $infos->{'ldap_srv'} eq '' );
     $mesg .= "\n";
