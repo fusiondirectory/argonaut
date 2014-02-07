@@ -142,7 +142,7 @@ if ($@) {
 exit 0;
 
 sub sig_int_handler {
-  $pidfile->remove;
+  $pid->remove;
   exit(0);
 }
 
