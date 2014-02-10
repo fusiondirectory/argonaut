@@ -354,17 +354,17 @@ sub get_classes {
 }
 
 sub generate_files_dir_configspace {
-  create_dir("${dump_dir}/files");
-  create_dir("${dump_dir}/etc");
-  create_dir("${dump_dir}/default");
-  create_dir("${dump_dir}/dhcp/dhcpd.conf");
-  create_dir("${dump_dir}/fai/apt/sources.list");
-  create_dir("${dump_dir}/fai/fai.conf");
-  create_dir("${dump_dir}/fai/nfsroot.conf");
-  create_dir("${dump_dir}/motd");
-  create_dir("${dump_dir}/rc.local");
-  create_dir("${dump_dir}/selinux");
-  create_dir("${dump_dir}/config");
+  mkpath("${dump_dir}/files");
+  mkpath("${dump_dir}/files/etc");
+  mkpath("${dump_dir}/files/etc/default");
+  mkpath("${dump_dir}/files/etc/dhcp/dhcpd.conf");
+  mkpath("${dump_dir}/files/etc/fai/apt/sources.list");
+  mkpath("${dump_dir}/files/etc/fai/fai.conf");
+  mkpath("${dump_dir}/files/etc/fai/nfsroot.conf");
+  mkpath("${dump_dir}/files/motd");
+  mkpath("${dump_dir}/files/etc/rc.local");
+  mkpath("${dump_dir}/files/etc/selinux");
+  mkpath("${dump_dir}/files/etc/selinux/config");
 }
 
 sub generate_sources_list {
