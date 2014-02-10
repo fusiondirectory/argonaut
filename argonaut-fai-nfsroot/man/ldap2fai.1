@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "LDAP2FAI 1"
-.TH LDAP2FAI 1 "2013-11-29" "Argonaut 0.9.1" "Argonaut Documentation"
+.TH LDAP2FAI 1 "2014-02-11" "Argonaut 0.9.1" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -133,7 +133,7 @@
 ldap2fai \- read FAI config from LDAP and create config space.
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-ldap2fai [\-hnv] [\-d dump_dir] [\-H hostname] \-m <\s-1MAC\s0>
+ldap2fai [\-hnv] [\-c config_space] [\-h hostname] \-m mac_address
 .SH "OPTIONS"
 .IX Header "OPTIONS"
 \&\fB\-h\fR
@@ -142,13 +142,13 @@ ldap2fai [\-hnv] [\-d dump_dir] [\-H hostname] \-m <\s-1MAC\s0>
 \&\fB\-v\fR
     be verbose (multiple v's will increase verbosity)
 .PP
-\&\fB\-n\fR
+\&\fB\-d\fR
     dry run (includes verbose)
 .PP
-\&\fB\-d\fR
+\&\fB\-c\fR
     output dir (default: /var/lib/fai/config)
 .PP
-\&\fB\-H\fR
+\&\fB\-h\fR
     check hostname
 .PP
 \&\fB\-m\fR

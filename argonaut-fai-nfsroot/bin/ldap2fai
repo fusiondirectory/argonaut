@@ -67,9 +67,9 @@ Getopt::Long::Configure ("bundling");
 
 GetOptions( 'v|verbose'     => \$verbose,
             'h|help'        => \&usage,
-            'd|dump-dir=s'  => \$dump_dir,
-            'n|dry-run'     => \$dry_run,
-            'H|hostname=s'  => \$check_hostname,
+            'c|config-space=s'  => \$dump_dir,
+            'd|dry-run'     => \$dry_run,
+            'n|hostname=s'  => \$check_hostname,
             'm|mac=s'       => \$mac )
   or usage( 'Wrong parameters' );
 
@@ -167,13 +167,13 @@ sub usage
   (@_) && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
- usage: $0 [-hnvW] [-d dump_dir] [-H hostname] -m mac_address
+ usage: $0 [-hnvW] [-c config_space] [-n hostname] -m mac_address
 
   -h  : this (help) message
-  -n  : dry run (includes verbose)
+  -d  : dry run (includes verbose)
   -v  : be verbose
-  -d  : dump dir (default: ${dump_dir})
-  -H  : check hostname
+  -c  : config space (default: ${dump_dir})
+  -n  : check hostname
   -m  : mac address
 
 
@@ -545,7 +545,7 @@ ldap2fai - read FAI config from LDAP and create config space.
 
 =head1 SYNOPSIS
 
-ldap2fai [-hnv] [-d dump_dir] [-H hostname] -m <MAC>
+ldap2fai [-hnv] [-c config_space] [-h hostname] -m mac_address
 
 =head1 OPTIONS
 
@@ -555,13 +555,13 @@ B<-h>
 B<-v>
     be verbose (multiple v's will increase verbosity)
 
-B<-n>
+B<-d>
     dry run (includes verbose)
 
-B<-d>
+B<-c>
     output dir (default: /var/lib/fai/config)
 
-B<-H>
+B<-h>
     check hostname
 
 B<-m>
