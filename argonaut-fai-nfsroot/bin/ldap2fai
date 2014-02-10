@@ -106,8 +106,8 @@ my $faiobj = Argonaut::FAI->new( 'LDAP'     => $ldap,
                                  'dumpdir'  => $dump_dir );
 
 # Set FAI flags
-$faiobj->flags( FAI_FLAG_VERBOSE ) if( $verbose );
-$faiobj->flags( FAI_FLAG_VERBOSE | FAI_FLAG_DRY_RUN ) if( $dry_run );
+$faiobj->flags( $faiobj->FAI_FLAG_VERBOSE ) if( $verbose );
+$faiobj->flags( $faiobj->FAI_FLAG_VERBOSE | $faiobj->FAI_FLAG_DRY_RUN ) if( $dry_run );
 
 my $class_str = get_classes( $mac );
 print( "  + FAIclass string:    $class_str\n" ) if( $verbose );
