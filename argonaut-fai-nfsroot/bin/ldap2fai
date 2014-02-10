@@ -152,6 +152,7 @@ if( defined ${hostname} ) {
   }
 }
 
+generate_files_dir_configspace();
 generate_sources_list( $sections );
 generate_kernel_packagelist( $kernel );
 
@@ -352,6 +353,19 @@ sub get_classes {
   return $entry->get_value( 'FAIclass' );
 }
 
+sub generate_files_dir_configspace {
+  create_dir("${dump_dir}/files");
+  create_dir("${dump_dir}/etc");
+  create_dir("${dump_dir}/default");
+  create_dir("${dump_dir}/dhcp/dhcpd.conf");
+  create_dir("${dump_dir}/fai/apt/sources.list");
+  create_dir("${dump_dir}/fai/fai.conf");
+  create_dir("${dump_dir}/fai/nfsroot.conf");
+  create_dir("${dump_dir}/motd");
+  create_dir("${dump_dir}/rc.local");
+  create_dir("${dump_dir}/selinux");
+  create_dir("${dump_dir}/config");
+}
 
 sub generate_sources_list {
   my( $sections ) = @_;
