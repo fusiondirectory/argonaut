@@ -357,7 +357,11 @@ sub generate_files_dir_configspace {
   mkpath("${dump_dir}/files");
   mkpath("${dump_dir}/files/etc");
   mkpath("${dump_dir}/files/etc/default");
+  mkpath("${dump_dir}/files/etc/resolv.conf");
+  mkpath("${dump_dir}/files/etc/hosts");
   mkpath("${dump_dir}/files/etc/dhcp/dhcpd.conf");
+  mkpath("${dump_dir}/files/etc/apt/sources.list");
+  mkpath("${dump_dir}/files/etc/apt/preferences");
   mkpath("${dump_dir}/files/etc/fai/apt/sources.list");
   mkpath("${dump_dir}/files/etc/fai/fai.conf");
   mkpath("${dump_dir}/files/etc/fai/nfsroot.conf");
