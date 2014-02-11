@@ -123,7 +123,7 @@ sub rpc_call
     params  => $params,
   };
 
-  my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
+  my $res = $client->call($protocol."://".$server_ip.":".$server_port, $callobj);
 
   if($res) {
     if ($res->is_error) {
