@@ -699,7 +699,7 @@ sub extend_class_cache {
           filter => $self->prepare_filter( "(objectClass=$objclass)" ),
           scope => 'one'
         );
-        $search{ 'attrs' } = @attrs if( scalar @attrs );
+        $search{ 'attrs' } = \@attrs if( scalar @attrs );
         $mesg = $ldap->search( %search );
 
       }
