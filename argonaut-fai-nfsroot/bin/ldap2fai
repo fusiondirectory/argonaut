@@ -52,6 +52,7 @@ my $fai_mirror;
 my $dry_run = 0;
 my $release_var = 'FAIclientRelease';
 my $check_hostname;
+my $sources_list;
 my $kernel;
 my $ldapinfos;
 my $mac;
@@ -70,6 +71,7 @@ GetOptions( 'v|verbose'     => \$verbose,
             'c|config-space=s'  => \$dump_dir,
             'd|dry-run'     => \$dry_run,
             'n|hostname=s'  => \$check_hostname,
+            's|sources-list'=> \$sources_list,
             'm|mac=s'       => \$mac )
   or usage( 'Wrong parameters' );
 
@@ -153,7 +155,9 @@ if( defined ${hostname} ) {
 }
 
 generate_files_dir_configspace();
-generate_sources_list( $sections );
+
+generate_sources_list( $sections ) if ($sources_list);
+ 
 generate_kernel_packagelist( $kernel );
 
 $ldap->unbind();   # take down session
