@@ -357,11 +357,11 @@ POE::Session->create(
         },
         id_of_host => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
-            my ($host) = @params;
+            my ($host, $filter) = @params;
 
-            $log->info("searching taskid for $host");
+            $log->info("searching taskid for $host $filter");
 
-            my $mac = getMacFromCn($host);
+            my $mac = getMacFromCn($host, $filter);
 
             $kernel->call($session => 'id_of_mac' => $jsonrpc, $id, $mac);
         },
