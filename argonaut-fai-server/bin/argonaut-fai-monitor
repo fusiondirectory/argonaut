@@ -52,6 +52,8 @@ my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ld
 my $server_port   = $server_settings->{'port'};
 my $protocol      = $server_settings->{'protocol'};
 
+my %taskids;
+
 my %progress_value = (
   "confdir"   =>  0,
   "setup"     =>  1,
@@ -139,8 +141,6 @@ sub rpc_call
 =pod
 This program read on stdin the fai-monitor output, extract useful information and send them to argonaut-server.
 =cut
-
-my %taskids;
 
 while (my $line = <STDIN>) {
   next if $line =~/^FAI monitoring daemon start/; # ignore start up messages from fai-monitor
