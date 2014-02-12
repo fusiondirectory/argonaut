@@ -1,82 +1,14 @@
 #!/bin/bash
-# (c) 2007-2008 Jan-Marek Glogowski <glogow@fbihome.de>
-# (c) 2008 Cajus Pollmeier <pollmeier@gonicus.de>
-# (c) 2009-2010 Benoit Mortier <benoit.mortier@opensides.be>
-# (c) 2011-2013 The FusionDirectory Project <contact@fusiondirectory.org>
-
-trap '' INT
+# (c) 2011-2014 The FusionDirectory Project <contact@fusiondirectory.org>
 
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:
-# Requires-Var:    $FAI $action
+# Requires-Var:  $FAI $LOGDIR
 # Suggests-Var:
 # Short-Description: get $FAI from an ldap server.
 ### END SUBROUTINE INFO
 
-
-# Get task id from argonaut-server
-MAC=`argonaut-client-fai-getid`
-if [ 0 -ne $? ]; then
-  task error 500 1 "$(< $LOGDIR/argonaut-client.log)\n\nPress enter to reboot." 15 60
-fi
-
-# use argonaut support lib
-. /usr/lib/argonaut/argonaut-support.lib
-
-if [ "$action" != "softupdate" ]; then
-  echo "* setting hostname: $HOSTNAME"
-  hostname "$HOSTNAME"
-fi
-
-# If we're very slow, wait for the ldap.conf
-if [ "$LDAP_AVAILABLE" ]; then
-  echo "* waiting for LDAP configuration"
-  while [ ! -f /etc/ldap/ldap.conf ]; do echo "."; sleep 1; done
-fi
-
-# Check if autosetup is needed at this point
-echo "* Argonaut configurator started"
-if ! terminal_activated $MAC; then
-
-    # Cancel softupdate on non-activated systems
-    if [ "softupdate" != "$action" ]; then
-
-      # wait till we get activated - need to be pushed twice here...
-      echo "goto-activation-start" >> $LOGDIR/fai.log
-      echo "* Argonaut waiting for activation..."
-
-      # Argonaut writes the GOto entry in three steps. To continue, we check
-      # if XDRIVER is present.
-      while ! terminal_load_hardware_profile $MAC &> /dev/null; do
-          cat "/etc/sysconfig/argonaut" | grep -v 'XDRIVER="unknown"' | grep -q 'XDRIVER' && break
-          sleep 5
-      done
-
-      # Activated!
-      echo "goto-activation-stop" >> $LOGDIR/fai.log
-      echo "* Argonaut system activated"
-
-      #if terminal_reboot_needed $MAC; then
-      #    faireboot
-      #    while true; do sleep 1; done
-      #fi
-
-    fi
-
-fi
-
-# Wait for LDAP config which may not be available yet
-echo "* waiting for LDAP configuration"
-while [ ! -f /etc/ldap/ldap.conf ]; do sleep 1; done
-
 # Create configuration space
-ldap2fai -v -d ${FAI} -H $HOSTNAME -m $MAC | tee $LOGDIR/ldap2fai.log
-if [ 0 -ne $? ]; then
-  task error 500 1 "$(< $LOGDIR/ldap2fai.log)\n\nPress enter to reboot." 15 60
-fi
-
-# Provide /etc/sysconfig/argonaut
-terminal_load_hardware_profile $MAC
-
-# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
+MAC=`argonaut-client-fai-getid`
+ldap2fai -v -c $FAI -n $HOSTNAME -m $MAC | tee /tmp/fai/ldap2fai.log
 
