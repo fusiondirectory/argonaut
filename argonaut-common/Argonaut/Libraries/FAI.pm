@@ -1505,20 +1505,24 @@ sub resolve_classlist {
   # Set @classes depending on parameter type
   if( 'ARRAY' eq ref( $class_str ) ) {
     @classes = @{$class_str};
-  } else { @classes = split( ' ', $class_str ); }
+  } else {
+    @classes = split( ' ', $class_str );
+  }
 
   # Check for release in classlist
   foreach my $class (@classes) {
     if( ":" eq substr( $class, 0, 1 ) ) {
-      return( "Duplicated release in classlist\n" )
+      return ("Duplicated release in classlist\n")
         if( defined $cls_release );
 
-      if( 2 < length( ${class} ) ) {
+      if (length(${class}) > 2) {
         $cls_release = substr( $class, 1 );
+      } else {
+        return( "Invalid release ':' in classlist\n" );
       }
-      else { return( "Invalid release ':' in classlist\n" ); }
+    } else {
+      push @newclasses, $class;
     }
-    else { push @newclasses, $class; }
   }
 
   # Overwrite release if supplied
@@ -1531,7 +1535,7 @@ sub resolve_classlist {
   $class_str = ':' . $cls_release . join( ' ', @classes );
 
   # Return cached values if not enforced
-  if( ! defined $force && $force ) {
+  if (!(defined $force && $force)) {
     return $self->{ 'RESOLVED' }{ $class_str }
       if( exists $self->{ 'RESOLVED' }{ $class_str } );
   }
@@ -1606,7 +1610,9 @@ sub expand_fai_classlist {
 
   if( 'ARRAY' eq ref( $classref ) ) {
     @newclasses = @$classref;
-  } else { @newclasses = split( $classref ); }
+  } else {
+    @newclasses = split(' ', $classref);
+  }
 
   # These classes are added automatically by FAI...
   unshift( @newclasses, "DEFAULT" );
@@ -1614,7 +1620,7 @@ sub expand_fai_classlist {
   push( @newclasses, "LAST" );
 
   return \@newclasses if( 'ARRAY' eq ref( $classref ) );
-  return join( ' ', @newclasses );
+  return join(' ', @newclasses);
 }
 
 END {}
