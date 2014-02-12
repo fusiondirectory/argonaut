@@ -90,6 +90,8 @@ if (!($mac =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i)) {
 if( ! $dry_run ) {
   -d "$dump_dir"
     || usage("'$dump_dir' is not a directory.\n");
+} else {
+  print ("[DRY RUN]\n");
 }
 
 $ldapinfos = argonaut_ldap_init( $ldap_conf, 0, $bind_dn, 0, $bind_pwd );
