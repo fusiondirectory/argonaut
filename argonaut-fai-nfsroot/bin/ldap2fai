@@ -145,16 +145,6 @@ print( "Dumping config space to '$dump_dir'...\n" );
 my( $error, $sections, $customs ) = $faiobj->dump_release( $release, $res_classlist, $hostname );
 print $error . "\n" if( defined $error );
 
-if( defined ${hostname} ) {
-  if( open( HOSTVARS, ">> ${dump_dir}/class/${hostname}.var" ) ) {
-    print( HOSTVARS "FAIclientRelease='$release'\n" );
-    print( HOSTVARS "MAXPACKAGES=20000\n" );
-    print( HOSTVARS "printk=0\n" );
-    print( HOSTVARS "STOP_ON_ERROR=700\n" );
-    close( HOSTVARS );
-  }
-}
-
 generate_files_dir_configspace();
 
 generate_sources_list( $sections ) if ($sources_list);
