@@ -634,10 +634,14 @@ sub argonaut_get_generic_settings {
       $settings->{'locked'} = 0;
     }
     while (my ($key,$value) = each(%{$params})) {
-      if (($mesg->entries)[0]->exists("$value")) {
-        $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+      if (ref $value eq ref []) {
+        $settings->{"$key"} = ($mesg->entries)[0]->get_value(@$value);
       } else {
-        $settings->{"$key"} = "";
+        if (($mesg->entries)[0]->get_value("$value")) {
+          $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+        } else {
+          $settings->{"$key"} = "";
+        }
       }
     }
     return $settings;
