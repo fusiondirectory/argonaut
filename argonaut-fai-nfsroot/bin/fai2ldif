@@ -36,57 +36,57 @@ use Path::Class;
 
 #~ use Argonaut::Libraries::FAI qw(:flags);
 
-my $dump_dir  = "/var/lib/fai/config";
-my $verbose   = 0;
+my $dump_dir      = "/var/lib/fai/config";
+my $verbose       = 0;
+my $base          = '<BASE>';
+my $faibaserdn    = 'ou=fai,ou=configs,ou=systems';
+my $faipackagerdn = 'ou=packages';
 
 Getopt::Long::Configure ("bundling");
 
-GetOptions( 'v|verbose'     => \$verbose,
-            'h|help'        => \&usage,
-            'c|config-space=s'  => \$dump_dir )
+GetOptions( 'v|verbose'         => \$verbose,
+            'h|help'            => \&usage,
+            'c|config-space=s'  => \$dump_dir,
+            'b|base=s'          => \$base )
   or usage( 'Wrong parameters' );
 
 my $class = shift or usage('Missing class parameter');
 
 if (-e "$dump_dir/package_config/$class") {
-  #~ my $dir = dir("$dump_dir/package_config") or die ("! Can't open $dump_dir/package_config\n");
-  #~ my @dir_files = $dir->children;
-  #~ foreach my $file (@dir_files) {
   my $file = file("$dump_dir/package_config/$class");
-    # skip if $file is a directory
-    if ( -d $file ) {
-      next;
-    }
+  # skip if $file is a directory
+  if ( -d $file ) {
+    next;
+  }
 
-    print "parsing $file\n" if $verbose;
+  print "parsing $file\n" if $verbose;
 
-    my $name = $file;
-    $name =~ s|^.*/||;
+  my $name = $file;
+  $name =~ s|^.*/||;
 
 
-    my @lines = $file->slurp;
+  my @lines = $file->slurp;
 
-    foreach my $line ( @lines ) {
-      # remove \n from the end of each line
-      $line =~ s/#.*$//;
-      chomp $line;
+  foreach my $line ( @lines ) {
+    # remove \n from the end of each line
+    $line =~ s/#.*$//;
+    chomp $line;
 
-      next if ( $line =~ /^$/ );
+    next if ( $line =~ /^$/ );
 
-      # only process for lines beginning with "class", and extracting the 2nd word (the class name)
-      if ( $line =~ /^PACKAGES\s+([^ ]+)(\s+([^ ]*))?/ ) {
-        my $cn = $name;
-        $cn .= '-'.$3 if $3;
-        print "dn: cn=$cn,base\n";
-        print "objectClass: FAIpackageList\n";
-        print "FAIinstallMethod: $1\n";
-        print "cn: $cn\n";
-      } else {
-        my @packages = split(/\s+/, $line);
-        foreach my $package (@packages) {
-          print "FAIpackage: $package\n";
-        }
+    # only process for lines beginning with "class", and extracting the 2nd word (the class name)
+    if ( $line =~ /^PACKAGES\s+([^ ]+)(\s+([^ ]*))?/ ) {
+      my $cn = $name;
+      $cn .= '-'.$3 if $3;
+      print "dn: cn=$cn,$faipackagerdn,$faibaserdn,$base\n";
+      print "objectClass: FAIpackageList\n";
+      print "FAIinstallMethod: $1\n";
+      print "cn: $cn\n";
+    } else {
+      my @packages = split(/\s+/, $line);
+      foreach my $package (@packages) {
+        print "FAIpackage: $package\n";
       }
     }
-  #~ }
+  }
 }
