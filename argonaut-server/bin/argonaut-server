@@ -40,12 +40,11 @@ use Data::Dumper;
 use Net::LDAP;
 use JSON::RPC::Client;
 use JSON;
-use Config::IniFiles;
 use File::Path;
 use Log::Handler;
 use App::Daemon qw(daemonize);
 
-use Argonaut::Libraries::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :config :file);
 use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file);
 
 # where to look for modules files
@@ -60,10 +59,9 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-our ($ldap_configfile,$ldap_dn,$ldap_password,$protocol,$server_ip,$server_port);
+our ($config,$protocol,$server_ip,$server_port);
 my ($sslkeyfile,$sslcertfile,$iptool,$delete_finished_tasks,
     $interface,$logdir,$packages_folder);
-my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-server.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-server.pid";
@@ -93,21 +91,8 @@ $log->add(
 );
 
 sub readConfig {
-  readConfigFile();
-  readLdapConfig();
-}
-
-sub readConfigFile {
-    my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-
-    $server_ip              =   $config->val( server => "server_ip"             ,"");
-    $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-    $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-    $ldap_password          =   $config->val( ldap => "password"                ,"");
-}
-
-sub readLdapConfig {
-  my $settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
+  $config = argonaut_read_config;
+  my $settings = argonaut_get_server_settings($config,$server_ip);
 
   $protocol               = $settings->{'protocol'};
   $server_port            = $settings->{'port'};
@@ -121,15 +106,10 @@ sub readLdapConfig {
   $packages_folder        = "/var/cache/argonaut/packages";
 }
 
-sub bindLdap {
-    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-    return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-}
-
 sub getIpFromMac {
   my ($mac) = @_;
 
-  my ($ldap,$ldap_base) = bindLdap();
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
@@ -162,7 +142,7 @@ Parameter : the host name
 sub getMacFromCn {
   my ($host, $filter) = @_;
 
-  my ($ldap,$ldap_base) = bindLdap();
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
@@ -254,7 +234,7 @@ sub ldap_authenticate {
   if (!defined($login) || !defined($password)) {
     return 0;
   }
-  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $login, 0, $password);
+  my $ldapinfos = argonaut_ldap_init ($config->{'ldap_configfile'}, 0, $login, 0, $password);
 
   if ( $ldapinfos->{'ERROR'} > 0) {
     return 0;

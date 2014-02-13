@@ -94,33 +94,10 @@ sub write_quotatab_file {
 }
 
 sub get_quota_settings {
-  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
-
-  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-
-  if ( $ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."\n";
-  }
-
-  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-
-  my $mesg = $ldap->search( # perform a search
-            base   => $ldap_base,
-            filter => "(&(objectClass=quotaService)(ipHostNumber=$ip))",
-            attrs => [  'cn','quotaDeviceParameters',
-                        'quotaLdapSearchIdAttribute',
-                        'quotaLdapServer','quotaLdapServerUserDn',
-                        'quotaLdapServerUserPassword','quotaMsgCharsetSupport',
-                        'quotaMsgContactSupport','quotaMsgContentSupport',
-                        'quotaMsgFromSupport','quotaMsgSignatureSupport',
-                        'quotaMsgSubjectSupport','quotaMailCommand',
-                        'quotaCarbonCopyMail' ]
-            );
-
-  my $settings = {};
-
-  if(scalar($mesg->entries)==1) {
-    my %keys = (
+  my ($config,$filter,$inheritance) = @_;
+  my $settings = argonaut_get_generic_settings(
+    'quotaService',
+    {
       'hostname'              => 'cn',
       'mail_cmd'              => "quotaMailCommand",
       'cc_to'                 => "quotaCarbonCopyMail",
@@ -132,53 +109,36 @@ sub get_quota_settings {
       'charset'               => "quotaMsgCharsetSupport",
       'ldap_searchattribute'  => "quotaLdapSearchIdAttribute",
       'ldap_userdn'           => "quotaLdapServerUserDn",
-      'ldap_userpwd'          => "quotaLdapServerUserPassword",
-    );
-    while (my ($key, $value) = each(%keys)) {
-      if (($mesg->entries)[0]->exists($value)) {
-        $settings->{$key} = ($mesg->entries)[0]->get_value($value);
-      } else {
-        $settings->{$key} = "";
-      }
-    }
+      'ldap_userpwd'          => 'quotaLdapServerUserPassword',
+      'ldap_dn'               => 'quotaLdapServer',
+      'device_parameters'     => ['quotaDeviceParameters', asref => 1],
+    },
+    $config,$filter,$inheritance
+  );
 
-    if (($mesg->entries)[0]->get_value('quotaDeviceParameters')) {
-      $settings->{'device_parameters'} = ($mesg->entries)[0]->get_value('quotaDeviceParameters', asref=>1);
-    } else {
-      $settings->{'device_parameters'} = [];
-    }
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
-    my $ldap_dn = ($mesg->entries)[0]->get_value('quotaLdapServer');
-    $mesg = $ldap->search( # perform a search
-      base    => $ldap_dn,
-      scope   => 'base',
-      filter  => "(objectClass=goLdapServer)",
-      attrs   => ['goLdapBase','goLdapURI']
-    );
-    if ($mesg->count <= 0) {
-      die "Could not found LDAP server $ldap_dn\n";
-    }
-    my $uri = URI->new(($mesg->entries)[0]->get_value('goLdapURI'));
-    $settings->{'ldap_basedn'}  = ($mesg->entries)[0]->get_value('goLdapBase');
-    $settings->{'ldap_host'}    = $uri->host;
-    $settings->{'ldap_port'}    = $uri->port;
-  } else {
-    die "This computer ($ip) is not configured in LDAP to run quota (missing service quotaService).";
+  my $mesg = $ldap->search( # perform a search
+    base    => $settings->{'ldap_dn'},
+    scope   => 'base',
+    filter  => "(objectClass=goLdapServer)",
+    attrs   => ['goLdapBase','goLdapURI']
+  );
+  if ($mesg->count <= 0) {
+    die "Could not found LDAP server ".$settings->{'ldap_dn'}."\n";
   }
+  my $uri = URI->new(($mesg->entries)[0]->get_value('goLdapURI'));
+  $settings->{'ldap_basedn'}  = ($mesg->entries)[0]->get_value('goLdapBase');
+  $settings->{'ldap_host'}    = $uri->host;
+  $settings->{'ldap_port'}    = $uri->port;
 
   return $settings;
 }
 
 sub apply_quotas {
-  my ($ldap_configfile,$ldap_dn,$ldap_password,$hostname) = @_;
+  my ($config,$hostname) = @_;
 
-  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-
-  if ( $ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."\n";
-  }
-
-  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,

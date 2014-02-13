@@ -31,13 +31,12 @@ use 5.008;
 use MIME::Base64;
 use Path::Class;
 use Net::LDAP;
-use Config::IniFiles;
 use File::Path;
 use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use LWP::Simple;
 
-use Argonaut::Libraries::Common qw(:ldap);
+use Argonaut::Libraries::Common qw(:ldap :config);
 
 BEGIN
 {
@@ -49,8 +48,6 @@ BEGIN
   @EXPORT_OK = qw(get_repolines get_packages_info store_packages_file cleanup_and_extract);
 }
 
-my $configfile = "/etc/argonaut/argonaut.conf";
-
 =pod
 =item get_repolines
 Get repolines from ldap
@@ -59,20 +56,9 @@ Get repolines from ldap
 sub get_repolines {
     my ($mac,$cn) = @_;
 
-    my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-    my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-    my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-    my $ldap_password          =   $config->val( ldap => "password"                ,"");
+    my $config = argonaut_read_config;
 
-    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-
-    if ( $ldapinfos->{'ERROR'} > 0) {
-      print ( $ldapinfos->{'ERRORMSG'}."\n" );
-      exit ($ldapinfos->{'ERROR'});
-    }
-
-    my $ldap = $ldapinfos->{'HANDLE'};
-    my $ldap_base = $ldapinfos->{'BASE'};
+    my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
     my $mesg;
 

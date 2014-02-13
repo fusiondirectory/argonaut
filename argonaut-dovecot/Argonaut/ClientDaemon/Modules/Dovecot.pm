@@ -51,10 +51,10 @@ sub create_mailbox : Public {
 }
 
 sub get_maildir : Private {
-  my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($main::config);
 
-  my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
-    base   => $ldapinfos->{'BASE'},
+  my $mesg = $ldap->search( # perform a search
+    base   => $ldap_base,
     filter => "(&(objectClass=fdDovecotServer)(ipHostNumber=".$main::client_settings->{'ip'}."))",
     attrs => [ 'fdDovecotMailDir' ]
   );

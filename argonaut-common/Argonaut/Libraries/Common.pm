@@ -35,10 +35,13 @@ use Net::LDAP;
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
 use File::Path;
+use Config::IniFiles;
 
 my $iptool = "ifconfig";
 
 my $die_endl = "\n"; # Change to "" to have verbose dies
+
+my $configfile = "/etc/argonaut/argonaut.conf";
 
 BEGIN
 {
@@ -57,6 +60,7 @@ BEGIN
       &argonaut_ldap_is_single_result
       &argonaut_ldap_split_dn
       &argonaut_ldap_init
+      &argonaut_ldap_handle
       &argonaut_get_generic_settings
       &argonaut_get_client_settings
       &argonaut_get_server_settings
@@ -79,6 +83,9 @@ BEGIN
     )],
      'net' => [qw(
       &argonaut_get_mac
+    )],
+     'config' => [qw(
+      &argonaut_read_config
     )]
   );
 
@@ -235,6 +242,17 @@ sub argonaut_ldap_init {
   $results{ 'ERROR' } = 0;
 
   return \%results;
+}
+
+sub argonaut_ldap_handle {
+  my ($config)  = @_;
+  my $ldapinfos = argonaut_ldap_init ($config->{'ldap_configfile'}, 0, $config->{'ldap_dn'}, 0, $config->{'ldap_password'});
+
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."$die_endl";
+  }
+
+  return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'},$ldapinfos);
 }
 
 #------------------------------------------------------------------------------
@@ -565,23 +583,33 @@ sub argonaut_ldap_fsearch {
 }
 
 #------------------------------------------------------------------------------
+# function for reading argonaut config
+#
+sub argonaut_read_config {
+  my %res = {};
+  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+  $res{'server_ip'}       = $config->val( server  => "server_ip"  ,"");
+  $res{'client_ip'}       = $config->val( client  => "client_ip"  ,"");
+  $res{'ldap_configfile'} = $config->val( ldap    => "config"     ,"/etc/ldap/ldap.conf");
+  $res{'ldap_dn'}         = $config->val( ldap    => "dn"         ,"");
+  $res{'ldap_password'}   = $config->val( ldap    => "password"   ,"");
+
+  return \%res;
+}
+
+#------------------------------------------------------------------------------
 # generic functions for get settings functions
 #
 sub argonaut_get_generic_settings {
-  my ($objectClass,$params,$ldap_configfile,$ldap_dn,$ldap_password,$filter,$inheritance) = @_;
+  my ($objectClass,$params,$config,$filter,$inheritance) = @_;
   unless (defined $inheritance) {
     $inheritance = 1;
   }
 
-  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
-  if ( $ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."$die_endl";
-  }
-
-  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-
-  if ($filter =~ m/([0-9]{1,3}\.?){4}/) {
+  if ($filter =~ m/([0-9]{1,3}\.?){4}/ or $filter eq '*') {
     $filter = "(ipHostNumber=$filter)";
   } elsif ($filter !~ m/^\(/) {
     $filter = "($filter)";
@@ -662,7 +690,7 @@ sub argonaut_get_generic_settings {
 # get server argonaut settings
 #
 sub argonaut_get_server_settings {
-  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
+  my ($config,$ip) = @_;
   if ($ip eq "") {
     $ip = "*";
   }
@@ -677,7 +705,7 @@ sub argonaut_get_server_settings {
       'interface'             => "argonautWakeOnLanInterface",
       'logdir'                => "argonautLogDir"
     },
-    $ldap_configfile,$ldap_dn,$ldap_password,$ip
+    $config,$ip
   );
 }
 

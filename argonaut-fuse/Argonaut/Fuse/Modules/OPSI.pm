@@ -57,7 +57,7 @@ sub get_module_settings {
       'server'    => "argonautFuseOpsiServer",
       'lang'      => "argonautFuseOpsiLang"
     },
-    $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$main::client_ip
+    $main::config,$main::client_ip
   );
 }
 

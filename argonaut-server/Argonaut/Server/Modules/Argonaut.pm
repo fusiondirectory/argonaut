@@ -59,7 +59,7 @@ sub handle_client {
   my $ip = main::getIpFromMac($mac);
 
   eval { #try
-    my $settings = argonaut_get_client_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+    my $settings = argonaut_get_client_settings($main::config,$ip);
     %$self = %$settings;
     $self->{action} = $action;
   };

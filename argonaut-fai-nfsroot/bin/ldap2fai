@@ -36,11 +36,10 @@ use 5.008;
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 use Getopt::Long;
-use Config::IniFiles;
 
 use File::Path;
 
-use Argonaut::Libraries::Common qw(:ldap :net :array);
+use Argonaut::Libraries::Common qw(:ldap :config :net :array);
 use Argonaut::Libraries::FAI qw(:flags);
 
 my $ldapuris;
@@ -57,12 +56,7 @@ my $kernel;
 my $ldapinfos;
 my $mac;
 
-my $configfile = "/etc/argonaut/argonaut.conf";
-my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-
-my $ldap_conf               =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
-my $bind_dn                 =   $config->val( ldap => "dn"          ,"");
-my $bind_pwd                =   $config->val( ldap => "password"    ,"");
+my $config = argonaut_read_config;
 
 Getopt::Long::Configure ("bundling");
 
@@ -94,15 +88,8 @@ if( ! $dry_run ) {
   print ("[DRY RUN]\n");
 }
 
-$ldapinfos = argonaut_ldap_init( $ldap_conf, 0, $bind_dn, 0, $bind_pwd );
+my ($ldap,$base) = argonaut_ldap_handle($config);
 
-if ( $ldapinfos->{'ERROR'} > 0) {
-  print ( $ldapinfos->{'ERRORMSG'}."\n" );
-  exit ($ldapinfos->{'ERROR'});
-}
-
-my $ldap = $ldapinfos->{ 'HANDLE' };
-my $base = $ldapinfos->{ 'BASE' };
 
 # Get FAI object
 my $faiobj = Argonaut::FAI->new( 'LDAP'     => $ldap,

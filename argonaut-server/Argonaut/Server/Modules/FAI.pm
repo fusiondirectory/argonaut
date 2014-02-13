@@ -46,7 +46,7 @@ sub handle_client {
     eval { #try
       my $settings = argonaut_get_generic_settings(
         'FAIobject', {'state' => "FAIstate"},
-        $main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip
+        $main::config,$ip
       );
       %$self = %$settings;
       $self->{action} = $action;
@@ -118,17 +118,13 @@ sub handler_fai {
 =cut
 sub flag {
   my ($self, $fai_state) = @_;
-  my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
+  my ($handle) = argonaut_ldap_handle($main::config);
 
-  if ($ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."\n";
-  }
-
-  my $mesg = $ldapinfos->{'HANDLE'}->modify($self->{'dn'}, replace => {"FAIstate" => $fai_state});
+  my $mesg = $handle->modify($self->{'dn'}, replace => {"FAIstate" => $fai_state});
 
   $mesg->code && die "Error while setting FAIstate for object '".$self->{'dn'}."' :".$mesg->error;
 
-  $mesg = $ldapinfos->{'HANDLE'}->unbind;   # take down session
+  $mesg = $handle->unbind;   # take down session
 }
 
 1;

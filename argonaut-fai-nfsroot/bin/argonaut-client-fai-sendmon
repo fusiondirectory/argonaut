@@ -29,28 +29,20 @@ use warnings;
 use 5.008;
 
 use JSON::RPC::Client;
-use Config::IniFiles;
 use Log::Handler;
 
-use Argonaut::Libraries::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :config :file);
 
-my $configfile = "/etc/argonaut/argonaut.conf";
 my $logfile = "argonaut-client-fai-sendmon.log";
 
-my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+my $config = argonaut_read_config;
 
-my $server_ip                       =   $config->val( server => "server_ip"          ,"");
-my $client_ip                       =   $config->val( client => "client_ip"          ,"");
-my $ldap_configfile                 =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-my $ldap_dn                         =   $config->val( ldap => "dn"                      ,"");
-my $ldap_password                   =   $config->val( ldap => "password"                ,"");
-
-my $client_settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+my $client_settings = argonaut_get_client_settings($config,$client_ip);
 
 my $file          = $client_settings->{'taskidfile'};
 my $logdir        = $client_settings->{'logdir'};
 
-my $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
+my $server_settings = argonaut_get_server_settings($config,$server_ip);
 
 my $server_port   = $server_settings->{'port'};
 my $protocol      = $server_settings->{'protocol'};

@@ -31,31 +31,28 @@ use warnings;
 use 5.008;
 
 use Switch;
-use Net::LDAP;
 use MIME::Base64;
 use Getopt::Std;
 use File::Path;
 use File::Copy;
 use Log::Handler;
-use Config::IniFiles;
 
-use Argonaut::Libraries::Common qw(:ldap :file :array :net);
+use Argonaut::Libraries::Common qw(:ldap :config :file :array :net);
 use Argonaut::Libraries::Packages qw(get_repolines);
 
 use lib "/usr/lib/argonaut";
 
-my ($ldap_configfile, $ldap_dn, $ldap_password);
 my ($archs,$mirrordir,$proxy,$mac,$client_ip);
 my ($verbose,$errors,$source,$gpgcheck,$contents,$pdiff,$logdir);
 my $result;
-my $ldapinfos;
 
-my $configfile = "/etc/argonaut/argonaut.conf";
 my $outdir = "/etc/argonaut/fai";
 my $crond_dir= "/etc/cron.daily";
 my $logfile = "ldap2repository.log";
 
-readConfig($configfile);
+my $config;
+
+readConfig;
 
 argonaut_create_dir($logdir);
 
@@ -72,25 +69,11 @@ $log->add(
 
 $log->info ("ldap2repository started\n");
 
-$ldapinfos = argonaut_ldap_init($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-
-if ( $ldapinfos->{'ERROR'} > 0) {
-  print ( $ldapinfos->{'ERRORMSG'}."\n" );
-  exit ($ldapinfos->{'ERROR'});
-}
-
-my $base = $ldapinfos->{'BASE'};
-
-my $ldapuris = $ldapinfos->{'URIS'};
-
-my $handle = $ldapinfos->{'HANDLE'};
-
 argonaut_create_dir($outdir);
 
 if( $verbose eq "TRUE" ) {
   print "Generating sources.list and debmirror cronjob for server\n"
     . "IP:     ${client_ip}\n"
-    . "Base:   ${base}\n"
     . "Outdir: ${outdir}\n\n";
 }
 
@@ -100,21 +83,12 @@ generate_cronjob_script();
 #generate the cronjob daily
 generate_cronjob_daily();
 
-# take down ldap session
-$handle->unbind;
-$handle->disconnect;
-
 exit 0;
 
 sub readConfig {
-  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+  $config = argonaut_read_config;
 
-  $client_ip               =   $config->val( client => "client_ip" ,"");
-  $ldap_configfile         =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
-  $ldap_dn                 =   $config->val( ldap => "dn"          ,"");
-  $ldap_password           =   $config->val( ldap => "password"    ,"");
-
-  my $settings = argonaut_get_ldap2repository_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+  my $settings = argonaut_get_ldap2repository_settings($config,$client_ip);
 
   $mirrordir              =   $settings->{'mirrordir'};
   $proxy                  =   $settings->{'proxy'};

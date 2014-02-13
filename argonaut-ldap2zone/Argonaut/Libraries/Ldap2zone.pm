@@ -31,15 +31,11 @@ use warnings;
 
 use 5.008;
 
-use Config::IniFiles;
 use DNS::ZoneParse;
 
-use Argonaut::Libraries::Common qw(:ldap);
+use Argonaut::Libraries::Common qw(:ldap :config);
 
-my $configfile = "/etc/argonaut/argonaut.conf";
 my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
-
-my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
 =item argonaut_ldap2zone
 Write a zone file for the LDAP zone and its reverse, generate named.conf files and assure they are included
@@ -49,14 +45,9 @@ sub argonaut_ldap2zone
 {
   my($zone,$verbose) = @_;
 
-  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+  my $config = argonaut_read_config;
 
-  my $client_ip               =   $config->val( client => "client_ip" ,"");
-  my $ldap_configfile         =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
-  my $ldap_dn                 =   $config->val( ldap => "dn"          ,"");
-  my $ldap_password           =   $config->val( ldap => "password"    ,"");
-
-  my $settings = argonaut_get_ldap2zone_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+  my $settings = argonaut_get_ldap2zone_settings($config,$client_ip);
 
   my $BIND_DIR                =   $settings->{'binddir'};
   my $BIND_CACHE_DIR          =   $settings->{'bindcachedir'};
@@ -80,13 +71,7 @@ sub argonaut_ldap2zone
 
   print "Searching DNS Zone '$zone'\n" if $verbose;
 
-  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-
-  if ( $ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."\n";
-  }
-
-  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
   my $dn = zoneparse($ldap,$ldap_base,$zone,$BIND_CACHE_DIR,$TTL,$verbose);
 
