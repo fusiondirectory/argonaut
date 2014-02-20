@@ -586,7 +586,7 @@ sub argonaut_ldap_fsearch {
 # function for reading argonaut config
 #
 sub argonaut_read_config {
-  my %res = {};
+  my %res = ();
   my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
   $res{'server_ip'}       = $config->val( server  => "server_ip"  ,"");
@@ -695,7 +695,7 @@ sub argonaut_get_generic_settings {
 #
 sub argonaut_get_server_settings {
   my ($config,$ip) = @_;
-  if ($ip eq "") {
+  if ((not defined $ip) or ($ip eq "")) {
     $ip = "*";
   }
   return argonaut_get_generic_settings(
