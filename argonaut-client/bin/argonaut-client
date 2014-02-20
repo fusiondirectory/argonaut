@@ -88,8 +88,8 @@ $server->dispatch_to($modules)->handle();
 sub readConfig {
   $config = argonaut_read_config;
 
-  $server_settings = argonaut_get_server_settings($config,$server_ip);
-  $client_settings = argonaut_get_client_settings($config,$client_ip);
+  $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
+  $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
 }
 
 
