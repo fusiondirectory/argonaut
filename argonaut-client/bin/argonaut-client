@@ -32,7 +32,7 @@ use JSON::RPC::Server::Daemon;
 use Log::Handler;
 use App::Daemon qw(daemonize);
 
-use Argonaut::Libraries::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :config :file);
 
 # where to look for modules files
 use Module::Pluggable search_path => 'Argonaut::ClientDaemon::Modules', sub_name => 'modules';
@@ -86,7 +86,7 @@ $server->dispatch_to($modules)->handle();
 
 
 sub readConfig {
-  $config = argonaut_read_config();
+  $config = argonaut_read_config;
 
   $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
   $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
