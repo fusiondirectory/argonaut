@@ -39,7 +39,7 @@ my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'
 
 my $logdir        = $client_settings->{'logdir'};
 
-my $server_settings = argonaut_get_server_settings($config,$server_ip);
+my $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
 my $server_port   = $server_settings->{'port'};
 my $protocol      = $server_settings->{'protocol'};
@@ -87,7 +87,7 @@ sub get_id
       params  => [$host, '(objectClass=FAIobject)'],
     };
 
-    my $taskid = $client->call($protocol."://".$server_ip.":".$server_port, $callobj);
+    my $taskid = $client->call($protocol."://".$config->{'server_ip'}.":".$server_port, $callobj);
 
     if($taskid) {
       if ($taskid->is_error) {
@@ -117,7 +117,7 @@ sub rpc_call
     params  => $params,
   };
 
-  my $res = $client->call($protocol."://".$server_ip.":".$server_port, $callobj);
+  my $res = $client->call($protocol."://".$config->{'server_ip'}.":".$server_port, $callobj);
 
   if($res) {
     if ($res->is_error) {
