@@ -42,7 +42,7 @@ my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'
 my $file          = $client_settings->{'taskidfile'};
 my $logdir        = $client_settings->{'logdir'};
 
-my $server_settings = argonaut_get_server_settings($config,$server_ip);
+my $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
 my $server_port   = $server_settings->{'port'};
 my $protocol      = $server_settings->{'protocol'};
@@ -108,7 +108,7 @@ while (my $var = <STDIN>) {
           params  => [$taskid,$taskname,$progress],
         };
 
-        my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
+        my $res = $client->call($protocol.$config->{'server_ip'}.":".$server_port, $callobj);
 
         if($res) {
             if ($res->is_error) {
@@ -131,7 +131,7 @@ while (my $var = <STDIN>) {
               params  => [$taskid,$taskname,100],
             };
 
-            my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
+            my $res = $client->call($protocol.$config->{'server_ip'}.":".$server_port, $callobj);
 
             if($res) {
                 if ($res->is_error) {
@@ -154,7 +154,7 @@ while (my $var = <STDIN>) {
           params  => [$taskid,$taskname." ".$errorcode],
         };
 
-        my $res = $client->call($protocol.$server_ip.":".$server_port, $callobj);
+        my $res = $client->call($protocol.$config->{'server_ip'}.":".$server_port, $callobj);
 
         if($res) {
           if ($res->is_error) {

@@ -92,7 +92,7 @@ $log->add(
 
 sub readConfig {
   $config = argonaut_read_config;
-  my $settings = argonaut_get_server_settings($config,$server_ip);
+  my $settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
   $protocol               = $settings->{'protocol'};
   $server_port            = $settings->{'port'};

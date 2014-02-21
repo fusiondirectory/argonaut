@@ -49,7 +49,7 @@ my $interface     = $client_settings->{'interface'};
 my $logdir        = $client_settings->{'logdir'};
 my $myMac         = $client_settings->{'mac'};
 
-my $server_settings = argonaut_get_server_settings($config,$server_ip);
+my $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
 my $server_port   = $server_settings->{'port'};
 my $protocol      = $server_settings->{'protocol'};
@@ -74,7 +74,7 @@ my $callobj = {
   params  => [$myMac],
 };
 
-my $taskid = $client->call($protocol."://".$server_ip.":".$server_port, $callobj);
+my $taskid = $client->call($protocol."://".$config->{'server_ip'}.":".$server_port, $callobj);
 
 if($taskid) {
   if ($taskid->is_error) {
