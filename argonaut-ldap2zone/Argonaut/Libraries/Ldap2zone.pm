@@ -47,7 +47,7 @@ sub argonaut_ldap2zone
 
   my $config = argonaut_read_config;
 
-  my $settings = argonaut_get_ldap2zone_settings($config,$client_ip);
+  my $settings = argonaut_get_ldap2zone_settings($config,$config->{'client_ip'});
 
   my $BIND_DIR                =   $settings->{'binddir'};
   my $BIND_CACHE_DIR          =   $settings->{'bindcachedir'};
