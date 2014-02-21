@@ -42,7 +42,7 @@ my $logfile = "argonaut-client-fai-getid.log";
 
 my $config = argonaut_read_config;
 
-my $client_settings = argonaut_get_client_settings($config,$client_ip);
+my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
 
 my $file          = $client_settings->{'taskidfile'};
 my $interface     = $client_settings->{'interface'};

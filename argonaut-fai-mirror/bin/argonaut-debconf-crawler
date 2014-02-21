@@ -33,7 +33,7 @@ use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file clean
 
 my $config = argonaut_read_config;
 
-my $settings = argonaut_get_crawler_settings($config,$client_ip);
+my $settings = argonaut_get_crawler_settings($config,$config->{'client_ip'});
 
 my $servpath                =   $settings->{'mirrordir'};
 my $packagesfolder          =   $settings->{'packagesfolder'};

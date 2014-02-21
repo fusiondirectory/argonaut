@@ -35,7 +35,7 @@ my $logfile = "argonaut-fai-monitor.log";
 
 my $config = argonaut_read_config;
 
-my $client_settings = argonaut_get_client_settings($config,$client_ip);
+my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
 
 my $logdir        = $client_settings->{'logdir'};
 

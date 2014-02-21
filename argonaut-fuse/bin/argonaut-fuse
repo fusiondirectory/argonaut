@@ -150,7 +150,7 @@ sub readConfig
 {
     $config = argonaut_read_config;
 
-    my $settings = argonaut_get_fuse_settings($config,$client_ip);
+    my $settings = argonaut_get_fuse_settings($config,$config->{'client_ip'});
 
     $default_mode           =   $settings->{"default_mode"};
     $tftp_root              =   $settings->{"pxelinux_cfg"};

@@ -35,7 +35,7 @@ my $warnquota_file  = "/etc/warnquota.conf";
 my $quotatab_file   = "/etc/quotatab";
 my $config = argonaut_read_config;
 
-my $settings = get_quota_settings($config,$client_ip);
+my $settings = get_quota_settings($config,$config->{'client_ip'});
 
 write_warnquota_file ($settings,$warnquota_file);
 write_quotatab_file ($settings,$quotatab_file);

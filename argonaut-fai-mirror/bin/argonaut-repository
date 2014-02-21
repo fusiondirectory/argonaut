@@ -52,7 +52,7 @@ my $logfile = "ldap2repository.log";
 
 my $config;
 
-readConfig;
+readConfig();
 
 argonaut_create_dir($logdir);
 
@@ -88,7 +88,7 @@ exit 0;
 sub readConfig {
   $config = argonaut_read_config;
 
-  my $settings = argonaut_get_ldap2repository_settings($config,$client_ip);
+  my $settings = argonaut_get_ldap2repository_settings($config,$config->{'client_ip'});
 
   $mirrordir              =   $settings->{'mirrordir'};
   $proxy                  =   $settings->{'proxy'};
