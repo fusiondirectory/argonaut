@@ -40,8 +40,6 @@ use Log::Handler;
 use Argonaut::Libraries::Common qw(:ldap :config :file :array :net);
 use Argonaut::Libraries::Packages qw(get_repolines);
 
-use lib "/usr/lib/argonaut";
-
 my ($archs,$mirrordir,$proxy,$mac,$client_ip);
 my ($verbose,$errors,$source,$gpgcheck,$contents,$pdiff,$logdir);
 my $result;
