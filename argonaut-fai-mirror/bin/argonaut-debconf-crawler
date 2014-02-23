@@ -28,7 +28,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:net :config);
+use Argonaut::Libraries::Common qw(:ldap :net :config);
 use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file cleanup_and_extract);
 
 my $config = argonaut_read_config;
