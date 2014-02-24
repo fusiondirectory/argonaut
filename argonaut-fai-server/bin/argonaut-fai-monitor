@@ -95,7 +95,6 @@ sub get_id
         die "Error : ", $taskid->error_message;
       } else {
         $taskids{$host} = $taskid->content->{result};
-        close(ID);
       }
     } else {
       $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
