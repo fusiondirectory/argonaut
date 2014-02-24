@@ -9,6 +9,6 @@
 ### END SUBROUTINE INFO
 
 # Create configuration space
-MAC=`argonaut-client-fai-getid`
+MAC=`argonaut-getid`
 ldap2fai -v -c $FAI -n $HOSTNAME -m $MAC | tee /tmp/fai/ldap2fai.log
 
