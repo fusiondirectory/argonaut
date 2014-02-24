@@ -2,9 +2,9 @@
 
 #######################################################################
 #
-# argonaut-apply-quota
+# argonaut-quota
 #
-# Copyright (C) 2011-2013 FusionDirectory project
+# Copyright (C) 2011-2014 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
@@ -50,11 +50,11 @@ argonaut-apply-quota - applying quota from data stored in the ldap server
 
 =head1 SYNOPSIS
 
-argonaut-apply-quota
+argonaut-quota
 
 =head1 DESCRIPTION
 
-argonaut-apply-quota is a program used to apply quota on server based on the data stored in the ldap server
+argonaut-quota is a program used to apply quota on server based on the data stored in the ldap server
 
 =head1 BUGS
 
@@ -67,7 +67,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =over 1
 
-=item Copyright (C) 2011-2013 FusionDirectory project
+=item Copyright (C) 2011-2014 FusionDirectory project
 
 =back
 
