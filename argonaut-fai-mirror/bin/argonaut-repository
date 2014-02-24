@@ -71,7 +71,7 @@ argonaut_create_dir($outdir);
 
 if( $verbose eq "TRUE" ) {
   print "Generating sources.list and debmirror cronjob for server\n"
-    . "IP:     ${client_ip}\n"
+    . "IP:     $config->{'client_ip'}\n"
     . "Outdir: ${outdir}\n\n";
 }
 
