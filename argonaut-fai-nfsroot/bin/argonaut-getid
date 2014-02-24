@@ -2,9 +2,9 @@
 
 #######################################################################
 #
-# argonaut-client-fai-get-id -- get deployment queue job id
+# argonaut-get-id -- get deployment queue job id
 #
-# Copyright (C) 2011-2013 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2011-2014 FusionDirectory project <contact@fusiondirectory.org>
 #
 # Author: Côme BERNIGAUD
 #
@@ -38,7 +38,7 @@ This program ask the argonaut-server for the assigned taskid for the fai install
 It store the info into the file specified in the config file.
 =cut
 
-my $logfile = "argonaut-client-fai-getid.log";
+my $logfile = "argonaut-getid.log";
 
 my $config = argonaut_read_config;
 
@@ -56,7 +56,7 @@ my $protocol      = $server_settings->{'protocol'};
 
 argonaut_create_dir($logdir);
 
-my $log = Log::Handler->create_logger("argonaut-client-fai-get-id");
+my $log = Log::Handler->create_logger("argonaut-get-id");
 
 $log->add(
     file => {
