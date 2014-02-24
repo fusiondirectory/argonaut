@@ -97,7 +97,10 @@ sub readConfig {
   $verbose                =   $settings->{'verbose'};
   $mac                    =   $settings->{'mac'};
 
-  $logdir                 =   $config->val( log => "logdir"                   ,"/var/log/argonaut/");
+  $logdir                 =   $settings->{'logdir'};
+  if ($logdir eq "") {
+    $logdir = "/var/log/argonaut/";
+  }
 
   if ($errors eq "TRUE") {
     $errors = "--ignore-small-errors";
@@ -138,6 +141,7 @@ sub argonaut_get_ldap2repository_settings {
       'gpgcheck'        => 'argonautLdap2repGPGCheck',
       'contents'        => 'argonautLdap2repContents',
       'verbose'         => 'argonautLdap2repVerbose',
+      'logdir'          => 'argonautLdap2repLogDir',
     },
     @_
   );
