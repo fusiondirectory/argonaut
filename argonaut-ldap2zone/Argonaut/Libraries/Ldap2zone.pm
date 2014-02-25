@@ -2,7 +2,7 @@
 #
 # Argonaut::Libraries::Ldap2zone -- create zone files from LDAP DNS zones
 #
-# Copyright (C) 2012-2013 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2014 FusionDirectory project <contact@fusiondirectory.org>
 #
 # Author: Côme BERNIGAUD
 #
