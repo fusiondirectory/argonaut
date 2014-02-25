@@ -24,7 +24,6 @@
 package Argonaut::Server::ModulesPool;
 
 use strict;
-use diagnostics;
 use POE qw( Component::Pool::Thread );
 use threads::shared;
 use Module::Pluggable search_path => 'Argonaut::Server::Modules', require => 1;
