@@ -76,6 +76,8 @@ sub do_action {
 
   my $substatus = $self->handler_fai($self->{taskid},$self->{action},$params);
   $self->{task}->{substatus} = $substatus;
+  $self->{task}->{handler} = 1;
+
   return 0;
 }
 
@@ -126,6 +128,22 @@ sub flag {
 
   $mesg = $handle->unbind;   # take down session
 }
+
+sub update_task
+{
+}
+
+sub task_processed {
+  my ($self, $task) = @_;
+
+  if ($task->{status} ne 'processing') {
+    return $task;
+  }
+
+  $self->flag("localboot");
+  return $task;
+}
+
 
 1;
 

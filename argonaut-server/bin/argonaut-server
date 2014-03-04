@@ -372,7 +372,9 @@ POE::Session->create(
           if (defined $progress) {
             $heap->{tasks}->{$taskid}->{progress} = $progress;
             if ($progress >= 100) {
-              flag($heap->{tasks}->{$taskid}->{target},"localboot");
+              if (defined $heap->{tasks}->{$id}->{'handler'}) {
+                $heap->{tasks}->{$taskid}->{'handler'}->task_processed($heap->{tasks}->{$id});
+              }
               $heap->{tasks}->{$taskid}->{status} = "processed";
               if ($delete_finished_tasks) {
                 $kernel->call($session => 'delete_task' => $taskid);
