@@ -37,13 +37,28 @@ else
   msg "installation will not work please indicate the file to be copied into FAI_LDAP"
 fi
 
-#copy cacert.pem to /etc/ssl/certs
-if [ -n "$FAI_CERTS" ]; then
-  msg "installing ca certinto nfs root"
-  cp ${FAI_CERTS} ${NFSROOT}/etc/ssl/certs
+if [ -n "$FAI_SSL_CERT" ]; then
+  msg "installing ssl certificate into nfs root"
+  cp ${FAI_SSL_CERT} ${NFSROOT}/etc/ssl/certs
 else
-  msg "FAI_CERTS not mentionned in /etc/fai/nfsroot.conf"
-  msg "installation will not be able to use ssl certs with ldap, please indicate the certs to be copied into FAI_CERTS"
+  msg "FAI_SSL_CERT not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not be able to use ssl certificate with ldap, please indicate the certs to be copied into FAI_SSL_CERT"
+fi
+
+if [ -n "$FAI_SSL_CERT_KEY" ]; then
+  msg "installing ssl certificate private key into nfs root"
+  cp ${FAI_SSL_CERT_KEY} ${NFSROOT}/etc/ssl/private
+else
+  msg "FAI_SSL_CERT_KEY not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not be able to use ssl certifcate with ldap, please indicate the certificate private key to be copied into FAI_SSL_CERT_KEY"
+fi
+
+if [ -n "$FAI_SSL_CERT_CA" ]; then
+  msg "installing ssl ca certificate into nfs root"
+  cp ${FAI_SSL_CERT_CA} ${NFSROOT}/etc/ssl/certs
+else
+  msg "FAI_SSL_CERT_CA not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not be able to verify ssl certificate with ldap, please indicate the ca certificate to be copied into FAI_SSL_CERT_CA"
 fi
 
 # Get newest kernel installed inside the nfsroot
