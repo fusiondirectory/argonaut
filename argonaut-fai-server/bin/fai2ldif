@@ -42,13 +42,16 @@ my $base          = '<BASE>';
 my $faibaserdn    = 'ou=fai,ou=configs,ou=systems';
 my $faipackagerdn = 'ou=packages';
 my $faidiskrdn    = 'ou=disk';
+my $dist          = '';
 
 Getopt::Long::Configure ("bundling");
 
 GetOptions( 'v|verbose'         => \$verbose,
             'h|help'            => \&usage,
             'c|config-space=s'  => \$dump_dir,
-            'b|base=s'          => \$base )
+            'd|dist=s'          => \$dist,
+            'b|base=s'          => \$base
+          )
   or usage( 'Wrong parameters' );
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -57,18 +60,20 @@ sub usage
   (@_) && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
- usage: $0 [-hv] [-c config_space] -b base class
+ usage: $0 [-hv] [-c config_space] [-d dist] -b base class
 
   -h  : this (help) message
   -v  : be verbose
   -c  : config space (default: ${dump_dir})
   -b  : ldap base
+  -d  : distribution
 
 EOF
   exit -1;
 }
 
 my $class = shift or usage('Missing class parameter');
+$faibaserdn = $dist.$faibaserdn;
 
 if (-f "$dump_dir/package_config/$class") {
   my $file = file("$dump_dir/package_config/$class");
@@ -94,6 +99,8 @@ if (-f "$dump_dir/package_config/$class") {
       $cn .= '-'.$3 if $3;
       print "dn: cn=$cn,$faipackagerdn,$faibaserdn,$base\n";
       print "cn: $cn\n";
+      print 'objectClass: top'."\n";
+      print 'objectClass: FAIclass'."\n";
       print "objectClass: FAIpackageList\n";
       print "FAIinstallMethod: $1\n";
     } else {
@@ -120,6 +127,8 @@ if (-f "$dump_dir/disk_config/$class") {
 
   print "dn: cn=$class,$faidiskrdn,$faibaserdn,$base\n";
   print "cn: $class\n";
+  print 'objectClass: top'."\n";
+  print 'objectClass: FAIclass'."\n";
   print "objectClass: FAIpartitionTable\n";
   print "FAIpartitionMethod: setup-storage\n";
 
@@ -133,11 +142,13 @@ if (-f "$dump_dir/disk_config/$class") {
 
     if ( $line =~ /^disk_config\s+([^\s]+)\s+(.+)/ ) {
       if ($1 eq 'lvm') {
-        print "lvm\n";
+        print "lvm\n" if $verbose;
       } else {
         $disk_cn = $1;
         print "dn: cn=$disk_cn,cn=$class,$faidiskrdn,$faibaserdn,$base\n";
         print "cn: $disk_cn\n";
+        print 'objectClass: top'."\n";
+        print 'objectClass: FAIclass'."\n";
         print "objectClass: FAIpartitionDisk\n";
         print "FAIdiskType: disk\n";
         foreach my $option (split ' ',$2) {
@@ -145,14 +156,21 @@ if (-f "$dump_dir/disk_config/$class") {
         }
       }
     } else {
-      if ($line =~ /([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+(createopts="(.*)")?\s+(tuneopts="(.*)")?/) {
+      if ($line =~ /([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)(\s+createopts="(.*)")?(\s+tuneopts="(.*)")?/) {
         print "dn: FAIpartitionNr=$partitionNr,cn=$disk_cn,cn=$class,$faidiskrdn,$faibaserdn,$base\n";
         print "FAIpartitionNr: $partitionNr\n";
+        print "cn: $partitionNr\n";
+        print 'objectClass: top'."\n";
+        print 'objectClass: FAIclass'."\n";
         print "objectClass: FAIpartitionEntry\n";
         $partitionNr++;
         print "FAIpartitionType: $1\nFAImountPoint: $2\nFAIpartitionSize: $3\nFAIfsType: $4\nFAImountOptions: $5\n";
+        chomp $7 if defined $7;
+        chomp $9 if defined $9;
         print "FAIfsCreateOptions: $7\n" if defined $7;
         print "FAIfsTuneOptions: $9\n" if defined $9;
+      } else {
+        print STDERR "Could not parse line $line\n";
       }
     }
   }
