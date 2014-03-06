@@ -78,7 +78,9 @@ EOF
 }
 
 my $class = shift or usage('Missing class parameter');
-$faibaserdn = $dist.$faibaserdn;
+if ($dist) {
+  $faibaserdn = "ou=$dist,$faibaserdn";
+}
 if ($outfilename) {
   open($outfile, '>'.$outfilename) or die "Could not open '$outfilename'\n";
 } else {
