@@ -42,6 +42,7 @@ my $base          = '<BASE>';
 my $faibaserdn    = 'ou=fai,ou=configs,ou=systems';
 my $faipackagerdn = 'ou=packages';
 my $faidiskrdn    = 'ou=disk';
+my $faivarrdn     = 'ou=variables';
 my $dist          = '';
 my $outfile;
 my $outfilename   = '';
@@ -84,57 +85,60 @@ if ($outfilename) {
   $outfile = *STDOUT;
 }
 
-if (-f "$dump_dir/package_config/$class") {
-  my $file = file("$dump_dir/package_config/$class");
+parse_class("package_config/$class", sub {return {};}, \&parse_line_package);
+parse_class("disk_config/$class", \&parse_init_disk, \&parse_line_disk);
+parse_class("class/$class.var", \&parse_init_variables, \&parse_line_variables);
 
-  print "parsing $file\n" if $verbose;
+sub parse_class
+{
+  my ($filepath, $init_parser, $line_parser) = @_;
+  $filepath = "$dump_dir/$filepath";
 
-  my $name = $file;
-  $name =~ s|^.*/||;
+  if (-f $filepath) {
+    my $file = file($filepath);
 
-  my @lines = $file->slurp;
+    print "parsing $file\n" if $verbose;
 
-  foreach my $line ( @lines ) {
-    # remove comments
-    $line =~ s/#.*$//;
-    # remove \n from the end of each line
-    chomp $line;
+    my $parser = &$init_parser();
 
-    next if ( $line =~ /^$/ );
+    my @lines = $file->slurp;
+    foreach my $line ( @lines ) {
+      # remove comments
+      $line =~ s/#.*$//;
+      # remove \n from the end of each line
+      chomp $line;
 
-    # only process for lines beginning with "class", and extracting the 2nd word (the class name)
-    if ( $line =~ /^PACKAGES\s+([^ ]+)(\s+([^ ]*))?/ ) {
-      my $cn = $name;
-      $cn .= '-'.$3 if $3;
-      print $outfile "dn: cn=$cn,$faipackagerdn,$faibaserdn,$base\n";
-      print $outfile "cn: $cn\n";
-      print $outfile 'objectClass: top'."\n";
-      print $outfile 'objectClass: FAIclass'."\n";
-      print $outfile "objectClass: FAIpackageList\n";
-      print $outfile "FAIinstallMethod: $1\n";
-    } else {
-      my @packages = split(/\s+/, $line);
-      foreach my $package (@packages) {
-        print $outfile "FAIpackage: $package\n";
-      }
+      next if ( $line =~ /^$/ );
+
+    $parser->$line_parser($line);
     }
   }
 }
 
-if (-f "$dump_dir/disk_config/$class") {
-  my $file = file("$dump_dir/disk_config/$class");
+sub parse_line_package
+{
+  my $infos = shift;
+  my $line = shift;
+  # only process for lines beginning with "class", and extracting the 2nd word (the class name)
+  if ( $line =~ /^PACKAGES\s+([^ ]+)(\s+([^ ]*))?/ ) {
+    my $cn = $class;
+    $cn .= '-'.$3 if $3;
+    print $outfile "dn: cn=$cn,$faipackagerdn,$faibaserdn,$base\n";
+    print $outfile "cn: $cn\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAIpackageList\n";
+    print $outfile "FAIinstallMethod: $1\n";
+  } else {
+    my @packages = split(/\s+/, $line);
+    foreach my $package (@packages) {
+      print $outfile "FAIpackage: $package\n";
+    }
+  }
+}
 
-  print "parsing $file\n" if $verbose;
-
-  my $name = $file;
-  $name =~ s|^.*/||;
-
-  my @lines = $file->slurp;
-
-  my $disk_cn;
-  my $disk_type;
-  my $partitionNr=0;
-
+sub parse_init_disk
+{
   print $outfile "dn: cn=$class,$faidiskrdn,$faibaserdn,$base\n";
   print $outfile "cn: $class\n";
   print $outfile 'objectClass: top'."\n";
@@ -142,67 +146,91 @@ if (-f "$dump_dir/disk_config/$class") {
   print $outfile "objectClass: FAIpartitionTable\n";
   print $outfile "FAIpartitionMethod: setup-storage\n";
 
-  foreach my $line ( @lines ) {
-    # remove comments
-    $line =~ s/#.*$//;
-    # remove \n from the end of each line
-    chomp $line;
+  return {};
+}
 
-    next if ( $line =~ /^$/ );
+sub parse_line_disk
+{
+  my $infos = shift;
+  my $line  = shift;
 
-    if ( $line =~ /^disk_config\s+([^\s]+)(\s+(.+))?/ ) {
-      if ($1 eq 'lvm') {
-        $disk_type = 'lvm';
-      } else {
-        $disk_type = 'disk';
-        $disk_cn = $1;
-        print $outfile "dn: cn=$disk_cn,cn=$class,$faidiskrdn,$faibaserdn,$base\n";
-        print $outfile "cn: $disk_cn\n";
-        print $outfile 'objectClass: top'."\n";
-        print $outfile 'objectClass: FAIclass'."\n";
-        print $outfile "objectClass: FAIpartitionDisk\n";
-        print $outfile "FAIdiskType: $disk_type\n";
-        foreach my $option (split ' ',$3) {
-          print $outfile "FAIdiskOption: $option\n";
-        }
-        $partitionNr=1;
-      }
-    } elsif (($disk_type eq 'lvm') and ($line =~ /^vg\s+([^\s]+)\s+([^\s]+)/)) {
-      $disk_cn = $1;
-      print $outfile "dn: cn=$disk_cn,cn=$class,$faidiskrdn,$faibaserdn,$base\n";
-      print $outfile "cn: $disk_cn\n";
+  if ( $line =~ /^disk_config\s+([^\s]+)(\s+(.+))?/ ) {
+    if ($1 eq 'lvm') {
+      $infos->{'disk_type'} = 'lvm';
+    } else {
+      $infos->{'disk_type'} = 'disk';
+      $infos->{'disk_cn'}   = $1;
+      print $outfile 'dn: cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+      print $outfile 'cn: '.$infos->{'disk_cn'}."\n";
       print $outfile 'objectClass: top'."\n";
       print $outfile 'objectClass: FAIclass'."\n";
       print $outfile "objectClass: FAIpartitionDisk\n";
-      print $outfile "FAIdiskType: $disk_type\n";
-      foreach my $option (split ',',$2) {
-        print $outfile "FAIlvmDevice: $option\n";
+      print $outfile 'FAIdiskType: '.$infos->{'disk_type'}."\n";
+      foreach my $option (split ' ',$3) {
+        print $outfile "FAIdiskOption: $option\n";
       }
-      $partitionNr=1;
-    } elsif ($line =~ /^([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)(\s+createopts="(.*)")?(\s+tuneopts="(.*)")?/) {
-      print $outfile "dn: FAIpartitionNr=$partitionNr,cn=$disk_cn,cn=$class,$faidiskrdn,$faibaserdn,$base\n";
-      print $outfile "FAIpartitionNr: $partitionNr\n";
-      print $outfile 'objectClass: top'."\n";
-      print $outfile 'objectClass: FAIclass'."\n";
-      print $outfile "objectClass: FAIpartitionEntry\n";
-      $partitionNr++;
-      if ($disk_type eq 'lvm') {
-        my $cn = $1;
-        $cn =~ s/^$disk_cn-//;
-        print $outfile "cn: $cn\n";
-        print $outfile "FAIpartitionType: lvm\n";
-      } else {
-        print $outfile "cn: $partitionNr\n";
-        print $outfile "FAIpartitionType: $1\n";
-      }
-      print $outfile "FAImountPoint: $2\nFAIpartitionSize: $3\nFAIfsType: $4\nFAImountOptions: $5\n";
-      chomp $7 if defined $7;
-      chomp $9 if defined $9;
-      print $outfile "FAIfsCreateOptions: $7\n" if defined $7;
-      print $outfile "FAIfsTuneOptions: $9\n" if defined $9;
-    } else {
-      print STDERR "Could not parse line $line\n";
+      $infos->{'partitionNr'} = 1;
     }
+  } elsif (($infos->{'disk_type'} eq 'lvm') and ($line =~ /^vg\s+([^\s]+)\s+([^\s]+)/)) {
+    $infos->{'disk_cn'} = $1;
+    print $outfile 'dn: cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+    print $outfile 'cn: '.$infos->{'disk_cn'}."\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAIpartitionDisk\n";
+    print $outfile 'FAIdiskType: '.$infos->{'disk_type'}."\n";
+    foreach my $option (split ',',$2) {
+      print $outfile "FAIlvmDevice: $option\n";
+    }
+    $infos->{'partitionNr'} = 1;
+  } elsif ($line =~ /^([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)(\s+createopts="([^"]*)")?(\s+tuneopts="([^"]*)")?/) {
+    print $outfile 'dn: FAIpartitionNr='.$infos->{'partitionNr'}.',cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+    print $outfile 'FAIpartitionNr: '.$infos->{'partitionNr'}."\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAIpartitionEntry\n";
+    if ($infos->{'disk_type'} eq 'lvm') {
+      my $cn = $1;
+      $cn =~ s/^$infos->{'disk_cn'}-//;
+      print $outfile "cn: $cn\n";
+      print $outfile "FAIpartitionType: lvm\n";
+    } else {
+      print $outfile 'cn: '.$infos->{'partitionNr'}."\n";
+      print $outfile "FAIpartitionType: $1\n";
+    }
+    print $outfile "FAImountPoint: $2\nFAIpartitionSize: $3\nFAIfsType: $4\nFAImountOptions: $5\n";
+    chomp $7 if defined $7;
+    chomp $9 if defined $9;
+    print $outfile "FAIfsCreateOptions: $7\n" if defined $7;
+    print $outfile "FAIfsTuneOptions: $9\n" if defined $9;
+    $infos->{'partitionNr'}++;
+  } else {
+    print STDERR "Could not parse line $line\n";
   }
+}
 
+sub parse_init_variables
+{
+  print $outfile "dn: cn=$class,$faivarrdn,$faibaserdn,$base\n";
+  print $outfile 'objectClass: top'."\n";
+  print $outfile 'objectClass: FAIclass'."\n";
+  print $outfile "objectClass: FAIvariable\n";
+  print $outfile "cn: $class\n";
+  return {};
+}
+
+sub parse_line_variables
+{
+  my $infos = shift;
+  my $line  = shift;
+
+  if ( $line =~ /^([^=]+)=(.*)$/ ) {
+    print $outfile "dn: cn=$1,cn=$class,$faivarrdn,$faibaserdn,$base\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAIvariableEntry\n";
+    print $outfile "cn: $1\nFAIvariableContent: $2\n";
+  } else {
+    print STDERR "Could not parse line $line\n";
+  }
 }
