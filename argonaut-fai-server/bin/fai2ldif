@@ -33,6 +33,7 @@ use Getopt::Long;
 
 # used to manage files
 use Path::Class;
+use File::Find;
 
 #~ use Argonaut::Libraries::FAI qw(:flags);
 
@@ -90,6 +91,7 @@ if ($outfilename) {
 parse_class("package_config/$class", sub {return {};}, \&parse_line_package);
 parse_class("disk_config/$class", \&parse_init_disk, \&parse_line_disk);
 parse_class("class/$class.var", \&parse_init_variables, \&parse_line_variables);
+parse_templates("$dump_dir/files");
 
 sub parse_class
 {
@@ -125,7 +127,7 @@ sub parse_line_package
   if ( $line =~ /^PACKAGES\s+([^ ]+)(\s+([^ ]*))?/ ) {
     my $cn = $class;
     $cn .= '-'.$3 if $3;
-    print $outfile "dn: cn=$cn,$faipackagerdn,$faibaserdn,$base\n";
+    print $outfile "\ndn: cn=$cn,$faipackagerdn,$faibaserdn,$base\n";
     print $outfile "cn: $cn\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
@@ -141,7 +143,7 @@ sub parse_line_package
 
 sub parse_init_disk
 {
-  print $outfile "dn: cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+  print $outfile "\ndn: cn=$class,$faidiskrdn,$faibaserdn,$base\n";
   print $outfile "cn: $class\n";
   print $outfile 'objectClass: top'."\n";
   print $outfile 'objectClass: FAIclass'."\n";
@@ -162,7 +164,7 @@ sub parse_line_disk
     } else {
       $infos->{'disk_type'} = 'disk';
       $infos->{'disk_cn'}   = $1;
-      print $outfile 'dn: cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+      print $outfile "\n".'dn: cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
       print $outfile 'cn: '.$infos->{'disk_cn'}."\n";
       print $outfile 'objectClass: top'."\n";
       print $outfile 'objectClass: FAIclass'."\n";
@@ -175,7 +177,7 @@ sub parse_line_disk
     }
   } elsif (($infos->{'disk_type'} eq 'lvm') and ($line =~ /^vg\s+([^\s]+)\s+([^\s]+)/)) {
     $infos->{'disk_cn'} = $1;
-    print $outfile 'dn: cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+    print $outfile "\n".'dn: cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
     print $outfile 'cn: '.$infos->{'disk_cn'}."\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
@@ -186,7 +188,7 @@ sub parse_line_disk
     }
     $infos->{'partitionNr'} = 1;
   } elsif ($line =~ /^([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)(\s+createopts="([^"]*)")?(\s+tuneopts="([^"]*)")?/) {
-    print $outfile 'dn: FAIpartitionNr='.$infos->{'partitionNr'}.',cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+    print $outfile "\n".'dn: FAIpartitionNr='.$infos->{'partitionNr'}.',cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
     print $outfile 'FAIpartitionNr: '.$infos->{'partitionNr'}."\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
@@ -213,7 +215,7 @@ sub parse_line_disk
 
 sub parse_init_variables
 {
-  print $outfile "dn: cn=$class,$faivarrdn,$faibaserdn,$base\n";
+  print $outfile "\ndn: cn=$class,$faivarrdn,$faibaserdn,$base\n";
   print $outfile 'objectClass: top'."\n";
   print $outfile 'objectClass: FAIclass'."\n";
   print $outfile "objectClass: FAIvariable\n";
@@ -227,7 +229,7 @@ sub parse_line_variables
   my $line  = shift;
 
   if ( $line =~ /^([^=]+)=(.*)$/ ) {
-    print $outfile "dn: cn=$1,cn=$class,$faivarrdn,$faibaserdn,$base\n";
+    print $outfile "\ndn: cn=$1,cn=$class,$faivarrdn,$faibaserdn,$base\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
     print $outfile "objectClass: FAIvariableEntry\n";
@@ -235,4 +237,23 @@ sub parse_line_variables
   } else {
     print STDERR "Could not parse line $line\n";
   }
+}
+
+sub parse_templates
+{
+  my $dirname = shift;
+  my $tf_finder = sub {
+    return if ! -f;
+    return if ! /^$class$/;
+    my $path = $File::Find::name;
+    $path =~ s/^$dirname//;
+    print $File::Find::name."\n";
+    print $outfile "\n".'dn: cn='."$_,cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+    print $outfile 'cn: '."$_\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAItemplateEntry\n";
+    print $outfile "FAItemplatePath: $path\n";
+  };
+  find( $tf_finder, $dirname );
 }
