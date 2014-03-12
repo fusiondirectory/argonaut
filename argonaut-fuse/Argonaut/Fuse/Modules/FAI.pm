@@ -54,7 +54,7 @@ sub get_module_settings {
       'fai_flags' => "argonautFuseFaiFlags",
       'nfs_root'  => "argonautFuseNfsRoot",
     },
-    $main::config,$main::client_ip
+    $main::config,$main::config->{'client_ip'}
   );
 }
 

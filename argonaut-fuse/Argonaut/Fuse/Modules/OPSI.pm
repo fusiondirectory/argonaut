@@ -57,7 +57,7 @@ sub get_module_settings {
       'server'    => "argonautFuseOpsiServer",
       'lang'      => "argonautFuseOpsiLang"
     },
-    $main::config,$main::client_ip
+    $main::config,$main::config->{'client_ip'}
   );
 }
 
