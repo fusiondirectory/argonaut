@@ -372,8 +372,8 @@ POE::Session->create(
           if (defined $progress) {
             $heap->{tasks}->{$taskid}->{progress} = $progress;
             if ($progress >= 100) {
-              if (defined $heap->{tasks}->{$id}->{'handler'}) {
-                $heap->{tasks}->{$taskid}->{'handler'}->task_processed($heap->{tasks}->{$id});
+              if (defined $heap->{tasks}->{$taskid}->{'handler'}) {
+                $heap->{tasks}->{$taskid}->{'handler'}->task_processed($heap->{tasks}->{$taskid});
               }
               $heap->{tasks}->{$taskid}->{status} = "processed";
               if ($delete_finished_tasks) {
