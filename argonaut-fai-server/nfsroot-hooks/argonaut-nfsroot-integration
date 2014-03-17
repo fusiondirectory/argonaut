@@ -26,9 +26,10 @@ msg() {
   echo "nfsroot-hooks/argonaut-nfsroot-integration: $1"
 }
 
-#copy argonaut.conf & ldap.conf
 msg "Copy argonaut.conf and ldap.conf"
 cp /etc/argonaut/argonaut.conf "${NFSROOT}"/etc/argonaut
+
+
 if [ -n "$FAI_LDAP" ]; then
   msg "installing $FAI_LDAP into ${NFSROOT}"
   cp ${FAI_LDAP} ${NFSROOT}${FAI_LDAP}
