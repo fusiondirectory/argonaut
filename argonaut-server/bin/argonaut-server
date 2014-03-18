@@ -61,7 +61,7 @@ use Socket;
 
 our ($config,$protocol,$server_ip,$server_port);
 my ($sslkeyfile,$sslcertfile,$iptool,$delete_finished_tasks,
-    $interface,$logdir,$packages_folder);
+    $interface,$logdir,$packages_folder,$fetch_packages);
 my $logfile = "argonaut-server.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-server.pid";
@@ -98,6 +98,7 @@ sub readConfig {
   $server_port            = $settings->{'port'};
   $iptool                 = $settings->{'iptool'};
   $delete_finished_tasks  = $settings->{'delete_finished_tasks'};
+  $fetch_packages         = $settings->{'fetch_packages'};
   $interface              = $settings->{'interface'};
   $logdir                 = $settings->{'logdir'};
   $sslkeyfile             = $settings->{'keyfile'};
@@ -299,15 +300,17 @@ POE::Session->create(
                 ];
             #~ $_[KERNEL]->yield(add=>undef,undef,"job_trigger_action_halt",["00:11:22:33:44:55"],{timestamp=>1314107700});
             $log->notice("Argonaut server launched on port $server_port");
-            $_[HEAP]{crawler} = POE::Component::Schedule->add(
-                $_[SESSION],
-                packages_crawler => DateTime::Set->from_recurrence(
-                                after      => DateTime->now,
-                                recurrence => sub {
-                                    return $_[0]->add( days => 1 )
-                                },
-                            ));
-            $_[KERNEL]->yield("packages_crawler"); #FIXME should be included in the recurrence
+            if ($fetch_packages) {
+                $_[HEAP]{crawler} = POE::Component::Schedule->add(
+                    $_[SESSION],
+                    packages_crawler => DateTime::Set->from_recurrence(
+                                    after      => DateTime->now,
+                                    recurrence => sub {
+                                        return $_[0]->add( days => 1 )
+                                    },
+                                ));
+                $_[KERNEL]->yield("packages_crawler");
+            }
         },
         echo => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];

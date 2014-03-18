@@ -706,6 +706,7 @@ sub argonaut_get_server_settings {
       'protocol'              => "argonautProtocol",
       'iptool'                => "argonautIpTool",
       'delete_finished_tasks' => "argonautDeleteFinished",
+      'fetch_packages'        => "argonautFetchPackages",
       'interface'             => "argonautWakeOnLanInterface",
       'logdir'                => "argonautLogDir"
     },
