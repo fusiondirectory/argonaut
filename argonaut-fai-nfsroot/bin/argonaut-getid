@@ -42,6 +42,10 @@ my $logfile = "argonaut-getid.log";
 
 my $config = argonaut_read_config;
 
+if ($ARGV[0]) {
+  $config->{'client_ip'} = $ARGV[0];
+}
+
 my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
 
 my $file          = $client_settings->{'taskidfile'};
