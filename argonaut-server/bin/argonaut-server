@@ -97,8 +97,8 @@ sub readConfig {
   $protocol               = $settings->{'protocol'};
   $server_port            = $settings->{'port'};
   $iptool                 = $settings->{'iptool'};
-  $delete_finished_tasks  = $settings->{'delete_finished_tasks'};
-  $fetch_packages         = $settings->{'fetch_packages'};
+  $delete_finished_tasks  = ($settings->{'delete_finished_tasks'} eq "TRUE");
+  $fetch_packages         = ($settings->{'fetch_packages'} eq "TRUE");
   $interface              = $settings->{'interface'};
   $logdir                 = $settings->{'logdir'};
   $sslkeyfile             = $settings->{'keyfile'};
