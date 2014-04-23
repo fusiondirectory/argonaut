@@ -43,7 +43,7 @@ sub print_usage
 my $i_arg = 0;
 
 foreach my $arg ( @ARGV ) {
-  if ($dumpdir == 1) {
+  if (defined $dumpdir and $dumpdir == 1) {
     $dumpdir = $arg;
   } elsif (lc($arg) eq "--verbose") {
     $verbose_arg = 1;
