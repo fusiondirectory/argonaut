@@ -32,6 +32,7 @@ use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 my $zone_arg = undef;
 my $verbose_arg = 0;
 my $norefresh = 0;
+my $dumpdir = undef;
 
 sub print_usage
 {
@@ -42,10 +43,14 @@ sub print_usage
 my $i_arg = 0;
 
 foreach my $arg ( @ARGV ) {
-  if (lc($arg) eq "--verbose") {
+  if ($dumpdir == 1) {
+    $dumpdir = $arg;
+  } elsif (lc($arg) eq "--verbose") {
     $verbose_arg = 1;
   } elsif (lc($arg) eq "--norestart") {
     $norefresh = 1;
+  } elsif (lc($arg) eq "--dumpdir") {
+    $dumpdir = 1;
   } elsif ($i_arg==0) {
     $zone_arg = $arg;
     $i_arg++;
@@ -53,12 +58,15 @@ foreach my $arg ( @ARGV ) {
     print_usage();
   }
 }
+if ($dumpdir == 1) {
+  print_usage();
+}
 
 if (!$zone_arg) {
   print_usage();
 }
 
-argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh);
+argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir);
 
 __END__
 
@@ -68,7 +76,7 @@ argonaut-ldap2zone - creating bind zone files and refreshing the server
 
 =head1 SYNOPSIS
 
-argonaut-ldap2zone [--verbose] [--norestart] ZONE
+argonaut-ldap2zone [--verbose] [--norestart] [--dumpdir dir] ZONE
 
 =head1 DESCRIPTION
 
@@ -80,6 +88,8 @@ B<--verbose>
     be verbose
 B<--norestart>
     do not restart bind
+B<--dumpdir> dir
+    override bind_dir and bind_cache_dir with dir for testing purposes
 
 =head1 EXAMPLES
 

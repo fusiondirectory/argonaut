@@ -43,7 +43,7 @@ Params : zone name, verbose flag
 =cut
 sub argonaut_ldap2zone
 {
-  my($zone,$verbose,$norefresh) = @_;
+  my($zone,$verbose,$norefresh,$dumpdir) = @_;
 
   my $config = argonaut_read_config;
 
@@ -51,6 +51,10 @@ sub argonaut_ldap2zone
 
   my $BIND_DIR                =   $settings->{'binddir'};
   my $BIND_CACHE_DIR          =   $settings->{'bindcachedir'};
+  if ($dumpdir) {
+    $BIND_DIR = $dumpdir;
+    $BIND_CACHE_DIR = $dumpdir;
+  }
   my $ALLOW_NOTIFY            =   $settings->{'allownotify'};
   my $ALLOW_UPDATE            =   $settings->{'allowupdate'};
   my $ALLOW_TRANSFER          =   $settings->{'allowtransfer'};
