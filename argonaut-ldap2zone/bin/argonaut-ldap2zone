@@ -31,6 +31,7 @@ use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 
 my $zone_arg = undef;
 my $verbose_arg = 0;
+my $norefresh = 0;
 
 sub print_usage
 {
@@ -43,6 +44,8 @@ my $i_arg = 0;
 foreach my $arg ( @ARGV ) {
   if (lc($arg) eq "--verbose") {
     $verbose_arg = 1;
+  } elsif (lc($arg) eq "--norestart") {
+    $norefresh = 1;
   } elsif ($i_arg==0) {
     $zone_arg = $arg;
     $i_arg++;
@@ -55,7 +58,7 @@ if (!$zone_arg) {
   print_usage();
 }
 
-argonaut_ldap2zone($zone_arg,$verbose_arg);
+argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh);
 
 __END__
 
@@ -65,7 +68,7 @@ argonaut-ldap2zone - creating bind zone files and refreshing the server
 
 =head1 SYNOPSIS
 
-argonaut-ldap2zone [--verbose] ZONE
+argonaut-ldap2zone [--verbose] [--norestart] ZONE
 
 =head1 DESCRIPTION
 
@@ -75,6 +78,8 @@ argonaut-ldap2zone is a program used to create bind zone files and refresh the b
 
 B<--verbose>
     be verbose
+B<--norestart>
+    do not restart bind
 
 =head1 EXAMPLES
 

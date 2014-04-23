@@ -43,7 +43,7 @@ Params : zone name, verbose flag
 =cut
 sub argonaut_ldap2zone
 {
-  my($zone,$verbose) = @_;
+  my($zone,$verbose,$norefresh) = @_;
 
   my $config = argonaut_read_config;
 
@@ -82,10 +82,12 @@ sub argonaut_ldap2zone
 
   create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
-  system("$RNDC reconfig")  == 0 or die "$RNDC reconfig failed : $?";
-  system("$RNDC freeze")    == 0 or die "$RNDC freeze failed : $?";
-  system("$RNDC reload")    == 0 or die "$RNDC reload failed : $?";
-  system("$RNDC thaw")      == 0 or die "$RNDC thaw failed : $?";
+  unless ($norefresh) {
+    system("$RNDC reconfig")  == 0 or die "$RNDC reconfig failed : $?";
+    system("$RNDC freeze")    == 0 or die "$RNDC freeze failed : $?";
+    system("$RNDC reload")    == 0 or die "$RNDC reload failed : $?";
+    system("$RNDC thaw")      == 0 or die "$RNDC thaw failed : $?";
+  }
 }
 
 =item zoneparse
