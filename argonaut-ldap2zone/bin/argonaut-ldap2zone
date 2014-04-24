@@ -32,7 +32,7 @@ use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 my $zone_arg = undef;
 my $verbose_arg = 0;
 my $norefresh = 0;
-my $dumpdir = undef;
+my $dumpdir = '';
 
 sub print_usage
 {
@@ -43,14 +43,14 @@ sub print_usage
 my $i_arg = 0;
 
 foreach my $arg ( @ARGV ) {
-  if (defined $dumpdir and $dumpdir == 1) {
+  if (not defined $dumpdir) {
     $dumpdir = $arg;
   } elsif (lc($arg) eq "--verbose") {
     $verbose_arg = 1;
   } elsif (lc($arg) eq "--norestart") {
     $norefresh = 1;
   } elsif (lc($arg) eq "--dumpdir") {
-    $dumpdir = 1;
+    undef $dumpdir;
   } elsif ($i_arg==0) {
     $zone_arg = $arg;
     $i_arg++;
@@ -58,8 +58,10 @@ foreach my $arg ( @ARGV ) {
     print_usage();
   }
 }
-if ($dumpdir == 1) {
+if (not defined $dumpdir) {
   print_usage();
+} elsif ($dumpdir eq '') {
+  undef $dumpdir;
 }
 
 if (!$zone_arg) {
