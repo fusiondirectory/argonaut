@@ -172,6 +172,12 @@ sub argonaut_ldap_init {
   }
 
   my $ldap = Net::LDAP->new( $ldapuris );
+
+  if ( ! defined $ldap ) {
+    %results = ( 'ERROR' => 1, 'ERRORMSG' => "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'");
+    return \%results;
+  }
+
   if (scalar($tlsoptions) != 0) {
     $ldap->start_tls(
       verify      => $tlsoptions->{'REQCERT'},
@@ -179,11 +185,6 @@ sub argonaut_ldap_init {
       clientkey   => $tlsoptions->{'KEY'},
       capath      => $tlsoptions->{'CACERTDIR'}
     );
-  }
-
-  if ( ! defined $ldap ) {
-    %results = ( 'ERROR' => 1, 'ERRORMSG' => "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'");
-    return \%results;
   }
 
   $results{ 'HANDLE' } = $ldap;
