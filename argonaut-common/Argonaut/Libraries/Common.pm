@@ -152,7 +152,7 @@ sub argonaut_get_mac_pxe {
 #
 sub argonaut_ldap_init {
   my( $ldap_conf, $prompt_dn, $bind_dn,
-      $prompt_pwd, $bind_pwd, $obfuscate_pwd ) = @_;
+      $prompt_pwd, $bind_pwd, $obfuscate_pwd, $ldap_tls ) = @_;
   my %results;
 
   undef $bind_dn if ($bind_dn eq '');
@@ -178,7 +178,7 @@ sub argonaut_ldap_init {
     return \%results;
   }
 
-  if (scalar($tlsoptions) != 0) {
+  if ($ldap_tls) {
     $ldap->start_tls(
       verify      => $tlsoptions->{'REQCERT'},
       clientcert  => $tlsoptions->{'CERT'},
@@ -247,7 +247,7 @@ sub argonaut_ldap_init {
 
 sub argonaut_ldap_handle {
   my ($config)  = @_;
-  my $ldapinfos = argonaut_ldap_init ($config->{'ldap_configfile'}, 0, $config->{'ldap_dn'}, 0, $config->{'ldap_password'});
+  my $ldapinfos = argonaut_ldap_init ($config->{'ldap_configfile'}, 0, $config->{'ldap_dn'}, 0, $config->{'ldap_password'}, 0, $config->{'ldap_tls'});
 
   if ( $ldapinfos->{'ERROR'} > 0) {
     die $ldapinfos->{'ERRORMSG'}."$die_endl";
@@ -590,11 +590,17 @@ sub argonaut_read_config {
   my %res = ();
   my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-  $res{'server_ip'}       = $config->val( server  => "server_ip"  ,"");
-  $res{'client_ip'}       = $config->val( client  => "client_ip"  ,"");
-  $res{'ldap_configfile'} = $config->val( ldap    => "config"     ,"/etc/ldap/ldap.conf");
-  $res{'ldap_dn'}         = $config->val( ldap    => "dn"         ,"");
-  $res{'ldap_password'}   = $config->val( ldap    => "password"   ,"");
+  $res{'server_ip'}       = $config->val( server  => "server_ip", "");
+  $res{'client_ip'}       = $config->val( client  => "client_ip", "");
+  $res{'ldap_configfile'} = $config->val( ldap    => "config",    "/etc/ldap/ldap.conf");
+  $res{'ldap_dn'}         = $config->val( ldap    => "dn",        "");
+  $res{'ldap_password'}   = $config->val( ldap    => "password",  "");
+  $res{'ldap_tls'}        = $config->val( ldap    => "tls",       "off");
+
+  if ($res{'ldap_tls'} !~ m/^off|on$/i) {
+    warn "Unknown value for option ldap/tls: ".$res{'ldap_tls'}." (valid values are on/off)\n";
+  }
+  $res{'ldap_tls'} = ($res{'ldap_tls'} =~ m/^on$/i);
 
   return \%res;
 }

@@ -235,7 +235,7 @@ sub ldap_authenticate {
   if (!defined($login) || !defined($password)) {
     return 0;
   }
-  my $ldapinfos = argonaut_ldap_init ($config->{'ldap_configfile'}, 0, $login, 0, $password);
+  my $ldapinfos = argonaut_ldap_init ($config->{'ldap_configfile'}, 0, $login, 0, $password, 0, $config->{'ldap_tls'});
 
   if ( $ldapinfos->{'ERROR'} > 0) {
     return 0;
