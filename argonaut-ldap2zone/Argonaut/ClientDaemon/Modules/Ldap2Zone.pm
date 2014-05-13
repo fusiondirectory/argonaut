@@ -28,9 +28,11 @@ use warnings;
 
 use 5.008;
 
-use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
-
+use Argonaut::Libraries::Common qw(:config);
 use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
+
+use if USE_LEGACY_JSON_RPC      base qw(JSON::RPC::Legacy::Procedure);
+use if not USE_LEGACY_JSON_RPC  base qw(JSON::RPC::Procedure);
 
 =item start
 start ldap2zone on the computer and store the result in the right place

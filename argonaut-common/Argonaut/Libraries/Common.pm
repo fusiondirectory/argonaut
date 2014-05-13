@@ -31,6 +31,8 @@ use warnings;
 
 use 5.008;
 
+use constant USE_LEGACY_JSON_RPC => 0;
+
 use Net::LDAP;
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
@@ -86,6 +88,7 @@ BEGIN
     )],
      'config' => [qw(
       &argonaut_read_config
+      USE_LEGACY_JSON_RPC
     )]
   );
 

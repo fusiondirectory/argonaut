@@ -33,19 +33,20 @@ use warnings;
 
 use 5.010;
 
+use Argonaut::Libraries::Common qw(:ldap :config :file);
+use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file);
+
 use POE qw(Component::Schedule Component::Server::JSONRPC::Http);
 use DateTime;
 use DateTime::Set;
 use Data::Dumper;
 use Net::LDAP;
-use JSON::RPC::Client;
+use if USE_LEGACY_JSON_RPC,     JSON::RPC::Legacy::Client;
+use if not USE_LEGACY_JSON_RPC, JSON::RPC::Client;
 use JSON;
 use File::Path;
 use Log::Handler;
 use App::Daemon qw(daemonize);
-
-use Argonaut::Libraries::Common qw(:ldap :config :file);
-use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file);
 
 # where to look for modules files
 use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', instantiate => 'new', except => 'Argonaut::Server::Modules::Argonaut';

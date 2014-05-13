@@ -28,9 +28,10 @@ use warnings;
 
 use 5.008;
 
-use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
+use Argonaut::Libraries::Common qw(:ldap :config);
 
-use Argonaut::Libraries::Common qw(:ldap);
+use if USE_LEGACY_JSON_RPC,     base qw(JSON::RPC::Legacy::Procedure);
+use if not USE_LEGACY_JSON_RPC, base qw(JSON::RPC::Procedure);
 
 =item getServiceName
 Returns the local name of a service

@@ -28,7 +28,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :file :config);
 
 my @unlocked_actions = ['System.halt', 'System.reboot'];
 
@@ -116,7 +116,12 @@ sub launch { # if ip pings, send the request
 
   $main::log->info("sending action $action to $ip");
 
-  my $client = JSON::RPC::Client->new();
+  my $client;
+  if (USE_LEGACY_JSON_RPC) {
+    $client = new JSON::RPC::Legacy::Client;
+  } else {
+    $client = new JSON::RPC::Client;
+  }
   $client->version('1.0');
   if ($main::protocol eq 'https') {
     if ($client->ua->can('ssl_opts')) {

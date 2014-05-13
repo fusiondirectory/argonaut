@@ -29,13 +29,14 @@ use warnings;
 
 use 5.008;
 
+use Argonaut::Libraries::Common qw(:ldap :file :config);
+
 use Switch;
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
-use JSON::RPC::Client;
+use if USE_LEGACY_JSON_RPC,     JSON::RPC::Legacy::Client;
+use if not USE_LEGACY_JSON_RPC, JSON::RPC::Client;
 use Log::Handler;
-
-use Argonaut::Libraries::Common qw(:ldap :file);
 
 use Exporter;
 our @ISA = ("Exporter");
@@ -68,7 +69,12 @@ sub get_pxe_config {
   my $mac   = argonaut_get_mac_pxe($filename);
 
   my $opsi_url = "https://".$settings->{'admin'}.":".$settings->{'password'}."\@".$settings->{'server'}.":4447/rpc";
-  my $opsi_client = new JSON::RPC::Client;
+  my $opsi_client;
+  if (USE_LEGACY_JSON_RPC) {
+    $opsi_client = new JSON::RPC::Legacy::Client;
+  } else {
+    $opsi_client = new JSON::RPC::Client;
+  }
   my $result = undef;
 
   # Load actions

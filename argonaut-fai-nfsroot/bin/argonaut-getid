@@ -28,10 +28,11 @@ use warnings;
 
 use 5.008;
 
-use JSON::RPC::Client;
-use Log::Handler;
-
 use Argonaut::Libraries::Common qw(:net :ldap :config :file);
+
+use if USE_LEGACY_JSON_RPC,     JSON::RPC::Legacy::Client;
+use if not USE_LEGACY_JSON_RPC, JSON::RPC::Client;
+use Log::Handler;
 
 =pod
 This program ask the argonaut-server for the assigned taskid for the fai installation.
@@ -70,7 +71,12 @@ $log->add(
     }
 );
 
-my $client = new JSON::RPC::Client;
+my $client;
+if (USE_LEGACY_JSON_RPC) {
+  $client = new JSON::RPC::Legacy::Client;
+} else {
+  $client = new JSON::RPC::Client;
+}
 $client->version('1.0');
 
 my $callobj = {

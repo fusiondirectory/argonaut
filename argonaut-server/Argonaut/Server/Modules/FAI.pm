@@ -26,7 +26,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :file :config);
 
 my @fai_actions = ("Deployment.reinstall", "Deployment.update", "Deployment.wake", "Deployment.reboot");
 
