@@ -28,8 +28,8 @@ use 5.008;
 
 use Argonaut::Libraries::Common qw(:config);
 
-use if USE_LEGACY_JSON_RPC,     base qw(JSON::RPC::Legacy::Procedure);
-use if not USE_LEGACY_JSON_RPC, base qw(JSON::RPC::Procedure);
+use if (USE_LEGACY_JSON_RPC),     base qw(JSON::RPC::Legacy::Procedure);
+use if not (USE_LEGACY_JSON_RPC), base qw(JSON::RPC::Procedure);
 
 =item echo
 return the parameters passed to it

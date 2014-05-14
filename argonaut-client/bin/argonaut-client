@@ -30,8 +30,8 @@ use 5.008;
 
 use Argonaut::Libraries::Common qw(:ldap :config :file);
 
-use if USE_LEGACY_JSON_RPC,     JSON::RPC::Legacy::Server::Daemon;
-use if not USE_LEGACY_JSON_RPC, JSON::RPC::Server::Daemon;
+use if (USE_LEGACY_JSON_RPC),     JSON::RPC::Legacy::Server::Daemon;
+use if not (USE_LEGACY_JSON_RPC), JSON::RPC::Server::Daemon;
 use Log::Handler;
 use App::Daemon qw(daemonize);
 
