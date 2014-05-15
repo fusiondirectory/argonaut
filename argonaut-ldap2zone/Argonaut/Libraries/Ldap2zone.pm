@@ -65,12 +65,16 @@ sub argonaut_ldap2zone
   my $TTL                     =   $settings->{'ttl'};
   my $RNDC                    =   $settings->{'rndc'};
 
-  if(not -d $output_BIND_DIR) {
-    die "Bind directory '$output_BIND_DIR' does not exist";
+  if (not -d $output_BIND_DIR) {
+    die "Bind directory '$output_BIND_DIR' does not exist\n";
   }
 
-  if(not -d $output_BIND_CACHE_DIR) {
-    die "Bind cache directory '$output_BIND_CACHE_DIR' does not exist";
+  if (not -d $output_BIND_CACHE_DIR) {
+    die "Bind cache directory '$output_BIND_CACHE_DIR' does not exist\n";
+  }
+
+  if (!-e $RNDC) {
+    die "Rndc path '$RNDC' doesn't seem to exists\n";
   }
 
   if (substr($zone,-1) ne ".") { # If the end point is not there, add it
