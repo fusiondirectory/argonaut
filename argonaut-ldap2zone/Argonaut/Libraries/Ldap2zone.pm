@@ -51,7 +51,7 @@ sub argonaut_ldap2zone
 
   my $BIND_DIR                =   $settings->{'binddir'};
   my $BIND_CACHE_DIR          =   $settings->{'bindcachedir'};
-  my $output_BIND_DIR, $output_BIND_CACHE_DIR;
+  my ($output_BIND_DIR, $output_BIND_CACHE_DIR);
   if ($dumpdir) {
     $output_BIND_DIR = $dumpdir;
     $output_BIND_CACHE_DIR = $dumpdir;
