@@ -51,9 +51,13 @@ sub argonaut_ldap2zone
 
   my $BIND_DIR                =   $settings->{'binddir'};
   my $BIND_CACHE_DIR          =   $settings->{'bindcachedir'};
+  my $output_BIND_DIR, $output_BIND_CACHE_DIR;
   if ($dumpdir) {
-    $BIND_DIR = $dumpdir;
-    $BIND_CACHE_DIR = $dumpdir;
+    $output_BIND_DIR = $dumpdir;
+    $output_BIND_CACHE_DIR = $dumpdir;
+  } else {
+    $output_BIND_DIR = $BIND_DIR;
+    $output_BIND_CACHE_DIR = $BIND_CACHE_DIR;
   }
   my $ALLOW_NOTIFY            =   $settings->{'allownotify'};
   my $ALLOW_UPDATE            =   $settings->{'allowupdate'};
@@ -61,12 +65,12 @@ sub argonaut_ldap2zone
   my $TTL                     =   $settings->{'ttl'};
   my $RNDC                    =   $settings->{'rndc'};
 
-  if(not -d $BIND_DIR) {
-    die "Bind directory '$BIND_DIR' does not exist";
+  if(not -d $output_BIND_DIR) {
+    die "Bind directory '$output_BIND_DIR' does not exist";
   }
 
-  if(not -d $BIND_CACHE_DIR) {
-    die "Bind cache directory '$BIND_CACHE_DIR' does not exist";
+  if(not -d $output_BIND_CACHE_DIR) {
+    die "Bind cache directory '$output_BIND_CACHE_DIR' does not exist";
   }
 
   if (substr($zone,-1) ne ".") { # If the end point is not there, add it
@@ -77,14 +81,14 @@ sub argonaut_ldap2zone
 
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
-  my $dn = zoneparse($ldap,$ldap_base,$zone,$BIND_CACHE_DIR,$TTL,$verbose);
+  my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
 
   my $reverse_zone = get_reverse_zone($ldap,$ldap_base,$dn);
   print "Reverse zone is $reverse_zone\n" if $verbose;
 
-  zoneparse($ldap,$ldap_base,$reverse_zone,$BIND_CACHE_DIR,$TTL,$verbose);
+  zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
 
-  create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+  create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
   unless ($norefresh) {
     system("$RNDC reconfig")  == 0 or die "$RNDC reconfig failed : $?";
@@ -101,7 +105,7 @@ Returns : dn of the zone
 =cut
 sub zoneparse
 {
-  my ($ldap,$ldap_base,$zone,$BIND_CACHE_DIR,$TTL,$verbose) = @_;
+  my ($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose) = @_;
   my $mesg = $ldap->search( # perform a search
           base   => $ldap_base,
           filter => "zoneName=$zone",
@@ -172,8 +176,8 @@ sub zoneparse
   }
 
   # write the new zone file to disk
-  print "Writing DNS Zone '$zone' in $BIND_CACHE_DIR/db.$zone\n" if $verbose;
-  my $file_output = "$BIND_CACHE_DIR/db.$zone";
+  print "Writing DNS Zone '$zone' in $output_BIND_CACHE_DIR/db.$zone\n" if $verbose;
+  my $file_output = "$output_BIND_CACHE_DIR/db.$zone";
   my $newzone;
   open($newzone, '>', $file_output) or die "error while trying to open $file_output";
   print $newzone $zonefile->output();
@@ -204,13 +208,13 @@ sub get_reverse_zone
 }
 
 =item create_namedconf
-Create file $BIND_DIR/named.conf.ldap2zone
+Create file $output_BIND_DIR/named.conf.ldap2zone
 Params : zone name, reverse zone name
 Returns :
 =cut
 sub create_namedconf
 {
-  my($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
+  my($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
 
   if($ALLOW_NOTIFY eq "TRUE") {
     $ALLOW_NOTIFY = "notify yes;";
@@ -230,9 +234,9 @@ sub create_namedconf
     $ALLOW_TRANSFER = "";
   }
 
-  print "Writing named.conf file in $BIND_DIR/named.conf.ldap2zone.$zone\n" if $verbose;
+  print "Writing named.conf file in $output_BIND_DIR/named.conf.ldap2zone.$zone\n" if $verbose;
   my $namedfile;
-  open($namedfile, '>', "$BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $BIND_DIR/named.conf.ldap2zone.$zone";
+  open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone.$zone";
   print $namedfile <<EOF;
 zone "$zone" {
   type master;
@@ -251,9 +255,9 @@ zone "$reverse_zone" {
 EOF
   close $namedfile;
 
-  print "Writing file $BIND_DIR/named.conf.ldap2zone\n" if $verbose;
-  open($namedfile, '>', "$BIND_DIR/named.conf.ldap2zone") or die "error while trying to open $BIND_DIR/named.conf.ldap2zone";
-  opendir DIR, $BIND_DIR or die "Error while openning $BIND_DIR!";
+  print "Writing file $output_BIND_DIR/named.conf.ldap2zone\n" if $verbose;
+  open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone";
+  opendir DIR, $output_BIND_DIR or die "Error while openning $output_BIND_DIR!";
   my @files = readdir DIR;
   foreach my $file (grep { /^named\.conf\.ldap2zone\./ } @files) {
     print $namedfile qq{include "$BIND_DIR/$file";\n};
