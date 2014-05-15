@@ -86,21 +86,40 @@ argonaut-ldap2zone is a program used to create bind zone files and refresh the b
 
 =head1 OPTIONS
 
-B<--verbose>
-    be verbose
-B<--norestart>
-    do not restart bind
-B<--dumpdir> dir
-    override bind_dir and bind_cache_dir with dir for testing purposes
+=over 3
 
-=head1 EXAMPLES
+=item B<--verbose>
 
- argonaut-ldap2zone --verbose fusiondirectory.org.
+be verbose
+
+=item B<--norestart>
+
+Do not refresh bind zone with rndc 
+
+=item B<--dumpdir>
+
+Dump the zones and bind configuration to another dir for testing purposes
+
+=back
+
+=head1 EXAMPLE
+
+B<argonaut-ldap2zone --verbose fusiondirectory.org.>
+
+ Write the updated zones from ldap and refresh bind
+ 
+B<argonaut-ldap2zone --verbose --norestart --dumpdir dnszone/ master.fdi>
+
+ Write the updated zones from ldap to another directory and don't refresh bind
 
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
 <https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 AUTHORS
+
+Come Bernigaud
 
 =head1 LICENCE AND COPYRIGHT
 
