@@ -36,7 +36,7 @@ my $dumpdir = '';
 
 sub print_usage
 {
-  print "Usage : argonaut-ldap2zone [--verbose] [--norestart] [--dumpdir dir] ZONE";
+  print "Usage : argonaut-ldap2zone [--verbose] [--norestart] [--dumpdir dir] ZONE\n";
   exit(0);
 }
 
