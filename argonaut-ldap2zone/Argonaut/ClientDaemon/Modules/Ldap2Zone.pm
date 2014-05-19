@@ -31,8 +31,11 @@ use 5.008;
 use Argonaut::Libraries::Common qw(:config);
 use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 
-use if USE_LEGACY_JSON_RPC      base qw(JSON::RPC::Legacy::Procedure);
-use if not USE_LEGACY_JSON_RPC  base qw(JSON::RPC::Procedure);
+my $base;
+BEGIN {
+  $base = (USE_LEGACY_JSON_RPC ? "JSON::RPC::Legacy::Procedure" : "JSON::RPC::Procedure");
+}
+use base $base;
 
 =item start
 start ldap2zone on the computer and store the result in the right place

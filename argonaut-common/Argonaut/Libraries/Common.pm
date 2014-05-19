@@ -31,7 +31,8 @@ use warnings;
 
 use 5.008;
 
-use constant USE_LEGACY_JSON_RPC => 0;
+use JSON::RPC ();
+use constant USE_LEGACY_JSON_RPC => ($JSON::RPC::VERSION > 0.96);
 
 use Net::LDAP;
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
