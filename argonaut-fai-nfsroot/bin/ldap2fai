@@ -54,30 +54,32 @@ my $check_hostname;
 my $sources_list;
 my $kernel;
 my $ldapinfos;
-my $mac;
+my $mac = '';
+my $ip  = '';
 
 my $config = argonaut_read_config;
 
 Getopt::Long::Configure ("bundling");
 
-GetOptions( 'v|verbose'     => \$verbose,
-            'h|help'        => \&usage,
+GetOptions( 'v|verbose'         => \$verbose,
+            'h|help'            => \&usage,
             'c|config-space=s'  => \$dump_dir,
-            'd|dry-run'     => \$dry_run,
-            'n|hostname=s'  => \$check_hostname,
-            's|sources-list'=> \$sources_list,
-            'm|mac=s'       => \$mac )
+            'd|dry-run'         => \$dry_run,
+            'n|hostname=s'      => \$check_hostname,
+            's|sources-list'    => \$sources_list,
+            'i|ip=s'            => \$ip,
+            'm|mac=s'           => \$mac )
   or usage( 'Wrong parameters' );
 
 # If we use dry-run, be verbose
 $verbose = 1 if( $dry_run );
 
-if (! defined $mac) {
-  usage( "MAC address not specified." );
+if (($mac eq '') && ($ip eq '')) {
+  usage( "Neither MAC address nor IP specified." );
 }
 
-if (!($mac =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i)) {
-    usage( "MAC address not valid." );
+if (($mac ne '') && (!($mac =~ m/^([0-9a-f]{2}:){5}[0-9a-f]{2}/i))) {
+  usage( "MAC address not valid." );
 }
 
 # Is dump_dir a directory
@@ -100,7 +102,7 @@ my $faiobj = Argonaut::FAI->new( 'LDAP'     => $ldap,
 $faiobj->flags( $faiobj->FAI_FLAG_VERBOSE ) if( $verbose );
 $faiobj->flags( $faiobj->FAI_FLAG_VERBOSE | $faiobj->FAI_FLAG_DRY_RUN ) if( $dry_run );
 
-my $class_str = get_classes( $mac );
+my $class_str = get_classes( $mac, $ip );
 print( "  + FAIclass string:    $class_str\n" ) if( $verbose );
 
 my ($res_classlist, $release) = $faiobj->resolve_classlist( $class_str );
@@ -151,7 +153,7 @@ sub usage
   (@_) && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
- usage: $0 [-hnvW] [-c config_space] [-n hostname] -m mac_address
+ usage: $0 [-hnvW] [-c config_space] [-n hostname] [-m mac_address | -i ip_address]
 
   -h  : this (help) message
   -d  : dry run (includes verbose)
@@ -159,6 +161,7 @@ sub usage
   -c  : config space (default: ${dump_dir})
   -n  : check hostname
   -m  : mac address
+  -i  : ip address
 
 
 EOF
@@ -223,13 +226,20 @@ sub get_classes {
 
   # return list of FAI classes defined for host
   my $mac = shift;
+  my $ip  = shift;
   my (@classes,$mesg,$entry);
   my $host_info;
   my $real_hostname;
 
-  print( "Lookup host for MAC '$mac'...\n" ) if( $verbose );
+  my $filter = "(&(objectClass=goHard)";
+  if ($mac ne '') {
+    print( "Lookup host for MAC '$mac'...\n" ) if( $verbose );
+    $filter .= "(macAddress=$mac))";
+  } else {
+    print( "Lookup host for IP '$ip'...\n" ) if( $verbose );
+    $filter .= "(ipHostNumber=$ip))";
+  }
 
-  my $filter = "(&(objectClass=goHard)(macAddress=$mac))";
   $mesg = $ldap->search(
     base => "$base",
     filter => $filter,
@@ -529,7 +539,7 @@ ldap2fai - read FAI config from LDAP and create config space.
 
 =head1 SYNOPSIS
 
-ldap2fai [-hnv] [-c config_space] [-h hostname] -m mac_address
+ldap2fai [-hnv] [-c config_space] [-h hostname] [-m mac_address | -i ip_address]
 
 =head1 OPTIONS
 
@@ -550,6 +560,9 @@ B<-h>
 
 B<-m>
     mac address
+
+B<-i>
+    ip address
 
 =head1 DESCRIPTION
 

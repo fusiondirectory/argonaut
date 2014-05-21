@@ -3,12 +3,10 @@
 
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:
-# Requires-Var:  $FAI $LOGDIR
+# Requires-Var:  $FAI $LOGDIR $IPADDR $HOSTNAME
 # Suggests-Var:
 # Short-Description: get $FAI from an ldap server.
 ### END SUBROUTINE INFO
 
 # Create configuration space
-MAC=`argonaut-getid $IPADDR`
-ldap2fai -v -c $FAI -n $HOSTNAME -m $MAC | tee /tmp/fai/ldap2fai.log
-
+ldap2fai -v -c $FAI -n $HOSTNAME -i $IPADDR | tee /tmp/fai/ldap2fai.log
