@@ -155,11 +155,11 @@ sub getMacFromCn {
   $mesg->code && die "Error while searching mac for host '$host' :".$mesg->error;
 
   if(scalar($mesg->entries)>1) {
-    $log->error("Multiple Macs were found for the host '$host'!");
-    die "Multiple Macs were found for the host '$host'!";
+    $log->error("Multiple mac addresses were found for the host '$host'!");
+    die "Multiple mac addresses were found for the host '$host'!";
   } elsif(scalar($mesg->entries)<1) {
-    $log->error("No Macs were found for the host '$host'!");
-    die "No Mads were found for the host '$host'!";
+    $log->error("No macs was found for the host '$host'!");
+    die "No mac address was found for the host '$host'!";
   }
 
   my $mac = ($mesg->entries)[0]->get_value("macAddress");
@@ -337,7 +337,7 @@ POE::Session->create(
                     return;
                 }
             }
-            $kernel->post( $jsonrpc => 'error' => $id, "Mac were not found in queue");
+            $kernel->post( $jsonrpc => 'error' => $id, "Mac address '$mac' was not found in queue");
         },
         id_of_host => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];

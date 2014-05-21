@@ -97,8 +97,8 @@ sub get_id
 
     if($taskid) {
       if ($taskid->is_error) {
-        $log->error("Error : ", $taskid->error_message);
-        die "Error : ", $taskid->error_message;
+        $log->error("Error for host '$host': ", $taskid->error_message);
+        die "Error for host '$host': ", $taskid->error_message;
       } else {
         $taskids{$host} = $taskid->content->{result};
       }
