@@ -34,16 +34,39 @@ use Getopt::Long;
 # used to manage files
 use Path::Class;
 use File::Find;
-
-#~ use Argonaut::Libraries::FAI qw(:flags);
+use Fcntl qw(:mode);
+use MIME::Base64;
 
 my $dump_dir      = "/var/lib/fai/config";
 my $verbose       = 0;
 my $base          = '<BASE>';
 my $faibaserdn    = 'ou=fai,ou=configs,ou=systems';
-my $faipackagerdn = 'ou=packages';
-my $faidiskrdn    = 'ou=disk';
-my $faivarrdn     = 'ou=variables';
+my %faitypes = (
+  'package' => {
+    'rdn'       => 'ou=packages',
+  },
+  'disk' => {
+    'rdn'       => 'ou=disk',
+  },
+  'variable' => {
+    'rdn'       => 'ou=variables',
+  },
+  'hook' => {
+    'rdn'       => 'ou=hooks',
+    'class'     => 'FAIhook',
+    'subclass'  => 'FAIhookEntry'
+  },
+  'script' => {
+    'rdn'       => 'ou=scripts',
+    'class'     => 'FAIscript',
+    'subclass'  => 'FAIscriptEntry'
+  },
+  'template' => {
+    'rdn'       => 'ou=templates',
+    'class'     => 'FAItemplate',
+    'subclass'  => 'FAItemplateEntry'
+  }
+);
 my $dist          = '';
 my $outfile;
 my $outfilename   = '';
@@ -87,11 +110,13 @@ if ($outfilename) {
 } else {
   $outfile = *STDOUT;
 }
-
-parse_class("package_config/$class", sub {return {};}, \&parse_line_package);
-parse_class("disk_config/$class", \&parse_init_disk, \&parse_line_disk);
-parse_class("class/$class.var", \&parse_init_variables, \&parse_line_variables);
-parse_templates("$dump_dir/files");
+parse_class("package_config/$class",  sub {return {};},       \&line_parser_package);
+print $outfile "\n";
+parse_class("disk_config/$class",     \&parse_init_disk,      \&line_parser_disk);
+parse_class("class/$class.var",       \&parse_init_variables, \&line_parser_variables);
+parse_files('script',   \&file_parser_script,   "scripts/$class");
+parse_files('template', \&file_parser_template, "files");
+parse_files('hook',     \&file_parser_hook,     "hooks");
 
 sub parse_class
 {
@@ -101,7 +126,7 @@ sub parse_class
   if (-f $filepath) {
     my $file = file($filepath);
 
-    print "parsing $file\n" if $verbose;
+    print "# parsing $file\n" if $verbose;
 
     my $parser = &$init_parser();
 
@@ -111,15 +136,15 @@ sub parse_class
       $line =~ s/#.*$//;
       # remove \n from the end of each line
       chomp $line;
-
+      # ignore empty lines
       next if ( $line =~ /^$/ );
 
-    $parser->$line_parser($line);
+      $parser->$line_parser($line);
     }
   }
 }
 
-sub parse_line_package
+sub line_parser_package
 {
   my $infos = shift;
   my $line = shift;
@@ -127,7 +152,8 @@ sub parse_line_package
   if ( $line =~ /^PACKAGES\s+([^ ]+)(\s+([^ ]*))?/ ) {
     my $cn = $class;
     $cn .= '-'.$3 if $3;
-    print $outfile "\ndn: cn=$cn,$faipackagerdn,$faibaserdn,$base\n";
+    print $outfile "\n";
+    print $outfile "dn: cn=$cn,".$faitypes{'package'}->{'rdn'}.",$faibaserdn,$base\n";
     print $outfile "cn: $cn\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
@@ -143,17 +169,18 @@ sub parse_line_package
 
 sub parse_init_disk
 {
-  print $outfile "\ndn: cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+  print $outfile "dn: cn=$class,".$faitypes{'disk'}->{'rdn'}.",$faibaserdn,$base\n";
   print $outfile "cn: $class\n";
   print $outfile 'objectClass: top'."\n";
   print $outfile 'objectClass: FAIclass'."\n";
   print $outfile "objectClass: FAIpartitionTable\n";
   print $outfile "FAIpartitionMethod: setup-storage\n";
+    print $outfile "\n";
 
   return {};
 }
 
-sub parse_line_disk
+sub line_parser_disk
 {
   my $infos = shift;
   my $line  = shift;
@@ -164,7 +191,7 @@ sub parse_line_disk
     } else {
       $infos->{'disk_type'} = 'disk';
       $infos->{'disk_cn'}   = $1;
-      print $outfile "\n".'dn: cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+      print $outfile 'dn: cn='.$infos->{'disk_cn'}.",cn=$class,".$faitypes{'disk'}->{'rdn'}.",$faibaserdn,$base\n";
       print $outfile 'cn: '.$infos->{'disk_cn'}."\n";
       print $outfile 'objectClass: top'."\n";
       print $outfile 'objectClass: FAIclass'."\n";
@@ -177,7 +204,7 @@ sub parse_line_disk
     }
   } elsif (($infos->{'disk_type'} eq 'lvm') and ($line =~ /^vg\s+([^\s]+)\s+([^\s]+)/)) {
     $infos->{'disk_cn'} = $1;
-    print $outfile "\n".'dn: cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+    print $outfile 'dn: cn='.$infos->{'disk_cn'}.",cn=$class,".$faitypes{'disk'}->{'rdn'}.",$faibaserdn,$base\n";
     print $outfile 'cn: '.$infos->{'disk_cn'}."\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
@@ -186,9 +213,10 @@ sub parse_line_disk
     foreach my $option (split ',',$2) {
       print $outfile "FAIlvmDevice: $option\n";
     }
+    print $outfile "\n";
     $infos->{'partitionNr'} = 1;
   } elsif ($line =~ /^([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)(\s+createopts="([^"]*)")?(\s+tuneopts="([^"]*)")?/) {
-    print $outfile "\n".'dn: FAIpartitionNr='.$infos->{'partitionNr'}.',cn='.$infos->{'disk_cn'}.",cn=$class,$faidiskrdn,$faibaserdn,$base\n";
+    print $outfile 'dn: FAIpartitionNr='.$infos->{'partitionNr'}.',cn='.$infos->{'disk_cn'}.",cn=$class,".$faitypes{'disk'}->{'rdn'}.",$faibaserdn,$base\n";
     print $outfile 'FAIpartitionNr: '.$infos->{'partitionNr'}."\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
@@ -207,6 +235,7 @@ sub parse_line_disk
     chomp $9 if defined $9;
     print $outfile "FAIfsCreateOptions: $7\n" if defined $7;
     print $outfile "FAIfsTuneOptions: $9\n" if defined $9;
+    print $outfile "\n";
     $infos->{'partitionNr'}++;
   } else {
     print STDERR "Could not parse line $line\n";
@@ -215,45 +244,151 @@ sub parse_line_disk
 
 sub parse_init_variables
 {
-  print $outfile "\ndn: cn=$class,$faivarrdn,$faibaserdn,$base\n";
+  print $outfile "dn: cn=$class,".$faitypes{'variable'}->{'rdn'}.",$faibaserdn,$base\n";
   print $outfile 'objectClass: top'."\n";
   print $outfile 'objectClass: FAIclass'."\n";
   print $outfile "objectClass: FAIvariable\n";
   print $outfile "cn: $class\n";
+  print $outfile "\n";
   return {};
 }
 
-sub parse_line_variables
+sub line_parser_variables
 {
   my $infos = shift;
   my $line  = shift;
 
   if ( $line =~ /^([^=]+)=(.*)$/ ) {
-    print $outfile "\ndn: cn=$1,cn=$class,$faivarrdn,$faibaserdn,$base\n";
+    print $outfile "dn: cn=$1,cn=$class,".$faitypes{'variable'}->{'rdn'}.",$faibaserdn,$base\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
     print $outfile "objectClass: FAIvariableEntry\n";
     print $outfile "cn: $1\nFAIvariableContent: $2\n";
+    print $outfile "\n";
   } else {
     print STDERR "Could not parse line $line\n";
   }
 }
 
-sub parse_templates
+sub parse_files
 {
-  my $dirname = shift;
+  my ($type, $file_parser, $filepath) = @_;
+  $filepath = "$dump_dir/$filepath";
+
+  return if ! -d $filepath;
+
+  my $parser = Argonaut::Librairies::FAI::ClassParser->new($type);
   my $tf_finder = sub {
-    return if ! -f;
-    return if ! /^$class$/;
-    my $path = $File::Find::name;
-    $path =~ s/^$dirname//;
-    print $File::Find::name."\n";
-    print $outfile "\n".'dn: cn='."$_,cn=$class,$faidiskrdn,$faibaserdn,$base\n";
-    print $outfile 'cn: '."$_\n";
+    print '# Parsing '.$File::Find::name."\n" if $verbose;
+    $parser->$file_parser($_, $File::Find::name, $filepath);
+  };
+  find( $tf_finder, $filepath );
+  $parser->print_ldif();
+}
+
+sub file_parser_template
+{
+  my $parser = shift;
+  shift;
+  return if ! -f;
+  return if ! /^$class$/;
+  my $path    = shift;
+  my $dirname = shift;
+  $path =~ s/^$dirname//;
+  $path =~ s|/$class$||;
+  my $stats   = file($_)->stat;
+  my $content = encode_base64(file($_)->slurp, "\n ");
+  $content =~ s/\s+$//;
+  push @{$parser->{'nodes'}}, {
+    'cn'    => $path,
+    'lines' => [
+      "FAItemplatePath: $path\n",
+      "FAItemplateFile:: $content\n",
+      sprintf "FAImode: %04o\n", S_IMODE($stats->mode),
+      "FAIowner: ".getpwuid($stats->uid).'.'.getgrgid($stats->gid)."\n",
+    ]
+  };
+}
+
+sub file_parser_script
+{
+  my $parser = shift;
+  shift;
+  return if ! -f;
+  /^([0-9]+)-(.+)$/;
+  my $prio  = $1;
+  my $cn    = $2;
+  my $content = encode_base64(file($_)->slurp, "\n ");
+  $content =~ s/\s+$//;
+  push @{$parser->{'nodes'}}, {
+    'cn'    => $cn,
+    'lines' => [
+      "FAIpriority: $prio\n",
+      "FAIscript:: $content\n",
+    ]
+  };
+}
+
+sub file_parser_hook
+{
+  my $parser = shift;
+  shift;
+  return if ! -f;
+  return if ! /\.$class(\.source)?$/;
+  if (/\.source$/) {
+    print "# Skipping $_ because LDAP schemas do not support .source\n";
+    return;
+  }
+  /^(.+)\.$class$/;
+  my $task = $1;
+  my $content = encode_base64(file($_)->slurp, "\n ");
+  $content =~ s/\s+$//;
+  push @{$parser->{'nodes'}}, {
+    'cn'    => $task,
+    'lines' => [
+      "FAItask: $task\n",
+      "FAIscript:: $content\n",
+    ]
+  };
+}
+
+package Argonaut::Librairies::FAI::ClassParser;
+
+sub new
+{
+  my $class = shift;
+  bless {
+    'type'  => shift,
+    'nodes' => [],
+  }, $class;
+}
+
+sub print_ldif
+{
+  my $parser  = shift;
+  return if (scalar @{$parser->{'nodes'}} eq 0);
+  my $dn_base;
+  if ($faitypes{$parser->{'type'}}->{'class'}) {
+    print $outfile "dn: cn=$class,".$faitypes{$parser->{'type'}}->{'rdn'}.",$faibaserdn,$base\n";
+    print $outfile 'cn: '.$class."\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
-    print $outfile "objectClass: FAItemplateEntry\n";
-    print $outfile "FAItemplatePath: $path\n";
-  };
-  find( $tf_finder, $dirname );
+    print $outfile "objectClass: ".$faitypes{$parser->{'type'}}->{'class'}."\n";
+    print $outfile "\n";
+    $dn_base = ",cn=$class,".$faitypes{$parser->{'type'}}->{'rdn'}.",$faibaserdn,$base\n";
+  } else {
+    $dn_base = ",".$faitypes{$parser->{'type'}}->{'rdn'}.",$faibaserdn,$base\n";
+  }
+  foreach my $node (@{$parser->{'nodes'}}) {
+    print $outfile 'dn: cn='.$node->{'cn'}.$dn_base;
+    print $outfile 'cn: '.$node->{'cn'}."\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: ".$faitypes{$parser->{'type'}}->{'subclass'}."\n";
+    foreach (@{$node->{'lines'}}) {
+      print;
+    }
+    print $outfile "\n";
+  }
 }
+
