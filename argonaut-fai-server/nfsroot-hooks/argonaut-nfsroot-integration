@@ -27,7 +27,8 @@ msg() {
 }
 
 msg "Copy argonaut.conf and ldap.conf"
-cp /etc/argonaut/argonaut.conf "${NFSROOT}"/etc/argonaut
+mkdir -p "${NFSROOT}"/etc/argonaut
+cp /etc/argonaut/argonaut.conf "${NFSROOT}"/etc/argonaut/
 
 if [ -n "$FAI_CONF" ]; then
   msg "installing $FAI_CONF into ${NFSROOT}"
