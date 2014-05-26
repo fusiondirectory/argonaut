@@ -326,7 +326,7 @@ sub store_packages_file {
               mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
               my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
               if(is_error($res)) {
-                  my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".gz");
+                  my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.gz" => $packages_file.".gz");
                   if(is_error($res2)) {
                       push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
                       push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.gz : $res2";
