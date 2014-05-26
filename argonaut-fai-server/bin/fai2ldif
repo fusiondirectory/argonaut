@@ -200,6 +200,7 @@ sub line_parser_disk
       foreach my $option (split ' ',$3) {
         print $outfile "FAIdiskOption: $option\n";
       }
+      print $outfile "\n";
       $infos->{'partitionNr'} = 1;
     }
   } elsif (($infos->{'disk_type'} eq 'lvm') and ($line =~ /^vg\s+([^\s]+)\s+([^\s]+)/)) {
@@ -259,11 +260,17 @@ sub line_parser_variables
   my $line  = shift;
 
   if ( $line =~ /^([^=]+)=(.*)$/ ) {
-    print $outfile "dn: cn=$1,cn=$class,".$faitypes{'variable'}->{'rdn'}.",$faibaserdn,$base\n";
+    my $cn    = $1;
+    my $value = $2;
+    if ($value =~ m/^'.*'$/) {
+      $value =~ s/^'//;
+      $value =~ s/'$//;
+    }
+    print $outfile "dn: cn=$cn,cn=$class,".$faitypes{'variable'}->{'rdn'}.",$faibaserdn,$base\n";
     print $outfile 'objectClass: top'."\n";
     print $outfile 'objectClass: FAIclass'."\n";
     print $outfile "objectClass: FAIvariableEntry\n";
-    print $outfile "cn: $1\nFAIvariableContent: $2\n";
+    print $outfile "cn: $cn\nFAIvariableContent: $value\n";
     print $outfile "\n";
   } else {
     print STDERR "Could not parse line $line\n";
@@ -304,7 +311,7 @@ sub file_parser_template
     'lines' => [
       "FAItemplatePath: $path\n",
       "FAItemplateFile:: $content\n",
-      sprintf "FAImode: %04o\n", S_IMODE($stats->mode),
+      sprintf ("FAImode: %04o\n", S_IMODE($stats->mode)),
       "FAIowner: ".getpwuid($stats->uid).'.'.getgrgid($stats->gid)."\n",
     ]
   };
