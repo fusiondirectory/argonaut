@@ -134,6 +134,8 @@ sub flag {
 
 sub update_task
 {
+  my ($self, $task) = @_;
+  return $task;
 }
 
 sub task_processed {
