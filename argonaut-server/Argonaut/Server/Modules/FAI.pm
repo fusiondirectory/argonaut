@@ -75,8 +75,11 @@ sub do_action {
   }
 
   my $substatus = $self->handler_fai($self->{taskid},$self->{action},$params);
-  $self->{task}->{substatus} = $substatus;
-  $self->{task}->{handler} = 1;
+
+  $self->{task} = [
+    'substatus' => $substatus,
+    'handler'   => 1
+  ];
 
   return 0;
 }
