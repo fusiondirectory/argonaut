@@ -500,7 +500,7 @@ RETRY_SEARCH:
       }
 
 NEXT_REFERRAL:
-      next if( ! length @referrals );
+      next if( ! scalar @referrals );
       my $uri = new URI( $referrals[ 0 ] );
       $ldap = new Net::LDAP( $uri->host );
       @referrals = splice( @referrals, 1 );
