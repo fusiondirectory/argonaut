@@ -102,20 +102,13 @@ sub handler_fai {
 
   $self->flag($fai_state->{$action});
 
-  eval { # try
-    if($need_reboot) {
-      $self->{launch_actions} = [["System.reboot", [$self->{'mac'}], {'args' => []}]];
-      return "rebooting";
-    } else {
-      main::wakeOnLan($self->{'mac'});
-      return "wake on lan";
-    }
-  };
-  if ($@) { # catch
-    $main::log->notice("Got $@ while trying to reboot, trying wake on lan");
+  if($need_reboot) {
+    $self->{launch_actions} = [["System.reboot", [$self->{'mac'}], {'args' => []}]];
+    return "rebooting";
+  } else {
     main::wakeOnLan($self->{'mac'});
     return "wake on lan";
-  };
+  }
 }
 
 =item
