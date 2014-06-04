@@ -132,11 +132,11 @@ sub rpc_call
   if($res) {
     if ($res->is_error) {
       $log->error("Error : ".$res->error_message);
-      die "Error : ", $res->error_message;
+      print "Error : ", $res->error_message."\n";
     }
   } else {
     $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
-    die "Error while trying to contact Argonaut server : ".$client->status_line;
+    print "Error while trying to contact Argonaut server : ".$client->status_line."\n";
   }
 }
 
@@ -149,10 +149,15 @@ while (my $line = <STDIN>) {
 
   my ($host,$keyword,$taskname,$errorcode) = split(/\s+/,$line);
 
-  my $taskid = get_id($host);
+  my $taskid = eval {
+    get_id($host);
+  };
+  if ($@) {
+    print "Could not find taskid for line '$line' : $@\n";
+  }
 
   if($keyword eq "TASKBEGIN") {
-    print "[monitor] Task $taskname begun\n";
+    print "[monitor:$host] Task $taskname begun\n";
 
     my $progress = undef;
     if(defined $progress_value{$taskname}) {
@@ -164,16 +169,17 @@ while (my $line = <STDIN>) {
       [$taskid,$taskname,$progress]
     );
   } elsif($keyword eq "TASKEND") {
-    print "[monitor] Task $taskname ended\n";
+    print "[monitor:$host] Task $taskname ended\n";
 
     if($taskname eq "faiend") {
       rpc_call(
         "set_task_substatus",
         [$taskid,$taskname,100]
       );
+      delete $taskids{$host};
     }
   } elsif($keyword eq "TASKERROR") {
-    print "[monitor] Task error $taskname $errorcode\n";
+    print "[monitor:$host] Task error $taskname $errorcode\n";
 
     rpc_call(
       "set_error",
