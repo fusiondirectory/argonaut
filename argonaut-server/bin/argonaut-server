@@ -540,9 +540,9 @@ POE::Session->create(
 
           my @modules = modules();
           push @modules, Argonaut::Server::Modules::Argonaut->new();
-          foreach my $module (@modules) {
+          MODULES: foreach my $module (@modules) {
             # Is this module able to handle this client and action?
-            if ($module->handle_client($target,$action)) {
+            if (eval {$module->handle_client($target,$action)}) {
               $handled = 1;
               # If it is, send him the infos
               my $args = undef;
@@ -550,7 +550,7 @@ POE::Session->create(
                 $args = $data->{args};
               }
               $kernel->post($heap->{modulepool} => "do" => $module, $taskid, $args);
-              last;
+              last MODULES;
             }
           }
           unless ($handled) {

@@ -75,8 +75,11 @@ sub do_action {
   }
 
   my $substatus = $self->handler_fai($self->{taskid},$self->{action},$params);
-  $self->{task}->{substatus} = $substatus;
-  $self->{task}->{handler} = 1;
+
+  $self->{task} = {
+    'substatus' => $substatus,
+    'handler'   => 1
+  };
 
   return 0;
 }
@@ -99,20 +102,13 @@ sub handler_fai {
 
   $self->flag($fai_state->{$action});
 
-  eval { # try
-    if($need_reboot) {
-      $self->{launch_actions} = [["System.reboot", [$self->{'mac'}], {'args' => []}]];
-      return "rebooting";
-    } else {
-      main::wakeOnLan($self->{'mac'});
-      return "wake on lan";
-    }
-  };
-  if ($@) { # catch
-    $main::log->notice("Got $@ while trying to reboot, trying wake on lan");
+  if($need_reboot) {
+    $self->{launch_actions} = [["System.reboot", [$self->{'mac'}], {'args' => []}]];
+    return "rebooting";
+  } else {
     main::wakeOnLan($self->{'mac'});
     return "wake on lan";
-  };
+  }
 }
 
 =item
@@ -131,6 +127,8 @@ sub flag {
 
 sub update_task
 {
+  my ($self, $task) = @_;
+  return $task;
 }
 
 sub task_processed {
