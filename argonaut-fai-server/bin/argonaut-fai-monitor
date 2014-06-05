@@ -97,14 +97,12 @@ sub get_id
 
     if($taskid) {
       if ($taskid->is_error) {
-        $log->error("Error for host '$host': ", $taskid->error_message);
-        die "Error for host '$host': ", $taskid->error_message;
+        die "Error for host '$host': ", $taskid->error_message."\n";
       } else {
         $taskids{$host} = $taskid->content->{result};
       }
     } else {
-      $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
-      die "Error while trying to contact Argonaut server : ".$client->status_line;
+      die "Error while trying to contact Argonaut server : ".$client->status_line."\n";
     }
   }
   return $taskids{$host};
@@ -146,14 +144,21 @@ This program read on stdin the fai-monitor output, extract useful information an
 
 while (my $line = <STDIN>) {
   next if $line =~/^FAI monitoring daemon start/; # ignore start up messages from fai-monitor
+  chomp $line;
 
   my ($host,$keyword,$taskname,$errorcode) = split(/\s+/,$line);
 
-  my $taskid = eval {
-    get_id($host);
-  };
+  my $taskid = eval {get_id($host);};
   if ($@) {
-    print "Could not find taskid for line '$line' : $@\n";
+    if (($keyword eq "TASKBEGIN") ||
+        ($keyword eq "TASKERROR") ||
+        (($keyword eq "TASKEND") && ($taskname eq "faiend"))) {
+      print "Could not find taskid for line '$line':\n $@\n";
+      $log->error($@);
+      next;
+    } else {
+      $log->debug($@);
+    }
   }
 
   if($keyword eq "TASKBEGIN") {
