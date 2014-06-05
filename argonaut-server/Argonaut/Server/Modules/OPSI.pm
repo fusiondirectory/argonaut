@@ -103,14 +103,10 @@ sub get_opsi_settings {
     };
   };
 
-  my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
-
-  if ($ldapinfos->{'ERROR'} > 0) {
-    die "[OPSI] LDAP error : ".$ldapinfos->{'ERRORMSG'}."\n";
-  }
+  my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
 
   if (not defined $settings->{'server-uri'}) {
-    my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
+    my $mesg = $ldap->search( # perform a search
       base    => $settings->{'server-dn'},
       scope   => 'base',
       filter  => "(objectClass=opsiServer)",
@@ -143,14 +139,10 @@ sub get_winstation_fqdn_settings {
   my $cn = $settings->{'cn'};
   $cn =~ s/\$$//;
 
-  my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
+  my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
 
-  if ($ldapinfos->{'ERROR'} > 0) {
-    die "[OPSI] LDAP error : ".$ldapinfos->{'ERRORMSG'}."\n";
-  }
-
-  my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
-    base    => $ldapinfos->{'BASE'},
+  my $mesg = $ldap->search( # perform a search
+    base    => $ldap_base,
     filter  => "(&(relativeDomainName=$cn)(aRecord=".$settings->{'ip'}.")(zoneName=*))",
     attrs   => ['zoneName']
   );
@@ -174,7 +166,7 @@ sub handle_client {
   my $ip = main::getIpFromMac($mac);
 
   eval { #try
-    my $settings = get_opsi_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+    my $settings = get_opsi_settings($main::config,$ip);
     %$self = %$settings;
     $self->{action} = $action;
   };
@@ -296,13 +288,9 @@ sub reinstall_or_update {
   my $res;
 
   #1 - fetch the host profile
-  my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
+  my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
 
-  if ($ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."\n";
-  }
-
-  my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
+  my $mesg = $ldap->search( # perform a search
     base    => $self->{'profile-dn'},
     scope   => 'base',
     filter  => "(objectClass=opsiProfile)",
@@ -385,7 +373,7 @@ sub reinstall_or_update {
   if (defined $self->{'softlists'}) {
     my $infos = [];
     foreach my $softlistdn (@{$self->{'softlists'}}) {
-      my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
+      my $mesg = $ldap->search( # perform a search
         base    => $softlistdn,
         scope   => 'base',
         filter  => "(|(objectClass=opsiSoftwareList)(objectClass=opsiOnDemandList))",
@@ -508,7 +496,7 @@ sub do_action {
     foreach my $host (@{$params->[0]}) {
       if (lc($host) =~ m/([0-9a-f]{2}:){5}[0-9a-f]{2}/) { # If host is a macAddress
         my $ip = main::getIpFromMac($host);
-        my $host_settings = get_winstation_fqdn_settings($main::ldap_configfile,$main::ldap_dn,$main::ldap_password,$ip);
+        my $host_settings = get_winstation_fqdn_settings($main::config,$ip);
         push @fqdns, $host_settings->{'fqdn'};
       } else {
         push @fqdns, $host;
