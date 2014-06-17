@@ -258,6 +258,11 @@ sub update_task {
   return $task;
 }
 
+sub task_processed {
+  my ($self, $task) = @_;
+  return $task;
+}
+
 sub update_or_insert {
   my ($self, $action,$params) = @_;
 
