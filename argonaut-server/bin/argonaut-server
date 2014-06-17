@@ -251,10 +251,7 @@ sub refresh_task {
     $heap->{tasks}->{$id} = $heap->{tasks}->{$id}->{'handler'}->update_task($heap->{tasks}->{$id});
   }
   if($heap->{tasks}->{$id}->{progress} >= 100) {
-    $heap->{tasks}->{$id}->{status} = "processed";
-    if($delete_finished_tasks) {
-      $kernel->call($session => 'delete_task' => $id);
-    }
+    $kernel->call($session => 'set_task_processed' => $id);
   }
 }
 
@@ -376,13 +373,7 @@ POE::Session->create(
           if (defined $progress) {
             $heap->{tasks}->{$taskid}->{progress} = $progress;
             if ($progress >= 100) {
-              if (defined $heap->{tasks}->{$taskid}->{'handler'}) {
-                $heap->{tasks}->{$taskid}->{'handler'}->task_processed($heap->{tasks}->{$taskid});
-              }
-              $heap->{tasks}->{$taskid}->{status} = "processed";
-              if ($delete_finished_tasks) {
-                $kernel->call($session => 'delete_task' => $taskid);
-              }
+              $kernel->call($session => 'set_task_processed' => $taskid);
             }
           }
         },
@@ -579,10 +570,7 @@ POE::Session->create(
             if (grep {$_ eq $heap->{tasks}->{$taskid}->{action}} @{$heap->{scheduled_only}}) {
               $heap->{tasks}->{$taskid}->{status} = "processing";
             } else {
-              $heap->{tasks}->{$taskid}->{status} = "processed";
-              if($delete_finished_tasks) {
-                $kernel->call($session => 'delete_task' => $taskid);
-              }
+              $kernel->call($session => 'set_task_processed' => $taskid);
             }
           }
         },
@@ -616,6 +604,19 @@ POE::Session->create(
             delete $heap->{tasks}->{$taskid}->{handler};
           }
           delete $heap->{tasks}->{$taskid};
+        },
+        set_task_processed => sub {
+          my ($kernel,$heap,$session,$taskid) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          if (not defined $heap->{tasks}->{$taskid}) {
+            return;
+          }
+          if (defined $heap->{tasks}->{$taskid}->{'handler'}) {
+            $heap->{tasks}->{$taskid} = $heap->{tasks}->{$taskid}->{'handler'}->task_processed($heap->{tasks}->{$taskid});
+          }
+          $heap->{tasks}->{$taskid}->{status} = "processed";
+          if($delete_finished_tasks) {
+            $kernel->call($session => 'delete_task' => $taskid);
+          }
         },
         get_new_task_id => sub {
           my $heap = $_[HEAP];
