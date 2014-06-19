@@ -32,7 +32,6 @@ use 5.008;
 use Data::Dumper;
 use Net::LDAP;
 use File::Path;
-use Switch;
 
 use Argonaut::Libraries::Common qw(:ldap :string :file);
 

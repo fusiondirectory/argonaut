@@ -30,7 +30,6 @@ use warnings;
 
 use 5.008;
 
-use Switch;
 use MIME::Base64;
 use Getopt::Std;
 use File::Path;

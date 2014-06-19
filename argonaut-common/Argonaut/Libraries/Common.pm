@@ -434,8 +434,6 @@ sub argonaut_ldap_search_checks {
 # Returns undef on non-LDAP failures
 #
 sub argonaut_ldap_rsearch {
-  use Switch;
-
   my ($ldap,$base,$sbase,$filter,$scope,$subbase,$attrs) = @_;
 
   ( $base, $sbase ) = argonaut_ldap_search_checks( @_ );
@@ -449,20 +447,19 @@ sub argonaut_ldap_rsearch {
   while( 1 ) {
 
     # Walk the DN tree
-    switch( scalar @rdns ) {
-    case 0 {
+    if (scalar @rdns == 0) {
       # We also want to search the stop base, if it was defined
       return if( ! defined $sbase );
-      if( length( $sbase ) > 0 )
-        { $search_base = substr( $sbase, 1 ); }
-      else { $search_base = ''; }
-      undef( $sbase );
+      if( length( $sbase ) > 0 ) {
+        $search_base = substr( $sbase, 1 );
+      } else {
+        $search_base = '';
       }
-    else {
+      undef( $sbase );
+    } else {
       $search_base = join( ',', @rdns );
       shift(@rdns);
       $search_base .= $sbase;
-      }
     }
 
     # Initialize hash with filter
@@ -533,8 +530,6 @@ NEXT_REFERRAL:
 #   ou=do,ou=test,ou=me,ou=very,ou=well
 #
 sub argonaut_ldap_fsearch {
-  use Switch;
-
   my ($ldap,$base,$sbase,$filter,$scope,$subbase,$attrs) = @_;
 
   ( $base, $sbase ) = argonaut_ldap_search_checks( @_ );
