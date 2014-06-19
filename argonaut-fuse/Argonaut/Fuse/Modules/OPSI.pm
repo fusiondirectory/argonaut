@@ -31,7 +31,6 @@ use 5.008;
 
 use Argonaut::Libraries::Common qw(:ldap :file :config);
 
-use Switch;
 use Net::LDAP;
 use Net::LDAP::Util qw(:escape);
 use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
