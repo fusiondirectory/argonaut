@@ -558,7 +558,12 @@ sub launch {
     $params = [];
   }
 
-  my $client = JSON::RPC::Client->new();
+  my $client;
+  if (USE_LEGACY_JSON_RPC) {
+    $client = new JSON::RPC::Legacy::Client;
+  } else {
+    $client = new JSON::RPC::Client;
+  }
   $client->version('1.0');
   my $host = $self->{'server-uri'};
   $host =~ s|^http(s?)://||;
