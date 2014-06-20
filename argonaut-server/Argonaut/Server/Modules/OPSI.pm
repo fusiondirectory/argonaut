@@ -28,7 +28,7 @@ use JSON;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file);
+use Argonaut::Libraries::Common qw(:ldap :file :config);
 
 my $actions = {
   'ping'                        => 'hostControl_reachable',
