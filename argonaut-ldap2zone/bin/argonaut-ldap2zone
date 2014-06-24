@@ -3,7 +3,7 @@
 #
 # Ldap2Zone - write DNS Zone file from LDAP informations
 #
-# Copyright (C) 2011-2013 FusionDirectory project
+# Copyright (C) 2011-2014 FusionDirectory project
 #
 # Author: Come Bernigaud
 #
@@ -31,18 +31,26 @@ use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 
 my $zone_arg = undef;
 my $verbose_arg = 0;
+my $norefresh = 0;
+my $dumpdir = '';
 
 sub print_usage
 {
-  print "Usage : ldap2zone [--verbose] ZONE\n";
+  print "Usage : argonaut-ldap2zone [--verbose] [--norestart] [--dumpdir dir] ZONE\n";
   exit(0);
 }
 
 my $i_arg = 0;
 
 foreach my $arg ( @ARGV ) {
-  if (lc($arg) eq "--verbose") {
+  if (not defined $dumpdir) {
+    $dumpdir = $arg;
+  } elsif (lc($arg) eq "--verbose") {
     $verbose_arg = 1;
+  } elsif (lc($arg) eq "--norestart") {
+    $norefresh = 1;
+  } elsif (lc($arg) eq "--dumpdir") {
+    undef $dumpdir;
   } elsif ($i_arg==0) {
     $zone_arg = $arg;
     $i_arg++;
@@ -50,12 +58,17 @@ foreach my $arg ( @ARGV ) {
     print_usage();
   }
 }
+if (not defined $dumpdir) {
+  print_usage();
+} elsif ($dumpdir eq '') {
+  undef $dumpdir;
+}
 
 if (!$zone_arg) {
   print_usage();
 }
 
-argonaut_ldap2zone($zone_arg,$verbose_arg);
+argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir);
 
 __END__
 
@@ -65,7 +78,7 @@ argonaut-ldap2zone - creating bind zone files and refreshing the server
 
 =head1 SYNOPSIS
 
-argonaut-ldap2zone [--verbose] ZONE
+argonaut-ldap2zone [--verbose] [--norestart] [--dumpdir dir] ZONE
 
 =head1 DESCRIPTION
 
@@ -73,17 +86,40 @@ argonaut-ldap2zone is a program used to create bind zone files and refresh the b
 
 =head1 OPTIONS
 
-B<--verbose>
-    be verbose
+=over 3
 
-=head1 EXAMPLES
+=item B<--verbose>
 
- argonaut-ldap2zone --verbose fusiondirectory.org.
+be verbose
+
+=item B<--norestart>
+
+Do not refresh bind zone with rndc 
+
+=item B<--dumpdir>
+
+Dump the zones and bind configuration to another dir for testing purposes
+
+=back
+
+=head1 EXAMPLE
+
+B<argonaut-ldap2zone --verbose fusiondirectory.org.>
+
+ Write the updated zones from ldap and refresh bind
+ 
+B<argonaut-ldap2zone --verbose --norestart --dumpdir dnszone/ master.fdi>
+
+ Write the updated zones from ldap to another directory and don't refresh bind
 
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
 <https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 AUTHORS
+
+Come Bernigaud
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -91,7 +127,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =over 1
 
-=item Copyright (C) 2011-2013 FusionDirectory project
+=item Copyright (C) 2011-2014 FusionDirectory project
 
 =back
 

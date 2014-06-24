@@ -2,7 +2,7 @@
 #
 # Argonaut::Libraries::Packages -- get and parse Debian Packages.
 #
-# Copyright (C) 2011-2013 FusionDirectory project
+# Copyright (C) 2011-2014 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
@@ -31,13 +31,12 @@ use 5.008;
 use MIME::Base64;
 use Path::Class;
 use Net::LDAP;
-use Config::IniFiles;
 use File::Path;
 use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use LWP::Simple;
 
-use Argonaut::Libraries::Common qw(:ldap);
+use Argonaut::Libraries::Common qw(:ldap :config);
 
 BEGIN
 {
@@ -49,8 +48,6 @@ BEGIN
   @EXPORT_OK = qw(get_repolines get_packages_info store_packages_file cleanup_and_extract);
 }
 
-my $configfile = "/etc/argonaut/argonaut.conf";
-
 =pod
 =item get_repolines
 Get repolines from ldap
@@ -59,20 +56,9 @@ Get repolines from ldap
 sub get_repolines {
     my ($mac,$cn) = @_;
 
-    my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-    my $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-    my $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-    my $ldap_password          =   $config->val( ldap => "password"                ,"");
+    my $config = argonaut_read_config;
 
-    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-
-    if ( $ldapinfos->{'ERROR'} > 0) {
-      print ( $ldapinfos->{'ERRORMSG'}."\n" );
-      exit ($ldapinfos->{'ERROR'});
-    }
-
-    my $ldap = $ldapinfos->{'HANDLE'};
-    my $ldap_base = $ldapinfos->{'BASE'};
+    my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
     my $mesg;
 
@@ -101,12 +87,20 @@ sub get_repolines {
     foreach my $entry ($mesg->entries()) {
       foreach my $repoline ($entry->get_value('FAIrepository')) {
         my ($uri,$parent,$dist,$sections,$install,$local,$archs) = split('\|',$repoline);
+        my $sections_array = [split(',',$sections)];
+        if ($install eq 'update') {
+          foreach my $section (@$sections_array) {
+            if ($section !~ m/^updates/) {
+              $section = "updates/$section";
+            }
+          }
+        }
         my $repo = {
           'line'        => $repoline,
           'uri'         => $uri,
           'parent'      => $parent,
           'dist'        => $dist,
-          'sections'    => [split(',',$sections)],
+          'sections'    => $sections_array,
           'installrepo' => $install,
           'localmirror' => ($local eq "local"),
           'archs'       => [split(',',$archs)]
@@ -332,7 +326,7 @@ sub store_packages_file {
               mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
               my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
               if(is_error($res)) {
-                  my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".gz");
+                  my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.gz" => $packages_file.".gz");
                   if(is_error($res2)) {
                       push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
                       push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.gz : $res2";

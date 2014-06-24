@@ -1,0 +1,91 @@
+#!/bin/sh
+
+#######################################################################
+#
+# argonaut-nfsroot-integration
+#
+# Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
+# Copyright (C) 2011-2013 FusionDirectory project
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+msg() {
+  echo "nfsroot-hooks/argonaut-nfsroot-integration: $1"
+}
+
+msg "Copy argonaut.conf and ldap.conf"
+mkdir -p "${NFSROOT}"/etc/argonaut
+cp /etc/argonaut/argonaut.conf "${NFSROOT}"/etc/argonaut/
+
+if [ -n "$FAI_CONF" ]; then
+  msg "installing $FAI_CONF into ${NFSROOT}"
+  cp ${FAI_CONF} ${NFSROOT}${FAI_CONF}
+else
+  msg "FAI_CONF not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not work please indicate the file to be copied into FAI_CONF"
+fi
+
+if [ -n "$FAI_LDAP" ]; then
+  msg "installing $FAI_LDAP into ${NFSROOT}"
+  cp ${FAI_LDAP} ${NFSROOT}${FAI_LDAP}
+else
+  msg "FAI_LDAP not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not work please indicate the file to be copied into FAI_LDAP"
+fi
+
+if [ -n "$FAI_SSL_CERT" ]; then
+  msg "installing ssl certificate into nfs root"
+  cp ${FAI_SSL_CERT} ${NFSROOT}/etc/ssl/certs
+else
+  msg "FAI_SSL_CERT not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not be able to use ssl certificate with ldap, please indicate the certs to be copied into FAI_SSL_CERT"
+fi
+
+if [ -n "$FAI_SSL_CERT_KEY" ]; then
+  msg "installing ssl certificate private key into nfs root"
+  cp ${FAI_SSL_CERT_KEY} ${NFSROOT}/etc/ssl/private
+else
+  msg "FAI_SSL_CERT_KEY not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not be able to use ssl certifcate with ldap, please indicate the certificate private key to be copied into FAI_SSL_CERT_KEY"
+fi
+
+if [ -n "$FAI_SSL_CERT_CA" ]; then
+  msg "installing ssl ca certificate into nfs root"
+  cp ${FAI_SSL_CERT_CA} ${NFSROOT}/etc/ssl/certs
+else
+  msg "FAI_SSL_CERT_CA not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not be able to verify ssl certificate with ldap, please indicate the ca certificate to be copied into FAI_SSL_CERT_CA"
+fi
+
+# Get newest kernel installed inside the nfsroot
+version=$(echo $NFSROOT/boot/vmlinuz-* | sort -n | head -n1 | cut -d- -f2-)
+
+# Copy as default kernel
+if [ -f $TFTPROOT/vmlinuz-$version ]; then
+  msg "installing vmlinuz-install"
+    cp -f $TFTPROOT/vmlinuz-$version $TFTPROOT/vmlinuz-install
+else
+  msg "ERROR: cannot find kernel to use as vmlinuz-install!!!"
+fi
+
+# Copy initrd if present
+if [ -f $TFTPROOT/initrd.img-$version ]; then
+  msg "installing initrd.img-install"
+    cp -f $TFTPROOT/initrd.img-$version $TFTPROOT/initrd.img-install
+else
+  msg "ERROR: cannot find initrd image to use as initrd.img-xx !!!"
+fi
+

@@ -4,7 +4,7 @@
 #
 # argonaut-client-management
 #
-# Copyright (C) 2011-2013 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2011-2014 FusionDirectory project <contact@fusiondirectory.org>
 #
 # Author: Côme BERNIGAUD
 #
@@ -28,19 +28,17 @@ use warnings;
 
 use 5.008;
 
-use JSON::RPC::Server::Daemon;
-use Config::IniFiles;
+use Argonaut::Libraries::Common qw(:ldap :config :file);
+
+use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Server::Daemon';
+use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Server::Daemon';
 use Log::Handler;
 use App::Daemon qw(daemonize);
-
-use Argonaut::Libraries::Common qw(:ldap :file);
 
 # where to look for modules files
 use Module::Pluggable search_path => 'Argonaut::ClientDaemon::Modules', sub_name => 'modules';
 
-our ($client_settings, $server_settings);
-our ($ldap_configfile, $ldap_dn, $ldap_password);
-my $configfile  = "/etc/argonaut/argonaut.conf";
+our ($config, $client_settings, $server_settings);
 my $logfile     = "argonaut-client.log";
 my $piddir      = "/var/run/argonaut";
 my $pidfile     = "argonaut-client.pid";
@@ -89,16 +87,10 @@ $server->dispatch_to($modules)->handle();
 
 
 sub readConfig {
-  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+  $config = argonaut_read_config;
 
-  my $client_ip           =   $config->val( client => "client_ip"            ,"");
-  my $server_ip           =   $config->val( server => "server_ip"             ,"");
-  $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-  $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-  $ldap_password          =   $config->val( ldap => "password"                ,"");
-
-  $server_settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
-  $client_settings = argonaut_get_client_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+  $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
+  $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
 }
 
 
@@ -134,7 +126,7 @@ argonaut-client
 
 =head1 DESCRIPTION
 
-argonaut-client is getting actions from argonaut server and run them. It is modular 
+argonaut-client is getting actions from argonaut server and run them. It is modular
 and can load various modules at run time.
 
 =head1 BUGS
@@ -148,7 +140,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =over 1
 
-=item Copyright (C) 2011-2013 FusionDirectory project
+=item Copyright (C) 2011-2014 FusionDirectory project
 
 =back
 

@@ -2,7 +2,7 @@
 #
 # Argonaut::ClientDaemon::Modules::Ldap2Zone -- Ldap2Zone remote call
 #
-# Copyright (C) 2012-2013 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2014 FusionDirectory project <contact@fusiondirectory.org>
 #
 # Author: Côme BERNIGAUD
 #
@@ -28,9 +28,14 @@ use warnings;
 
 use 5.008;
 
-use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
-
+use Argonaut::Libraries::Common qw(:config);
 use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
+
+my $base;
+BEGIN {
+  $base = (USE_LEGACY_JSON_RPC ? "JSON::RPC::Legacy::Procedure" : "JSON::RPC::Procedure");
+}
+use base $base;
 
 =item start
 start ldap2zone on the computer and store the result in the right place

@@ -28,9 +28,13 @@ use warnings;
 
 use 5.008;
 
-use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
+use Argonaut::Libraries::Common qw(:ldap :config);
 
-use Argonaut::Libraries::Common qw(:ldap);
+my $base;
+BEGIN {
+  $base = (USE_LEGACY_JSON_RPC ? "JSON::RPC::Legacy::Procedure" : "JSON::RPC::Procedure");
+}
+use base $base;
 
 =item getServiceName
 Returns the local name of a service
@@ -38,14 +42,11 @@ Returns the local name of a service
 sub getServiceName : Private {
     my ($nameFD) = @_;
 
-    my $ldapinfos = argonaut_ldap_init ($main::ldap_configfile, 0, $main::ldap_dn, 0, $main::ldap_password);
+    my ($ldap,$ldap_base) = argonaut_ldap_handle($main::config);
 
-    if ($ldapinfos->{'ERROR'} > 0) {
-        die $ldapinfos->{'ERRORMSG'}."\n";
-    }
 
-    my $mesg = $ldapinfos->{'HANDLE'}->search( # perform a search
-              base   => $ldapinfos->{'BASE'},
+    my $mesg = $ldap->search( # perform a search
+              base   => $ldap_base,
               filter => "(&(objectClass=argonautClient)(ipHostNumber=".$main::client_settings->{'ip'}."))",
               attrs => [ 'argonautServiceName' ]
             );

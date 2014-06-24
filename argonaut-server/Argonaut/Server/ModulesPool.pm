@@ -2,7 +2,7 @@
 #
 # Argonaut::Server::ModulesPool -- Argonaut server pool management
 #
-# Copyright (C) 2012-2013 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2014 FusionDirectory project <contact@fusiondirectory.org>
 #
 # Author: Côme BERNIGAUD
 #
@@ -24,7 +24,6 @@
 package Argonaut::Server::ModulesPool;
 
 use strict;
-use diagnostics;
 use POE qw( Component::Pool::Thread );
 use threads::shared;
 use Module::Pluggable search_path => 'Argonaut::Server::Modules', require => 1;

@@ -123,21 +123,42 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "ARGONAUT-SERVER 1"
-.TH ARGONAUT-SERVER 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
+.IX Title "LDAP2FAI 1"
+.TH LDAP2FAI 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-argonaut\-server \- Dispatching action received from FusionDirectory to the clients
+ldap2fai \- read FAI config from LDAP and create config space.
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-argonaut-server
+ldap2fai [\-hnv] [\-c config_space] [\-h hostname] [\-m mac_address | \-i ip_address]
+.SH "OPTIONS"
+.IX Header "OPTIONS"
+\&\fB\-h\fR
+    print out this help message
+.PP
+\&\fB\-v\fR
+    be verbose (multiple v's will increase verbosity)
+.PP
+\&\fB\-d\fR
+    dry run (includes verbose)
+.PP
+\&\fB\-c\fR
+    output dir (default: /var/lib/fai/config)
+.PP
+\&\fB\-h\fR
+    check hostname
+.PP
+\&\fB\-m\fR
+    mac address
+.PP
+\&\fB\-i\fR
+    ip address
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-argonaut-server \- argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular
-and can load various modules at run time.
+ldap2fai is a script to read the fai config space from \s-1LDAP\s0 and create it on the disk.
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
@@ -145,19 +166,16 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
-.IP "Copyright (C) 2011\-2014 FusionDirectory project" 1
+.IP "Copyright (c) 2008 Landeshauptstadt Munchen" 3
+.IX Item "Copyright (c) 2008 Landeshauptstadt Munchen"
+.PD 0
+.IP "Copyright (C) 2007\-2010 The GOsa project" 3
+.IX Item "Copyright (C) 2007-2010 The GOsa project"
+.IP "Copyright (C) 2011\-2014 FusionDirectory project" 3
 .IX Item "Copyright (C) 2011-2014 FusionDirectory project"
+.PD
 .PP
 This program is distributed in the hope that it will be useful,
 but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty of
 \&\s-1MERCHANTABILITY\s0 or \s-1FITNESS\s0 \s-1FOR\s0 A \s-1PARTICULAR\s0 \s-1PURPOSE\s0.  See the
 \&\s-1GNU\s0 General Public License for more details.
-.SH "POD ERRORS"
-.IX Header "POD ERRORS"
-Hey! \fBThe above document had some coding errors, which are explained below:\fR
-.IP "Around line 139:" 4
-.IX Item "Around line 139:"
-=pod directives shouldn't be over one line long!  Ignoring all 4 lines of content
-.IP "Around line 172:" 4
-.IX Item "Around line 172:"
-=pod directives shouldn't be over one line long!  Ignoring all 5 lines of content

@@ -123,21 +123,20 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "ARGONAUT-SERVER 1"
-.TH ARGONAUT-SERVER 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
+.IX Title "ARGONAUT-FUSE 1"
+.TH ARGONAUT-FUSE 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-argonaut\-server \- Dispatching action received from FusionDirectory to the clients
+argonaut\-fuse \- FUSE/TFTP supplicant targeted to work with LDAP entries written by FusionDirectory
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-argonaut-server
+argonaut-fuse
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-argonaut-server \- argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular
-and can load various modules at run time.
+\&\fBargonaut-fuse\fR is a modular fuse-tftp-supplicant written in perl which allows one to create pxelinux configurations for different types of clients using external modules.
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
@@ -145,19 +144,22 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
-.IP "Copyright (C) 2011\-2014 FusionDirectory project" 1
+.PP
+This code was Based on ctftpd
+.IP "Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>" 5
+.IX Item "Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>"
+.PD 0
+.IP "Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>" 5
+.IX Item "Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>"
+.IP "Copyright (c) 2008,2009 by Jan Wenzel <wenzel@gonicus.de>" 5
+.IX Item "Copyright (c) 2008,2009 by Jan Wenzel <wenzel@gonicus.de>"
+.IP "Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>" 5
+.IX Item "Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>"
+.IP "Copyright (C) 2011\-2014 FusionDirectory project" 5
 .IX Item "Copyright (C) 2011-2014 FusionDirectory project"
+.PD
 .PP
 This program is distributed in the hope that it will be useful,
 but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty of
 \&\s-1MERCHANTABILITY\s0 or \s-1FITNESS\s0 \s-1FOR\s0 A \s-1PARTICULAR\s0 \s-1PURPOSE\s0.  See the
 \&\s-1GNU\s0 General Public License for more details.
-.SH "POD ERRORS"
-.IX Header "POD ERRORS"
-Hey! \fBThe above document had some coding errors, which are explained below:\fR
-.IP "Around line 139:" 4
-.IX Item "Around line 139:"
-=pod directives shouldn't be over one line long!  Ignoring all 4 lines of content
-.IP "Around line 172:" 4
-.IX Item "Around line 172:"
-=pod directives shouldn't be over one line long!  Ignoring all 5 lines of content

@@ -4,7 +4,7 @@
 #
 # argonaut-server -- Json-rpc server for deployment
 #
-# Copyright (C) 2011-2013 FusionDirectory project
+# Copyright (C) 2011-2014 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
@@ -33,20 +33,20 @@ use warnings;
 
 use 5.010;
 
+use Argonaut::Libraries::Common qw(:ldap :config :file);
+use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file);
+
 use POE qw(Component::Schedule Component::Server::JSONRPC::Http);
 use DateTime;
 use DateTime::Set;
 use Data::Dumper;
 use Net::LDAP;
-use JSON::RPC::Client;
+use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
+use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
 use JSON;
-use Config::IniFiles;
 use File::Path;
 use Log::Handler;
 use App::Daemon qw(daemonize);
-
-use Argonaut::Libraries::Common qw(:ldap :file);
-use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file);
 
 # where to look for modules files
 use Module::Pluggable search_path => 'Argonaut::Server::Modules', sub_name => 'modules', instantiate => 'new', except => 'Argonaut::Server::Modules::Argonaut';
@@ -60,10 +60,9 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-our ($ldap_configfile,$ldap_dn,$ldap_password,$protocol,$server_ip,$server_port);
+our ($config,$protocol,$server_ip,$server_port);
 my ($sslkeyfile,$sslcertfile,$iptool,$delete_finished_tasks,
-    $interface,$logdir,$packages_folder);
-my $configfile = "/etc/argonaut/argonaut.conf";
+    $interface,$logdir,$packages_folder,$fetch_packages);
 my $logfile = "argonaut-server.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-server.pid";
@@ -93,26 +92,14 @@ $log->add(
 );
 
 sub readConfig {
-  readConfigFile();
-  readLdapConfig();
-}
-
-sub readConfigFile {
-    my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-
-    $server_ip              =   $config->val( server => "server_ip"             ,"");
-    $ldap_configfile        =   $config->val( ldap => "config"                  ,"/etc/ldap/ldap.conf");
-    $ldap_dn                =   $config->val( ldap => "dn"                      ,"");
-    $ldap_password          =   $config->val( ldap => "password"                ,"");
-}
-
-sub readLdapConfig {
-  my $settings = argonaut_get_server_settings($ldap_configfile,$ldap_dn,$ldap_password,$server_ip);
+  $config = argonaut_read_config;
+  my $settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
   $protocol               = $settings->{'protocol'};
   $server_port            = $settings->{'port'};
   $iptool                 = $settings->{'iptool'};
-  $delete_finished_tasks  = $settings->{'delete_finished_tasks'};
+  $delete_finished_tasks  = ($settings->{'delete_finished_tasks'} eq "TRUE");
+  $fetch_packages         = ($settings->{'fetch_packages'} eq "TRUE");
   $interface              = $settings->{'interface'};
   $logdir                 = $settings->{'logdir'};
   $sslkeyfile             = $settings->{'keyfile'};
@@ -121,15 +108,10 @@ sub readLdapConfig {
   $packages_folder        = "/var/cache/argonaut/packages";
 }
 
-sub bindLdap {
-    my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
-    return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
-}
-
 sub getIpFromMac {
   my ($mac) = @_;
 
-  my ($ldap,$ldap_base) = bindLdap();
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
@@ -154,6 +136,45 @@ sub getIpFromMac {
   return $ip;
 }
 
+=pod
+=item getMacFromCn
+Search in the ldap for the Mac associated to a host name.
+Parameter : the host name
+=cut
+sub getMacFromCn {
+  my ($host, $filter) = @_;
+
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
+
+  my $mesg = $ldap->search( # perform a search
+            base   => $ldap_base,
+            filter => "(&(cn=$host)(macAddress=*)$filter)",
+                        attrs => [ 'macAddress' ]
+            );
+
+  $mesg->code && die "Error while searching mac for host '$host' :".$mesg->error;
+
+  if(scalar($mesg->entries)>1) {
+    $log->error("Multiple mac addresses were found for the host '$host'!");
+    die "Multiple mac addresses were found for the host '$host'!";
+  } elsif(scalar($mesg->entries)<1) {
+    $log->error("No macs was found for the host '$host'!");
+    die "No mac address was found for the host '$host'!";
+  }
+
+  my $mac = ($mesg->entries)[0]->get_value("macAddress");
+
+  $mesg = $ldap->unbind;   # take down session
+
+  return $mac;
+}
+
+=pod
+=item wakeOnLan
+Send a wake on lan package to a mac address
+Parameter : the mac address
+inspired by WakeOnLan.pm file from FusionInventory
+=cut
 sub wakeOnLan {
     my ($macaddress) = @_;
 
@@ -215,7 +236,7 @@ sub ldap_authenticate {
   if (!defined($login) || !defined($password)) {
     return 0;
   }
-  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $login, 0, $password);
+  my $ldapinfos = argonaut_ldap_init ($config->{'ldap_configfile'}, 0, $login, 0, $password, 0, $config->{'ldap_tls'});
 
   if ( $ldapinfos->{'ERROR'} > 0) {
     return 0;
@@ -230,10 +251,7 @@ sub refresh_task {
     $heap->{tasks}->{$id} = $heap->{tasks}->{$id}->{'handler'}->update_task($heap->{tasks}->{$id});
   }
   if($heap->{tasks}->{$id}->{progress} >= 100) {
-    $heap->{tasks}->{$id}->{status} = "processed";
-    if($delete_finished_tasks) {
-      $kernel->call($session => 'delete_task' => $id);
-    }
+    $kernel->call($session => 'set_task_processed' => $id);
   }
 }
 
@@ -260,6 +278,7 @@ POE::Session->create(
                     'remove_entries' => 'remove_entries',
                     'process_entries_now' => 'process_entries',
                     'get_my_id' => 'id_of_mac',
+                    'get_host_id' => 'id_of_host',
                     'set_task_substatus' => 'jsonrpc_set_task_substatus',
                     'set_error' => 'set_error',
                     'get_packages' => 'get_packages'
@@ -279,15 +298,17 @@ POE::Session->create(
                 ];
             #~ $_[KERNEL]->yield(add=>undef,undef,"job_trigger_action_halt",["00:11:22:33:44:55"],{timestamp=>1314107700});
             $log->notice("Argonaut server launched on port $server_port");
-            $_[HEAP]{crawler} = POE::Component::Schedule->add(
-                $_[SESSION],
-                packages_crawler => DateTime::Set->from_recurrence(
-                                after      => DateTime->now,
-                                recurrence => sub {
-                                    return $_[0]->add( days => 1 )
-                                },
-                            ));
-            $_[KERNEL]->yield("packages_crawler"); #FIXME should be included in the recurrence
+            if ($fetch_packages) {
+                $_[HEAP]{crawler} = POE::Component::Schedule->add(
+                    $_[SESSION],
+                    packages_crawler => DateTime::Set->from_recurrence(
+                                    after      => DateTime->now,
+                                    recurrence => sub {
+                                        return $_[0]->add( days => 1 )
+                                    },
+                                ));
+                $_[KERNEL]->yield("packages_crawler");
+            }
         },
         echo => sub {
             my ($kernel, $jsonrpc, $id, @params) = @_[KERNEL, ARG0..$#_ ];
@@ -313,7 +334,17 @@ POE::Session->create(
                     return;
                 }
             }
-            $kernel->post( $jsonrpc => 'error' => $id, "Mac were not found in queue");
+            $kernel->post( $jsonrpc => 'error' => $id, "Mac address '$mac' was not found in queue");
+        },
+        id_of_host => sub {
+            my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
+            my ($host, $filter) = @params;
+
+            $log->info("searching taskid for $host $filter");
+
+            my $mac = getMacFromCn($host, $filter);
+
+            $kernel->call($session => 'id_of_mac' => $jsonrpc, $id, $mac);
         },
         jsonrpc_set_task_substatus => sub {
             my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
@@ -342,11 +373,7 @@ POE::Session->create(
           if (defined $progress) {
             $heap->{tasks}->{$taskid}->{progress} = $progress;
             if ($progress >= 100) {
-              flag($heap->{tasks}->{$taskid}->{target},"localboot");
-              $heap->{tasks}->{$taskid}->{status} = "processed";
-              if ($delete_finished_tasks) {
-                $kernel->call($session => 'delete_task' => $taskid);
-              }
+              $kernel->call($session => 'set_task_processed' => $taskid);
             }
           }
         },
@@ -504,9 +531,9 @@ POE::Session->create(
 
           my @modules = modules();
           push @modules, Argonaut::Server::Modules::Argonaut->new();
-          foreach my $module (@modules) {
+          MODULES: foreach my $module (@modules) {
             # Is this module able to handle this client and action?
-            if ($module->handle_client($target,$action)) {
+            if (eval {$module->handle_client($target,$action)}) {
               $handled = 1;
               # If it is, send him the infos
               my $args = undef;
@@ -514,7 +541,7 @@ POE::Session->create(
                 $args = $data->{args};
               }
               $kernel->post($heap->{modulepool} => "do" => $module, $taskid, $args);
-              last;
+              last MODULES;
             }
           }
           unless ($handled) {
@@ -543,10 +570,7 @@ POE::Session->create(
             if (grep {$_ eq $heap->{tasks}->{$taskid}->{action}} @{$heap->{scheduled_only}}) {
               $heap->{tasks}->{$taskid}->{status} = "processing";
             } else {
-              $heap->{tasks}->{$taskid}->{status} = "processed";
-              if($delete_finished_tasks) {
-                $kernel->call($session => 'delete_task' => $taskid);
-              }
+              $kernel->call($session => 'set_task_processed' => $taskid);
             }
           }
         },
@@ -580,6 +604,19 @@ POE::Session->create(
             delete $heap->{tasks}->{$taskid}->{handler};
           }
           delete $heap->{tasks}->{$taskid};
+        },
+        set_task_processed => sub {
+          my ($kernel,$heap,$session,$taskid) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          if (not defined $heap->{tasks}->{$taskid}) {
+            return;
+          }
+          if (defined $heap->{tasks}->{$taskid}->{'handler'}) {
+            $heap->{tasks}->{$taskid} = $heap->{tasks}->{$taskid}->{'handler'}->task_processed($heap->{tasks}->{$taskid});
+          }
+          $heap->{tasks}->{$taskid}->{status} = "processed";
+          if($delete_finished_tasks) {
+            $kernel->call($session => 'delete_task' => $taskid);
+          }
         },
         get_new_task_id => sub {
           my $heap = $_[HEAP];
@@ -690,11 +727,11 @@ argonaut-server - Dispatching action received from FusionDirectory to the client
 
 =head1 SYNOPSIS
 
-argonaut-server 
+argonaut-server
 
 =head1 DESCRIPTION
 
-argonaut-server - argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular 
+argonaut-server - argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular
 and can load various modules at run time.
 
 =head1 BUGS
@@ -708,7 +745,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =over 1
 
-=item Copyright (C) 2011-2013 FusionDirectory project
+=item Copyright (C) 2011-2014 FusionDirectory project
 
 =back
 

@@ -123,21 +123,21 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "ARGONAUT-SERVER 1"
-.TH ARGONAUT-SERVER 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
+.IX Title "ARGONAUT-FAI-MONITOR 1"
+.TH ARGONAUT-FAI-MONITOR 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-argonaut\-server \- Dispatching action received from FusionDirectory to the clients
+argonaut\-fai\-monitor \- read status of installation from fai\-monitor and send them to argonaut\-server
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-argonaut-server
+fai-monitor | argonaut-fai-monitor
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-argonaut-server \- argonaut-server dispatch actions received from FusionDirectory and send it to the clients. It is modular
-and can load various modules at run time.
+argonaut-fai-monitor read fai-monitor status and send them to argonaut-server for FusionDirectory to 
+show them in deployment queue
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
@@ -145,19 +145,10 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
-.IP "Copyright (C) 2011\-2014 FusionDirectory project" 1
+.IP "Copyright (C) 2011\-2014 FusionDirectory project" 3
 .IX Item "Copyright (C) 2011-2014 FusionDirectory project"
 .PP
 This program is distributed in the hope that it will be useful,
 but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty of
 \&\s-1MERCHANTABILITY\s0 or \s-1FITNESS\s0 \s-1FOR\s0 A \s-1PARTICULAR\s0 \s-1PURPOSE\s0.  See the
 \&\s-1GNU\s0 General Public License for more details.
-.SH "POD ERRORS"
-.IX Header "POD ERRORS"
-Hey! \fBThe above document had some coding errors, which are explained below:\fR
-.IP "Around line 139:" 4
-.IX Item "Around line 139:"
-=pod directives shouldn't be over one line long!  Ignoring all 4 lines of content
-.IP "Around line 172:" 4
-.IX Item "Around line 172:"
-=pod directives shouldn't be over one line long!  Ignoring all 5 lines of content

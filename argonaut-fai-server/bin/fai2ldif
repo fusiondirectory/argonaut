@@ -1,0 +1,528 @@
+#!/usr/bin/perl -w
+
+#######################################################################
+#
+# fai2ldif
+#
+# Copyright (c) 2014 The FusionDirectory Project <contact@fusiondirectory.org>
+#
+# Authors: Côme Bernigaud
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Net::LDAP;
+use Getopt::Long;
+
+# used to manage files
+use Path::Class;
+use File::Find;
+use Fcntl qw(:mode);
+use MIME::Base64;
+
+my $dump_dir      = "/var/lib/fai/config";
+my $verbose       = 0;
+my $base          = '<BASE>';
+my $faibaserdn    = 'ou=fai,ou=configs,ou=systems';
+my %faitypes = (
+  'package' => {
+    'rdn'       => 'ou=packages',
+  },
+  'disk' => {
+    'rdn'       => 'ou=disk',
+  },
+  'variable' => {
+    'rdn'       => 'ou=variables',
+  },
+  'hook' => {
+    'rdn'       => 'ou=hooks',
+    'class'     => 'FAIhook',
+    'subclass'  => 'FAIhookEntry'
+  },
+  'script' => {
+    'rdn'       => 'ou=scripts',
+    'class'     => 'FAIscript',
+    'subclass'  => 'FAIscriptEntry'
+  },
+  'template' => {
+    'rdn'       => 'ou=templates',
+    'class'     => 'FAItemplate',
+    'subclass'  => 'FAItemplateEntry'
+  }
+);
+my $dist          = '';
+my $outfile;
+my $outfilename   = '';
+
+Getopt::Long::Configure ("bundling");
+
+GetOptions( 'v|verbose'         => \$verbose,
+            'h|help'            => \&usage,
+            'c|config-space=s'  => \$dump_dir,
+            'd|dist=s'          => \$dist,
+            'o|output-file=s'   => \$outfilename,
+            'b|base=s'          => \$base
+          )
+  or usage( 'Wrong parameters' );
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub usage
+{
+  (@_) && print STDERR "\n@_\n\n";
+
+  print STDERR << "EOF";
+ usage: $0 [-hv] [-c config_space] [-d dist] -b base class
+
+  -h  : this (help) message
+  -v  : be verbose
+  -c  : config space (default: ${dump_dir})
+  -b  : ldap base
+  -d  : distribution
+  -o  : output file
+
+EOF
+  exit -1;
+}
+
+my $class = shift or usage('Missing class parameter');
+if ($dist) {
+  $faibaserdn = "ou=$dist,$faibaserdn";
+}
+if ($outfilename) {
+  open($outfile, '>'.$outfilename) or die "Could not open '$outfilename'\n";
+} else {
+  $outfile = *STDOUT;
+}
+
+# Debconf first as it could change package_config handling
+my %configured_packages = ();
+my $debconf_output = '';
+parse_class("debconf/$class",         sub {return {};},       \&line_parser_debconf);
+my $package_parser = parse_class("package_config/$class",  sub {return {'used' => []};},       \&line_parser_package);
+handle_package_list_end($package_parser);
+parse_class("disk_config/$class",     \&parse_init_disk,      \&line_parser_disk);
+parse_class("class/$class.var",       \&parse_init_variables, \&line_parser_variables);
+parse_files('script',   \&file_parser_script,   "scripts/$class");
+parse_files('template', \&file_parser_template, "files");
+parse_files('hook',     \&file_parser_hook,     "hooks");
+
+sub parse_class
+{
+  my ($filepath, $init_parser, $line_parser) = @_;
+  $filepath = "$dump_dir/$filepath";
+
+  if (-f $filepath) {
+    my $file = file($filepath);
+
+    print "# parsing $file\n" if $verbose;
+
+    my $parser = &$init_parser();
+
+    my @lines = $file->slurp;
+    foreach my $line ( @lines ) {
+      # remove comments
+      $line =~ s/#.*$//;
+      # remove \n from the end of each line
+      chomp $line;
+      # ignore empty lines
+      next if ( $line =~ /^$/ );
+
+      $parser->$line_parser($line);
+    }
+
+    return $parser;
+  }
+}
+
+sub line_parser_package
+{
+  my $infos = shift;
+  my $line = shift;
+  # only process for lines beginning with "class", and extracting the 2nd word (the class name)
+  if ( $line =~ /^PACKAGES\s+([^ ]+)(\s+([^ ]*))?/ ) {
+    my $cn = $class;
+    if ($3) {
+      if ($infos->{'main'}) { # We just ended main package list
+        while (my ($package, $v) = each %configured_packages) {
+          if ($v) {
+            print $outfile "FAIpackage: $package\n";
+            $configured_packages{$package} = 0;
+          }
+        }
+      }
+      $cn .= '-'.$3;
+      $infos->{'main'} = 0;
+    } else {
+      $infos->{'main'} = 1;
+    }
+    if (grep {$_ eq $cn} @{$infos->{'used'}}) {
+      $cn .= '-'.$1;
+      while (grep {$_ eq $cn} @{$infos->{'used'}}) {
+        $cn .= '-';
+      }
+    }
+    push  @{$infos->{'used'}}, $cn;
+    print $outfile "\n";
+    print $outfile "dn: cn=$cn,".$faitypes{'package'}->{'rdn'}.",$faibaserdn,$base\n";
+    print $outfile "cn: $cn\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAIpackageList\n";
+    print $outfile "FAIinstallMethod: $1\n";
+  } else {
+    my @packages = split(/\s+/, $line);
+    foreach my $package (@packages) {
+      print $outfile "FAIpackage: $package\n";
+      if ($infos->{'main'}) {
+        $configured_packages{$package} = 0;
+      }
+    }
+  }
+}
+
+sub handle_package_list_end
+{
+  my $infos = shift;
+  if (not $infos->{'main'}) { # We had no main package list
+    print $outfile "\n";
+    print $outfile "dn: cn=$class,".$faitypes{'package'}->{'rdn'}.",$faibaserdn,$base\n";
+    print $outfile "cn: $class\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile 'objectClass: FAIpackageList'."\n";
+  }
+  while (my ($package, $v) = each %configured_packages) {
+    if ($v) {
+      print $outfile "FAIpackage: $package\n";
+      $configured_packages{$package} = 0;
+    }
+  }
+  print $outfile "\n";
+  print $outfile $debconf_output;
+}
+
+sub parse_init_disk
+{
+  print $outfile "dn: cn=$class,".$faitypes{'disk'}->{'rdn'}.",$faibaserdn,$base\n";
+  print $outfile "cn: $class\n";
+  print $outfile 'objectClass: top'."\n";
+  print $outfile 'objectClass: FAIclass'."\n";
+  print $outfile "objectClass: FAIpartitionTable\n";
+  print $outfile "FAIpartitionMethod: setup-storage\n";
+    print $outfile "\n";
+
+  return {};
+}
+
+sub line_parser_disk
+{
+  my $infos = shift;
+  my $line  = shift;
+
+  if ( $line =~ /^disk_config\s+([^\s]+)(\s+(.+))?/ ) {
+    if ($1 eq 'lvm') {
+      $infos->{'disk_type'} = 'lvm';
+    } else {
+      $infos->{'disk_type'} = 'disk';
+      $infos->{'disk_cn'}   = $1;
+      print $outfile 'dn: cn='.$infos->{'disk_cn'}.",cn=$class,".$faitypes{'disk'}->{'rdn'}.",$faibaserdn,$base\n";
+      print $outfile 'cn: '.$infos->{'disk_cn'}."\n";
+      print $outfile 'objectClass: top'."\n";
+      print $outfile 'objectClass: FAIclass'."\n";
+      print $outfile "objectClass: FAIpartitionDisk\n";
+      print $outfile 'FAIdiskType: '.$infos->{'disk_type'}."\n";
+      foreach my $option (split ' ',$3) {
+        print $outfile "FAIdiskOption: $option\n";
+      }
+      print $outfile "\n";
+      $infos->{'partitionNr'} = 1;
+    }
+  } elsif (($infos->{'disk_type'} eq 'lvm') and ($line =~ /^vg\s+([^\s]+)\s+([^\s]+)/)) {
+    $infos->{'disk_cn'} = $1;
+    print $outfile 'dn: cn='.$infos->{'disk_cn'}.",cn=$class,".$faitypes{'disk'}->{'rdn'}.",$faibaserdn,$base\n";
+    print $outfile 'cn: '.$infos->{'disk_cn'}."\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAIpartitionDisk\n";
+    print $outfile 'FAIdiskType: '.$infos->{'disk_type'}."\n";
+    foreach my $option (split ',',$2) {
+      print $outfile "FAIlvmDevice: $option\n";
+    }
+    print $outfile "\n";
+    $infos->{'partitionNr'} = 1;
+  } elsif ($line =~ /^([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)(\s+createopts="([^"]*)")?(\s+tuneopts="([^"]*)")?/) {
+    print $outfile 'dn: FAIpartitionNr='.$infos->{'partitionNr'}.',cn='.$infos->{'disk_cn'}.",cn=$class,".$faitypes{'disk'}->{'rdn'}.",$faibaserdn,$base\n";
+    print $outfile 'FAIpartitionNr: '.$infos->{'partitionNr'}."\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAIpartitionEntry\n";
+    if ($infos->{'disk_type'} eq 'lvm') {
+      my $cn = $1;
+      $cn =~ s/^$infos->{'disk_cn'}-//;
+      print $outfile "cn: $cn\n";
+      print $outfile "FAIpartitionType: lvm\n";
+    } else {
+      print $outfile 'cn: '.$infos->{'partitionNr'}."\n";
+      print $outfile "FAIpartitionType: $1\n";
+    }
+    print $outfile "FAImountPoint: $2\nFAIpartitionSize: $3\nFAIfsType: $4\nFAImountOptions: $5\n";
+    chomp $7 if defined $7;
+    chomp $9 if defined $9;
+    print $outfile "FAIfsCreateOptions: $7\n" if defined $7;
+    print $outfile "FAIfsTuneOptions: $9\n" if defined $9;
+    print $outfile "\n";
+    $infos->{'partitionNr'}++;
+  } else {
+    print STDERR "Could not parse line $line\n";
+  }
+}
+
+sub parse_init_variables
+{
+  print $outfile "dn: cn=$class,".$faitypes{'variable'}->{'rdn'}.",$faibaserdn,$base\n";
+  print $outfile 'objectClass: top'."\n";
+  print $outfile 'objectClass: FAIclass'."\n";
+  print $outfile "objectClass: FAIvariable\n";
+  print $outfile "cn: $class\n";
+  print $outfile "\n";
+  return {};
+}
+
+sub line_parser_variables
+{
+  my $infos = shift;
+  my $line  = shift;
+
+  if ( $line =~ /^([^=]+)=(.*)$/ ) {
+    my $cn    = $1;
+    my $value = $2;
+    if (($value =~ m/^'(.*)'$/) || ($value =~ m/^"(.*)"$/)) {
+      $value = $1;
+    }
+    print $outfile "dn: cn=$cn,cn=$class,".$faitypes{'variable'}->{'rdn'}.",$faibaserdn,$base\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: FAIvariableEntry\n";
+    print $outfile "cn: $cn\nFAIvariableContent: $value\n";
+    print $outfile "\n";
+  } else {
+    print STDERR "Could not parse line $line\n";
+  }
+}
+
+sub line_parser_debconf
+{
+  my $infos = shift;
+  my $line  = shift;
+
+  if ( $line =~ /^(\S+)\s+(\S+)\s+(\S+)\s+(.+)$/ ) {
+    $debconf_output .= "dn: FAIvariable=$2,cn=$class,".$faitypes{'package'}->{'rdn'}.",$faibaserdn,$base\n";
+    $debconf_output .= "objectClass: FAIdebconfInfo\n";
+    $debconf_output .= "FAIpackage: $1\n";
+    $debconf_output .= "FAIvariable: $2\n";
+    $debconf_output .= "FAIvariableType: $3\n";
+    $debconf_output .= "FAIvariableContent: $4\n";
+    $debconf_output .= "\n";
+    if (not $configured_packages{$1}) {
+      $configured_packages{$1} = 1;
+    }
+  } else {
+    print STDERR "Could not parse line $line\n";
+  }
+}
+
+sub parse_files
+{
+  my ($type, $file_parser, $filepath) = @_;
+  $filepath = "$dump_dir/$filepath";
+
+  return if ! -d $filepath;
+
+  my $parser = Argonaut::Librairies::FAI::ClassParser->new($type);
+  my $tf_finder = sub {
+    print '# Parsing '.$File::Find::name."\n" if $verbose;
+    $parser->$file_parser($_, $File::Find::name, $filepath);
+  };
+  find( $tf_finder, $filepath );
+  $parser->print_ldif();
+}
+
+sub file_parser_template
+{
+  my $parser = shift;
+  shift;
+  return if ! -f;
+  return if ! /^$class$/;
+  my $path    = shift;
+  my $dirname = shift;
+  $path =~ s/^$dirname//;
+  $path =~ s|/$class$||;
+  my $stats   = file($_)->stat;
+  my $content = encode_base64(file($_)->slurp, "\n ");
+  $content =~ s/\s+$//;
+  push @{$parser->{'nodes'}}, {
+    'cn'    => $path,
+    'lines' => [
+      "FAItemplatePath: $path\n",
+      "FAItemplateFile:: $content\n",
+      sprintf ("FAImode: %04o\n", S_IMODE($stats->mode)),
+      "FAIowner: ".getpwuid($stats->uid).'.'.getgrgid($stats->gid)."\n",
+    ]
+  };
+}
+
+sub file_parser_script
+{
+  my $parser = shift;
+  shift;
+  return if ! -f;
+  /^([0-9]+)-(.+)$/;
+  my $prio  = $1;
+  my $cn    = $2;
+  my $content = encode_base64(file($_)->slurp, "\n ");
+  $content =~ s/\s+$//;
+  push @{$parser->{'nodes'}}, {
+    'cn'    => $cn,
+    'lines' => [
+      "FAIpriority: $prio\n",
+      "FAIscript:: $content\n",
+    ]
+  };
+}
+
+sub file_parser_hook
+{
+  my $parser = shift;
+  shift;
+  return if ! -f;
+  return if ! /\.$class(\.source)?$/;
+  if (/\.source$/) {
+    print "# Skipping $_ because LDAP schemas do not support .source\n";
+    return;
+  }
+  /^(.+)\.$class$/;
+  my $task = $1;
+  my $content = encode_base64(file($_)->slurp, "\n ");
+  $content =~ s/\s+$//;
+  push @{$parser->{'nodes'}}, {
+    'cn'    => $task,
+    'lines' => [
+      "FAItask: $task\n",
+      "FAIscript:: $content\n",
+    ]
+  };
+}
+
+package Argonaut::Librairies::FAI::ClassParser;
+
+sub new
+{
+  my $class = shift;
+  bless {
+    'type'  => shift,
+    'nodes' => [],
+  }, $class;
+}
+
+sub print_ldif
+{
+  my $parser  = shift;
+  return if (scalar @{$parser->{'nodes'}} eq 0);
+  my $dn_base;
+  if ($faitypes{$parser->{'type'}}->{'class'}) {
+    print $outfile "dn: cn=$class,".$faitypes{$parser->{'type'}}->{'rdn'}.",$faibaserdn,$base\n";
+    print $outfile 'cn: '.$class."\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: ".$faitypes{$parser->{'type'}}->{'class'}."\n";
+    print $outfile "\n";
+    $dn_base = ",cn=$class,".$faitypes{$parser->{'type'}}->{'rdn'}.",$faibaserdn,$base\n";
+  } else {
+    $dn_base = ",".$faitypes{$parser->{'type'}}->{'rdn'}.",$faibaserdn,$base\n";
+  }
+  foreach my $node (@{$parser->{'nodes'}}) {
+    print $outfile 'dn: cn='.$node->{'cn'}.$dn_base;
+    print $outfile 'cn: '.$node->{'cn'}."\n";
+    print $outfile 'objectClass: top'."\n";
+    print $outfile 'objectClass: FAIclass'."\n";
+    print $outfile "objectClass: ".$faitypes{$parser->{'type'}}->{'subclass'}."\n";
+    foreach (@{$node->{'lines'}}) {
+      print;
+    }
+    print $outfile "\n";
+  }
+}
+
+__END__
+
+=head1 NAME
+
+fai2ldif - read fai classes and create an ldif file to be imported into an ldap server
+
+=head1 SYNOPSIS
+
+fai2ldif [-hv] [-c config_space] [-d dist] [-o output filename] -b base class
+
+=head1 OPTIONS
+
+B<-h>
+    print out this help message
+
+B<-v>
+    be verbose (multiple v's will increase verbosity)
+
+B<-c>
+    config sapce (default: /var/lib/fai/config)
+
+B<-d>
+    Distribution name
+
+B<-b>
+    ldap base
+
+B<-o>
+    output filename
+
+
+=head1 DESCRIPTION
+
+fai2ldif is a script to read the fai config space from LDAP and create it on the disk.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2011-2014 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut

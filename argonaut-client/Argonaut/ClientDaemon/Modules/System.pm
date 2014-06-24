@@ -28,9 +28,13 @@ use warnings;
 
 use 5.008;
 
-use base qw(JSON::RPC::Procedure); # requires Perl 5.6 or later
+use Argonaut::Libraries::Common qw(:ldap :config);
 
-use Argonaut::Libraries::Common qw(:ldap);
+my $base;
+BEGIN {
+  $base = (USE_LEGACY_JSON_RPC ? "JSON::RPC::Legacy::Procedure" : "JSON::RPC::Procedure");
+}
+use base $base;
 
 =item halt
 shutdown the computer

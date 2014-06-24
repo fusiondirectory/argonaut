@@ -3,7 +3,7 @@
 # Argonaut::Libraries::Common -- Argonaut basic functions.
 #
 # Copyright (c) 2008 Landeshauptstadt München
-# Copyright (C) 2011-2013 FusionDirectory project
+# Copyright (C) 2011-2014 FusionDirectory project
 #
 # Author: Matthias S. Benkmann
 #         Come Bernigaud
@@ -31,12 +31,20 @@ use warnings;
 
 use 5.008;
 
+use JSON::RPC ();
+use constant USE_LEGACY_JSON_RPC => ($JSON::RPC::VERSION > 0.96);
+
 use Net::LDAP;
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
 use File::Path;
+use Config::IniFiles;
 
 my $iptool = "ifconfig";
+
+my $die_endl = "\n"; # Change to "" to have verbose dies
+
+my $configfile = "/etc/argonaut/argonaut.conf";
 
 BEGIN
 {
@@ -55,6 +63,7 @@ BEGIN
       &argonaut_ldap_is_single_result
       &argonaut_ldap_split_dn
       &argonaut_ldap_init
+      &argonaut_ldap_handle
       &argonaut_get_generic_settings
       &argonaut_get_client_settings
       &argonaut_get_server_settings
@@ -77,6 +86,10 @@ BEGIN
     )],
      'net' => [qw(
       &argonaut_get_mac
+    )],
+     'config' => [qw(
+      &argonaut_read_config
+      USE_LEGACY_JSON_RPC
     )]
   );
 
@@ -143,13 +156,13 @@ sub argonaut_get_mac_pxe {
 #
 sub argonaut_ldap_init {
   my( $ldap_conf, $prompt_dn, $bind_dn,
-      $prompt_pwd, $bind_pwd, $obfuscate_pwd ) = @_;
+      $prompt_pwd, $bind_pwd, $obfuscate_pwd, $ldap_tls ) = @_;
   my %results;
 
   undef $bind_dn if ($bind_dn eq '');
 
   # Parse ldap config
-  my ($base,$ldapuris) = argonaut_ldap_parse_config( $ldap_conf );
+  my ($base,$ldapuris,$tlsoptions) = argonaut_ldap_parse_config( $ldap_conf );
   %results = ( 'BASE' => $base, 'URIS' => $ldapuris);
 
   if ( ! defined $base ) {
@@ -167,6 +180,15 @@ sub argonaut_ldap_init {
   if ( ! defined $ldap ) {
     %results = ( 'ERROR' => 1, 'ERRORMSG' => "LDAP 'new' error: '$@' with parameters '".join(",",@{$ldapuris})."'");
     return \%results;
+  }
+
+  if ($ldap_tls) {
+    $ldap->start_tls(
+      verify      => $tlsoptions->{'REQCERT'},
+      clientcert  => $tlsoptions->{'CERT'},
+      clientkey   => $tlsoptions->{'KEY'},
+      capath      => $tlsoptions->{'CACERTDIR'}
+    );
   }
 
   $results{ 'HANDLE' } = $ldap;
@@ -227,6 +249,17 @@ sub argonaut_ldap_init {
   return \%results;
 }
 
+sub argonaut_ldap_handle {
+  my ($config)  = @_;
+  my $ldapinfos = argonaut_ldap_init ($config->{'ldap_configfile'}, 0, $config->{'ldap_dn'}, 0, $config->{'ldap_password'}, 0, $config->{'ldap_tls'});
+
+  if ( $ldapinfos->{'ERROR'} > 0) {
+    die $ldapinfos->{'ERRORMSG'}."$die_endl";
+  }
+
+  return ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'},$ldapinfos);
+}
+
 #------------------------------------------------------------------------------
 sub argonaut_ldap_parse_config
 {
@@ -248,7 +281,7 @@ sub argonaut_ldap_parse_config
   my @content=<LDAPCONF>;
   close(LDAPCONF);
 
-  my ($ldap_base, @ldap_uris);
+  my ($ldap_base, @ldap_uris, %tls_options);
   # Scan LDAP config
   foreach my $line (@content) {
     $line =~ /^\s*(#|$)/ && next;
@@ -270,43 +303,13 @@ sub argonaut_ldap_parse_config
       }
       next;
     }
-  }
-
-  return( $ldap_base, \@ldap_uris );
-}
-
-#------------------------------------------------------------------------------
-sub argonaut_ldap_parse_config_ex
-{
-  my %result = ();
-
-  my $ldap_info = '/etc/ldap/ldap-shell.conf';
-  if ( -r '/etc/ldap/ldap-offline.conf' ) {
-    $ldap_info = '/etc/ldap/ldap-offline.conf';
-  }
-
-  if (!open( LDAPINFO, "<${ldap_info}" ))
-  {
-     warn "Couldn't open ldap info ($ldap_info): $!\n";
-     return undef;
-  }
-  while( <LDAPINFO> ) {
-    if( $_ =~ m/^([a-zA-Z_0-9]+)="(.*)"$/ ) {
-      if ($1 eq "LDAP_URIS") {
-        my @uris = split(/ /,$2);
-        $result{$1} = \@uris;
-      }
-      else {
-        $result{$1} = $2;
-      }
+    if ($line =~ m/^TLS_(REQCERT|CERT|KEY|CACERTDIR)\s+(.*)\s*$/) {
+      $tls_options{$1} = $2;
+      next;
     }
   }
-  close( LDAPINFO );
-  if (not exists($result{"LDAP_URIS"}))
-  {
-    warn "LDAP_URIS missing in file $ldap_info\n";
-  }
-  return \%result;
+
+  return( $ldap_base, \@ldap_uris, \%tls_options);
 }
 
 # Split the dn (works with escaped commas)
@@ -334,82 +337,6 @@ sub argonaut_ldap_split_dn {
   }
 
   return @result_rdns;
-}
-
-#------------------------------------------------------------------------------
-#
-# parse config for user or global config
-#
-sub argonaut_ldap_parse_config_multi
-{
-  my ($ldap_config) = @_;
-
-  # Indicate, if it's a user or global config
-  my $is_user_cfg = 1;
-
-  # If we don't get a config, go searching for it
-  if( ! defined $ldap_config ) {
-
-    # Check the local and users LDAP config name
-    my $ldaprc = ( exists $ENV{ 'LDAPRC' } )
-               ? basename( $ENV{ 'LDAPRC' } ) : 'ldaprc';
-
-    # First check current directory
-    $ldap_config = $ENV{ 'PWD' } . '/' . $ldaprc;
-    goto config_open if( -e $ldap_config );
-
-    # Second - visible in users home
-    $ldap_config = $ENV{ 'HOME' } . '/' . $ldaprc;
-    goto config_open if( -e $ldap_config );
-
-    # Third - hidden in users home
-    $ldap_config = $ENV{ 'HOME' } . '/.' . $ldaprc;
-    goto config_open if( -e $ldap_config );
-
-    # We don't allow BINDDN in global config
-    $is_user_cfg = 0;
-
-    # Global environment config
-    if( exists $ENV{ 'LDAPCONF' } ) {
-      $ldap_config = $ENV{ 'LDAPCONF' };
-      goto config_open if( -e $ldap_config );
-    }
-
-    # Last chance - global config
-    $ldap_config = '/etc/ldap/ldap.conf'
-  }
-
-config_open:
-  # Read LDAP file if it's < 100kB
-  return if( (-s "${ldap_config}" > 100 * 1024)
-          || (! open( LDAPCONF, "<${ldap_config}" )) );
-
-  my @content = <LDAPCONF>;
-  close( LDAPCONF );
-
-  my( $ldap_base, @ldap_uris, $ldap_bind_dn );
-
-  # Parse LDAP config
-  foreach my $line (@content) {
-    $line =~ /^\s*(#|$)/ && next;
-    chomp($line);
-
-    if ($line =~ /^BASE\s+(.*)$/i) {
-      $ldap_base= $1;
-    }
-    elsif( $line =~ /^BINDDN\s+(.*)$/i ) {
-      $ldap_bind_dn = $1 if( $is_user_cfg );
-    }
-    elsif ($line =~ m#^URI\s+(.*)\s*$#i ) {
-      my (@ldap_servers) = split( ' ', $1 );
-      foreach my $server (@ldap_servers) {
-        push( @ldap_uris, $1 )
-          if( $server =~ m#^(ldaps?://([^/:\s]+)(:([0-9]+))?)/?$#i );
-      }
-    }
-  }
-
-  return( $ldap_base, \@ldap_uris, $ldap_bind_dn, $ldap_config );
 }
 
 #------------------------------------------------------------------------------
@@ -451,7 +378,7 @@ sub argonaut_create_dir
 {
   my ($dir) = @_;
 
-  mkdir($dir,755);
+  mkdir($dir,0755);
 }
 #------------------------------------------------------------------------------
 #
@@ -507,8 +434,6 @@ sub argonaut_ldap_search_checks {
 # Returns undef on non-LDAP failures
 #
 sub argonaut_ldap_rsearch {
-  use Switch;
-
   my ($ldap,$base,$sbase,$filter,$scope,$subbase,$attrs) = @_;
 
   ( $base, $sbase ) = argonaut_ldap_search_checks( @_ );
@@ -522,20 +447,19 @@ sub argonaut_ldap_rsearch {
   while( 1 ) {
 
     # Walk the DN tree
-    switch( scalar @rdns ) {
-    case 0 {
+    if (scalar @rdns == 0) {
       # We also want to search the stop base, if it was defined
       return if( ! defined $sbase );
-      if( length( $sbase ) > 0 )
-        { $search_base = substr( $sbase, 1 ); }
-      else { $search_base = ''; }
-      undef( $sbase );
+      if( length( $sbase ) > 0 ) {
+        $search_base = substr( $sbase, 1 );
+      } else {
+        $search_base = '';
       }
-    else {
+      undef( $sbase );
+    } else {
       $search_base = join( ',', @rdns );
       shift(@rdns);
       $search_base .= $sbase;
-      }
     }
 
     # Initialize hash with filter
@@ -573,7 +497,7 @@ RETRY_SEARCH:
       }
 
 NEXT_REFERRAL:
-      next if( ! length @referrals );
+      next if( ! scalar @referrals );
       my $uri = new URI( $referrals[ 0 ] );
       $ldap = new Net::LDAP( $uri->host );
       @referrals = splice( @referrals, 1 );
@@ -606,8 +530,6 @@ NEXT_REFERRAL:
 #   ou=do,ou=test,ou=me,ou=very,ou=well
 #
 sub argonaut_ldap_fsearch {
-  use Switch;
-
   my ($ldap,$base,$sbase,$filter,$scope,$subbase,$attrs) = @_;
 
   ( $base, $sbase ) = argonaut_ldap_search_checks( @_ );
@@ -661,64 +583,91 @@ sub argonaut_ldap_fsearch {
 }
 
 #------------------------------------------------------------------------------
+# function for reading argonaut config
+#
+sub argonaut_read_config {
+  my %res = ();
+  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+
+  $res{'server_ip'}       = $config->val( server  => "server_ip", "");
+  $res{'client_ip'}       = $config->val( client  => "client_ip", "");
+  $res{'ldap_configfile'} = $config->val( ldap    => "config",    "/etc/ldap/ldap.conf");
+  $res{'ldap_dn'}         = $config->val( ldap    => "dn",        "");
+  $res{'ldap_password'}   = $config->val( ldap    => "password",  "");
+  $res{'ldap_tls'}        = $config->val( ldap    => "tls",       "off");
+
+  if ($res{'ldap_tls'} !~ m/^off|on$/i) {
+    warn "Unknown value for option ldap/tls: ".$res{'ldap_tls'}." (valid values are on/off)\n";
+  }
+  $res{'ldap_tls'} = ($res{'ldap_tls'} =~ m/^on$/i);
+
+  return \%res;
+}
+
+#------------------------------------------------------------------------------
 # generic functions for get settings functions
 #
 sub argonaut_get_generic_settings {
-  my ($objectClass,$params,$ldap_configfile,$ldap_dn,$ldap_password,$ip,$inheritance) = @_;
+  my ($objectClass,$params,$config,$filter,$inheritance) = @_;
   unless (defined $inheritance) {
     $inheritance = 1;
   }
 
-  my $ldapinfos = argonaut_ldap_init ($ldap_configfile, 0, $ldap_dn, 0, $ldap_password);
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
-  if ( $ldapinfos->{'ERROR'} > 0) {
-    die $ldapinfos->{'ERRORMSG'}."\n";
+  if ($filter =~ m/([0-9]{1,3}\.?){4}/ or $filter eq '*') {
+    $filter = "(ipHostNumber=$filter)";
+  } elsif ($filter !~ m/^\(/) {
+    $filter = "($filter)";
   }
-
-  my ($ldap,$ldap_base) = ($ldapinfos->{'HANDLE'},$ldapinfos->{'BASE'});
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
-            filter => "(&(objectClass=$objectClass)(ipHostNumber=$ip))",
-            attrs => ['macAddress','gotoMode',values(%{$params})]
+            filter => "(&(objectClass=$objectClass)$filter)",
+            attrs => ['macAddress','gotoMode','ipHostNumber',values(%{$params})]
             );
 
   my $settings = {
-    'ip' => $ip
   };
 
   if(scalar($mesg->entries)==1) {
-    $settings->{'dn'} = ($mesg->entries)[0]->dn();
-    $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
+    $settings->{'dn'}   = ($mesg->entries)[0]->dn();
+    $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
+    $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
     if (($mesg->entries)[0]->exists('gotoMode')) {
       $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
     } else {
       $settings->{'locked'} = 0;
     }
     while (my ($key,$value) = each(%{$params})) {
-      if (($mesg->entries)[0]->exists("$value")) {
-        $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+      if (ref $value eq ref []) {
+        $settings->{"$key"} = ($mesg->entries)[0]->get_value(@$value);
       } else {
-        $settings->{"$key"} = "";
+        if (($mesg->entries)[0]->get_value("$value")) {
+          $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+        } else {
+          $settings->{"$key"} = "";
+        }
       }
     }
     return $settings;
   } elsif(scalar($mesg->entries)==0) {
     unless ($inheritance) {
-      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).";
+      die "This computer ($filter) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
     }
     $mesg = $ldap->search( # perform a search
               base   => $ldap_base,
-              filter => "ipHostNumber=$ip",
+              filter => $filter,
               attrs => [ 'dn', 'macAddress', 'gotoMode' ]
               );
     if (scalar($mesg->entries)>1) {
-      die "Several computers are associated to IP $ip.";
+      die "Several computers matches $filter.$die_endl";
     } elsif (scalar($mesg->entries)<1) {
-      die "There is no computer associated to IP $ip.";
+      die "There is no computer matching $filter.$die_endl";
     }
-    $settings->{'dn'} = ($mesg->entries)[0]->dn();
-    $settings->{'mac'} = ($mesg->entries)[0]->get_value("macAddress");
+    $settings->{'dn'}   = ($mesg->entries)[0]->dn();
+    $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
+    $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
     if (($mesg->entries)[0]->exists('gotoMode')) {
       $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
     } else {
@@ -740,10 +689,10 @@ sub argonaut_get_generic_settings {
       }
       return $settings;
     } else {
-      die "This computer ($ip) is not configured in LDAP to run this module (missing service $objectClass).";
+      die "This computer ($filter) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
     }
   } else {
-    die "Several computers are associated to IP $ip.";
+    die "Several computers matches $filter.$die_endl";
   }
 }
 
@@ -751,8 +700,8 @@ sub argonaut_get_generic_settings {
 # get server argonaut settings
 #
 sub argonaut_get_server_settings {
-  my ($ldap_configfile,$ldap_dn,$ldap_password,$ip) = @_;
-  if ($ip eq "") {
+  my ($config,$ip) = @_;
+  if ((not defined $ip) or ($ip eq "")) {
     $ip = "*";
   }
   return argonaut_get_generic_settings(
@@ -763,10 +712,11 @@ sub argonaut_get_server_settings {
       'protocol'              => "argonautProtocol",
       'iptool'                => "argonautIpTool",
       'delete_finished_tasks' => "argonautDeleteFinished",
+      'fetch_packages'        => "argonautFetchPackages",
       'interface'             => "argonautWakeOnLanInterface",
       'logdir'                => "argonautLogDir"
     },
-    $ldap_configfile,$ldap_dn,$ldap_password,$ip
+    $config,$ip
   );
 }
 
@@ -828,8 +778,7 @@ sub argonaut_get_fuse_settings {
     {
       'default_mode'        => 'argonautFuseDefaultMode',
       'logdir'              => 'argonautFuseLogDir',
-      'pxelinux_cfg'        => 'argonautFusePxelinuxCfg',
-      'pxelinux_cfg_static' => 'argonautFusePxelinuxCfgStatic',
+      'pxelinux_cfg'        => 'argonautFusePxelinuxCfg'
     },
     @_
   );

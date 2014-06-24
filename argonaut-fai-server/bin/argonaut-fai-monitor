@@ -1,0 +1,236 @@
+#!/usr/bin/perl
+
+#######################################################################
+#
+# argonaut-fai-monitor
+#
+# Copyright (C) 2014 FusionDirectory project <contact@fusiondirectory.org>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Argonaut::Libraries::Common qw(:ldap :file :config);
+
+use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
+use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
+use Log::Handler;
+
+my $logfile = "argonaut-fai-monitor.log";
+
+my $config = argonaut_read_config;
+
+my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
+
+my $logdir        = $client_settings->{'logdir'};
+
+my $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
+
+my $server_port   = $server_settings->{'port'};
+my $protocol      = $server_settings->{'protocol'};
+
+my %taskids;
+
+my %progress_value = (
+  "confdir"   =>  0,
+  "setup"     =>  1,
+  "defclass"  =>  2,
+  "defvar"    =>  3,
+  "action"    =>  4,
+  "install"   =>  5,
+  "partition" =>  6,
+  "extrbase"  =>  7,
+  "debconf"   =>  15,
+  "prepareapt"=>  16,
+  "updatebase"=>  17,
+  "instsoft"  =>  18,
+  "configure" =>  80,
+  "savelog"   =>  90
+);
+
+argonaut_create_dir($logdir);
+
+my $log = Log::Handler->create_logger("argonaut-fai-monitor");
+
+$log->add(
+  file => {
+    filename => "$logdir/$logfile",
+    maxlevel => "debug",
+    minlevel => "emergency"
+  }
+);
+
+sub get_id
+{
+  my $host = shift;
+  unless (exists $taskids{$host}) {
+    my $client;
+    if (USE_LEGACY_JSON_RPC) {
+      $client = new JSON::RPC::Legacy::Client;
+    } else {
+      $client = new JSON::RPC::Client;
+    }
+    $client->version('1.0');
+
+    my $callobj = {
+      method  => "get_host_id",
+      params  => [$host, '(objectClass=FAIobject)'],
+    };
+
+    my $taskid = $client->call($protocol."://".$config->{'server_ip'}.":".$server_port, $callobj);
+
+    if($taskid) {
+      if ($taskid->is_error) {
+        die "Error for host '$host': ", $taskid->error_message."\n";
+      } else {
+        $taskids{$host} = $taskid->content->{result};
+      }
+    } else {
+      die "Error while trying to contact Argonaut server : ".$client->status_line."\n";
+    }
+  }
+  return $taskids{$host};
+}
+
+sub rpc_call
+{
+  my ($method, $params) = @_;
+
+  my $client;
+  if (USE_LEGACY_JSON_RPC) {
+    $client = new JSON::RPC::Legacy::Client;
+  } else {
+    $client = new JSON::RPC::Client;
+  }
+  $client->version('1.0');
+
+  my $callobj = {
+    method  => "$method",
+    params  => $params,
+  };
+
+  my $res = $client->call($protocol."://".$config->{'server_ip'}.":".$server_port, $callobj);
+
+  if($res) {
+    if ($res->is_error) {
+      $log->error("Error : ".$res->error_message);
+      print "Error : ", $res->error_message."\n";
+    }
+  } else {
+    $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
+    print "Error while trying to contact Argonaut server : ".$client->status_line."\n";
+  }
+}
+
+=pod This program read on stdin the fai-monitor output, extract useful information and send them to argonaut-server.
+=cut
+
+while (my $line = <STDIN>) {
+  next if $line =~/^FAI monitoring daemon start/; # ignore start up messages from fai-monitor
+  chomp $line;
+
+  my ($host,$keyword,$taskname,$errorcode) = split(/\s+/,$line);
+
+  my $taskid = eval {get_id($host);};
+  if ($@) {
+    if (($keyword eq "TASKBEGIN") ||
+        ($keyword eq "TASKERROR") ||
+        (($keyword eq "TASKEND") && ($taskname eq "faiend"))) {
+      print "Could not find taskid for line '$line':\n $@\n";
+      $log->error($@);
+      next;
+    } else {
+      $log->debug($@);
+    }
+  }
+
+  if($keyword eq "TASKBEGIN") {
+    print "[monitor:$host] Task $taskname begun\n";
+
+    my $progress = undef;
+    if(defined $progress_value{$taskname}) {
+      $progress = $progress_value{$taskname};
+    }
+
+    rpc_call(
+      "set_task_substatus",
+      [$taskid,$taskname,$progress]
+    );
+  } elsif($keyword eq "TASKEND") {
+    print "[monitor:$host] Task $taskname ended\n";
+
+    if($taskname eq "faiend") {
+      rpc_call(
+        "set_task_substatus",
+        [$taskid,$taskname,100]
+      );
+      delete $taskids{$host};
+    }
+  } elsif($keyword eq "TASKERROR") {
+    print "[monitor:$host] Task error $taskname $errorcode\n";
+
+    rpc_call(
+      "set_error",
+      [$taskid,$taskname." ".$errorcode],
+    );
+  } else {
+    print "$line\n";
+  }
+}
+
+__END__
+
+
+=head1 NAME
+
+argonaut-fai-monitor - read status of installation from fai-monitor and send them to argonaut-server 
+
+=head1 SYNOPSIS
+
+fai-monitor | argonaut-fai-monitor
+
+=head1 DESCRIPTION
+
+argonaut-fai-monitor read fai-monitor status and send them to argonaut-server for FusionDirectory to 
+show them in deployment queue
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2011-2014 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
+

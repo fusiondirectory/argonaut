@@ -2,11 +2,11 @@
 
 #######################################################################
 #
-# argonaut-apply-quota
+# argonaut-debconf-crawler
 #
-# Copyright (C) 2011-2013 FusionDirectory project
+# Copyright (C) 2011-2014 FusionDirectory project
 #
-# Author: Côme BERNIGAUD
+# Author: Come Bernigaud
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,40 +28,43 @@ use warnings;
 
 use 5.008;
 
-use Config::IniFiles;
+use Argonaut::Libraries::Common qw(:ldap :net :config);
+use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file cleanup_and_extract);
 
-use Argonaut::Libraries::Quota qw(get_quota_settings write_warnquota_file write_quotatab_file apply_quotas);
+my $config = argonaut_read_config;
 
-my $warnquota_file  = "/etc/warnquota.conf";
-my $quotatab_file   = "/etc/quotatab";
-my $configfile      = "/etc/argonaut/argonaut.conf";
-my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
+my $settings = argonaut_get_crawler_settings($config,$config->{'client_ip'});
 
-my $client_ip               =   $config->val( client => "client_ip" ,"");
-my $ldap_configfile         =   $config->val( ldap => "config"      ,"/etc/ldap/ldap.conf");
-my $ldap_dn                 =   $config->val( ldap => "dn"          ,"");
-my $ldap_password           =   $config->val( ldap => "password"    ,"");
+my $servpath                =   $settings->{'mirrordir'};
+my $packagesfolder          =   $settings->{'packagesfolder'};
 
-my $settings = get_quota_settings($ldap_configfile,$ldap_dn,$ldap_password,$client_ip);
+my $mymac                   =   $settings->{'macaddress'};
 
-write_warnquota_file ($settings,$warnquota_file);
-write_quotatab_file ($settings,$quotatab_file);
+#=pod
+#=item cleanup_and_extract
+#Extract templates from packages.
+#Templates are saved as $servdir/debconf.d/release/section/nameofthepackage
+#
+#=cut
 
-apply_quotas ($ldap_configfile,$ldap_dn,$ldap_password,$settings->{'hostname'});
+store_packages_file($packagesfolder,$mymac); # FIXME : may be replaced by an mv+extract (no getstore in this case). (we should avoid using http get to access a local file)
+cleanup_and_extract($servpath,get_packages_info($packagesfolder,$mymac,undef,["package","version","filename"]));
+
+print "done\n";
 
 __END__
 
 =head1 NAME
 
-argonaut-apply-quota - applying quota from data stored in the ldap server
+argonaut-debconf-crawler - Extract debconf templates from packages
 
 =head1 SYNOPSIS
 
-argonaut-apply-quota
+argonaut-debconf-crawler
 
 =head1 DESCRIPTION
 
-argonaut-apply-quota is a program used to apply quota on server based on the data stored in the ldap server
+argonaut-debconf-crwaler is a program used to extract debconf templates from packages
 
 =head1 BUGS
 
@@ -74,7 +77,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =over 1
 
-=item Copyright (C) 2011-2013 FusionDirectory project
+=item Copyright (C) 2011-2014 FusionDirectory project
 
 =back
 

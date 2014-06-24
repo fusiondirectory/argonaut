@@ -1,0 +1,12 @@
+#!/bin/bash
+# (c) 2011-2014 The FusionDirectory Project <contact@fusiondirectory.org>
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:  $FAI $LOGDIR $IPADDR $HOSTNAME
+# Suggests-Var:
+# Short-Description: get $FAI from an ldap server.
+### END SUBROUTINE INFO
+
+# Create configuration space
+ldap2fai -v -c $FAI -n $HOSTNAME -i $IPADDR | tee /tmp/fai/ldap2fai.log
