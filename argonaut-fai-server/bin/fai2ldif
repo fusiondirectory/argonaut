@@ -470,3 +470,59 @@ sub print_ldif
   }
 }
 
+__END__
+
+=head1 NAME
+
+fai2ldif - read fai classes and create an ldif file to be imported into an ldap server
+
+=head1 SYNOPSIS
+
+fai2ldif [-hv] [-c config_space] [-d dist] [-o output filename] -b base class
+
+=head1 OPTIONS
+
+B<-h>
+    print out this help message
+
+B<-v>
+    be verbose (multiple v's will increase verbosity)
+
+B<-c>
+    config sapce (default: /var/lib/fai/config)
+
+B<-d>
+    Distribution name
+
+B<-b>
+    ldap base
+
+B<-o>
+    output filename
+
+
+=head1 DESCRIPTION
+
+fai2ldif is a script to read the fai config space from LDAP and create it on the disk.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2011-2014 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
