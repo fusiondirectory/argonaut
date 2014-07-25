@@ -138,8 +138,7 @@ sub rpc_call
   }
 }
 
-=pod
-This program read on stdin the fai-monitor output, extract useful information and send them to argonaut-server.
+=pod This program read on stdin the fai-monitor output, extract useful information and send them to argonaut-server.
 =cut
 
 while (my $line = <STDIN>) {
@@ -196,6 +195,42 @@ while (my $line = <STDIN>) {
 }
 
 __END__
+
+
+=head1 NAME
+
+argonaut-fai-monitor - read status of installation from fai-monitor and send them to argonaut-server 
+
+=head1 SYNOPSIS
+
+fai-monitor | argonaut-fai-monitor
+
+=head1 DESCRIPTION
+
+argonaut-fai-monitor read fai-monitor status and send them to argonaut-server for FusionDirectory to 
+show them in deployment queue
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 3
+
+=item Copyright (C) 2011-2014 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
 
 # vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
 

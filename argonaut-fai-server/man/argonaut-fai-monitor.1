@@ -123,20 +123,21 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "ARGONAUT-REPOSITORY 1"
-.TH ARGONAUT-REPOSITORY 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
+.IX Title "ARGONAUT-FAI-MONITOR 1"
+.TH ARGONAUT-FAI-MONITOR 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-argonaut\-repository \- creating debian repositories cronjob for the Argonaut deployment system.
+argonaut\-fai\-monitor \- read status of installation from fai\-monitor and send them to argonaut\-server
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-argonaut-repository
+fai-monitor | argonaut-fai-monitor
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-argonaut-repository is a program used to create the cronjob for creation the local debian mirrors.
+argonaut-fai-monitor read fai-monitor status and send them to argonaut-server for FusionDirectory to 
+show them in deployment queue
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
@@ -144,14 +145,8 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
-.IP "Copyright (C) 2005\-2006 Jan-Marek Glogowski" 3
-.IX Item "Copyright (C) 2005-2006 Jan-Marek Glogowski"
-.PD 0
-.IP "Copyright (C) 2007\-2010 The GOsa project" 3
-.IX Item "Copyright (C) 2007-2010 The GOsa project"
 .IP "Copyright (C) 2011\-2014 FusionDirectory project" 3
 .IX Item "Copyright (C) 2011-2014 FusionDirectory project"
-.PD
 .PP
 This program is distributed in the hope that it will be useful,
 but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty of

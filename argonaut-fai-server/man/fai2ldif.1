@@ -123,20 +123,39 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "ARGONAUT-REPOSITORY 1"
-.TH ARGONAUT-REPOSITORY 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
+.IX Title "FAI2LDIF 1"
+.TH FAI2LDIF 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-argonaut\-repository \- creating debian repositories cronjob for the Argonaut deployment system.
+fai2ldif \- read fai classes and create an ldif file to be imported into an ldap server
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-argonaut-repository
+fai2ldif [\-hv] [\-c config_space] [\-d dist] [\-o output filename] \-b base class
+.SH "OPTIONS"
+.IX Header "OPTIONS"
+\&\fB\-h\fR
+    print out this help message
+.PP
+\&\fB\-v\fR
+    be verbose (multiple v's will increase verbosity)
+.PP
+\&\fB\-c\fR
+    config sapce (default: /var/lib/fai/config)
+.PP
+\&\fB\-d\fR
+    Distribution name
+.PP
+\&\fB\-b\fR
+    ldap base
+.PP
+\&\fB\-o\fR
+    output filename
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-argonaut-repository is a program used to create the cronjob for creation the local debian mirrors.
+fai2ldif is a script to read the fai config space from \s-1LDAP\s0 and create it on the disk.
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
@@ -144,14 +163,8 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
-.IP "Copyright (C) 2005\-2006 Jan-Marek Glogowski" 3
-.IX Item "Copyright (C) 2005-2006 Jan-Marek Glogowski"
-.PD 0
-.IP "Copyright (C) 2007\-2010 The GOsa project" 3
-.IX Item "Copyright (C) 2007-2010 The GOsa project"
 .IP "Copyright (C) 2011\-2014 FusionDirectory project" 3
 .IX Item "Copyright (C) 2011-2014 FusionDirectory project"
-.PD
 .PP
 This program is distributed in the hope that it will be useful,
 but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty of
