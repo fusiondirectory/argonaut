@@ -136,11 +136,11 @@ sub getIpFromMac {
   return $ip;
 }
 
-=pod
-=item getMacFromCn
-Search in the ldap for the Mac associated to a host name.
-Parameter : the host name
-=cut
+#=pod
+#=item getMacFromCn
+#Search in the ldap for the Mac associated to a host name.
+#Parameter : the host name
+#=cut
 sub getMacFromCn {
   my ($host, $filter) = @_;
 
@@ -169,12 +169,12 @@ sub getMacFromCn {
   return $mac;
 }
 
-=pod
-=item wakeOnLan
-Send a wake on lan package to a mac address
-Parameter : the mac address
-inspired by WakeOnLan.pm file from FusionInventory
-=cut
+#=pod
+#=item wakeOnLan
+#Send a wake on lan package to a mac address
+#Parameter : the mac address
+#inspired by WakeOnLan.pm file from FusionInventory
+#=cut
 sub wakeOnLan {
     my ($macaddress) = @_;
 
