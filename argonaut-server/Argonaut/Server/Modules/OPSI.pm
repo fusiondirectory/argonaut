@@ -301,6 +301,9 @@ sub reinstall_or_update {
     filter  => "(objectClass=opsiProfile)",
     attrs   => ['fdOpsiNetbootProduct', 'fdOpsiSoftwareList', 'fdOpsiProductProperty']
   );
+  if ($mesg->count <= 0) {
+    die "[OPSI] Client with OPSI activated but profile '".$settings->{'profile-dn'}."' could not be found";
+  }
   $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
   $self->{'softlists'}  = ($mesg->entries)[0]->get_value("fdOpsiSoftwareList", asref => 1);
   $self->{'localboots'} = [];
