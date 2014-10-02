@@ -9,4 +9,4 @@
 ### END SUBROUTINE INFO
 
 # Create configuration space
-ldap2fai -v -c $FAI -n $HOSTNAME -i $IPADDR | tee /tmp/fai/ldap2fai.log
+argonaut-ldap2fai -v -c $FAI -n $HOSTNAME -i $IPADDR | tee /tmp/fai/ldap2fai.log

@@ -2,7 +2,7 @@
 
 #######################################################################
 #
-# ldap2fai
+# argonaut-ldap2fai
 #
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (c) 2008-2010 GONICUS GmbH  <gosa-devel@oss.gonicus.de>
@@ -524,7 +524,7 @@ sub generate_kernel_packagelist {
       || do_exit( 4, "Can't create ${dump_dir}/scripts/LAST/99-install-kernel. $!\n" );
 
     print SOURCES "#!/bin/sh\n";
-    print SOURCES "# - automatically created by ldap2fai -\n";
+    print SOURCES "# - automatically created by argonaut-ldap2fai -\n";
     print SOURCES "\$ROOTCMD aptitude -o \"Aptitude::CmdLine::Ignore-Trust-Violations=yes\" -y install $kernel\n";
     close (SOURCES);
     chmod 0700, "${dump_dir}/scripts/LAST/99-install-kernel";
@@ -535,11 +535,11 @@ __END__
 
 =head1 NAME
 
-ldap2fai - read FAI config from LDAP and create config space.
+argonaut-ldap2fai - read FAI config from LDAP and create config space.
 
 =head1 SYNOPSIS
 
-ldap2fai [-hnv] [-c config_space] [-h hostname] [-m mac_address | -i ip_address]
+argonaut-ldap2fai [-hnv] [-c config_space] [-h hostname] [-m mac_address | -i ip_address]
 
 =head1 OPTIONS
 
@@ -566,7 +566,7 @@ B<-i>
 
 =head1 DESCRIPTION
 
-ldap2fai is a script to read the fai config space from LDAP and create it on the disk.
+argonaut-ldap2fai is a script to read the fai config space from LDAP and create it on the disk.
 
 =head1 BUGS
 
