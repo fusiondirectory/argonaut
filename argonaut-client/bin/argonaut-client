@@ -69,7 +69,13 @@ $App::Daemon::as_user = "root";
 
 daemonize();
 
-my $server = JSON::RPC::Server::Daemon->new(
+my $serverClass;
+if (USE_LEGACY_JSON_RPC) {
+  $serverClass = "JSON::RPC::Legacy::Server::Daemon";
+} else {
+  $serverClass = "JSON::RPC::Server::Daemon";
+}
+my $server = $serverClass->new(
   LocalPort => $client_settings->{'port'},
   ($server_settings->{'protocol'} eq 'https') ? (SSL_server    => 1,
                                                   SSL_key_file  => $client_settings->{'keyfile'},
