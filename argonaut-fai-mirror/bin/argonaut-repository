@@ -178,7 +178,7 @@ sub generate_cronjob_script {
     my $uri = $repo->{'uri'};
     my ($localuri) = $uri;
     my $parent_or_opts = $repo->{'parent'};
-    my $dist = $repo->{'dist'};
+    my $release = $repo->{'release'};
     my $sections = join(',',@{$repo->{'sections'}});
     my (@section_list) = @{$repo->{'sections'}};
     my $archs = join(',',@{$repo->{'archs'}}); # archs comma-separated
@@ -190,10 +190,10 @@ sub generate_cronjob_script {
       next;
     }
 
-    print SOURCES "deb $uri $dist @section_list\n";
+    print SOURCES "deb $uri $release @section_list\n";
 
     print "parent: $parent_or_opts\n" if( $verbose eq "TRUE" );
-    print "sources.list: deb $uri $dist @section_list\n" if( $verbose eq "TRUE" );
+    print "sources.list: deb $uri $release @section_list\n" if( $verbose eq "TRUE" );
 
 
     my @par_repos = get_repolines(undef,$parent_or_opts);
@@ -217,9 +217,9 @@ sub generate_cronjob_script {
         next;
       }
 
-      my $par_dist = $par_repo->{'dist'};
+      my $par_release = $par_repo->{'release'};
       my @outline = ();
-      if ("$dist" eq "$par_dist") {
+      if ("$release" eq "$par_release") {
         foreach my $section (@{$par_repo->{'sections'}}) {
           if (argonaut_array_find_and_remove( \@section_list, ${section})) {
             push (@outline, $section);
@@ -228,7 +228,7 @@ sub generate_cronjob_script {
         }
 
         if (0 != scalar @{outline}) {
-          my $cron_line = "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline})
+          my $cron_line = "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${release} --section=" . join(",", @{outline})
                     . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/\n";
           print CRON $cron_line;
           print "mirror-update-cronjob: ".$cron_line."\n" if( $verbose eq "TRUE" );
@@ -238,7 +238,7 @@ sub generate_cronjob_script {
     }
 
     if (scalar @section_list != 0) {
-      print "No repository was found in parent $parent_or_opts for release $dist, for sections ".join(",", @section_list)."\n" if( $verbose eq "TRUE" );
+      print "No repository was found in parent $parent_or_opts for release $release, for sections ".join(",", @section_list)."\n" if( $verbose eq "TRUE" );
     }
   }
   close (SOURCES);

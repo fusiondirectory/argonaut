@@ -68,6 +68,7 @@ my %faitypes = (
   }
 );
 my $dist          = '';
+my $release       = '';
 my $outfile;
 my $outfilename   = '';
 
@@ -77,6 +78,7 @@ GetOptions( 'v|verbose'         => \$verbose,
             'h|help'            => \&usage,
             'c|config-space=s'  => \$dump_dir,
             'd|dist=s'          => \$dist,
+            'r|release=s'       => \$release,
             'o|output-file=s'   => \$outfilename,
             'b|base=s'          => \$base
           )
@@ -88,13 +90,14 @@ sub usage
   (@_) && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
- usage: $0 [-hv] [-c config_space] [-d dist] -b base class
+ usage: $0 [-hv] [-c config_space] [-d dist] [-r release] [-o file] -b base class
 
   -h  : this (help) message
   -v  : be verbose
   -c  : config space (default: ${dump_dir})
   -b  : ldap base
   -d  : distribution
+  -r  : release
   -o  : output file
 
 EOF
@@ -104,6 +107,9 @@ EOF
 my $class = shift or usage('Missing class parameter');
 if ($dist) {
   $faibaserdn = "ou=$dist,$faibaserdn";
+}
+if ($release) {
+  $faibaserdn = "ou=$release,$faibaserdn";
 }
 if ($outfilename) {
   open($outfile, '>'.$outfilename) or die "Could not open '$outfilename'\n";
@@ -478,7 +484,7 @@ fai2ldif - read fai classes and create an ldif file to be imported into an ldap 
 
 =head1 SYNOPSIS
 
-fai2ldif [-hv] [-c config_space] [-d dist] [-o output filename] -b base class
+fai2ldif [-hv] [-c config_space] [-d dist] [-r release] [-o output filename] -b base class
 
 =head1 OPTIONS
 

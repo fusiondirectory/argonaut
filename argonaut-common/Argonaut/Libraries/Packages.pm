@@ -86,7 +86,7 @@ sub get_repolines {
     my @repolines = ();
     foreach my $entry ($mesg->entries()) {
       foreach my $repoline ($entry->get_value('FAIrepository')) {
-        my ($uri,$parent,$dist,$sections,$install,$local,$archs) = split('\|',$repoline);
+        my ($uri,$parent,$release,$sections,$install,$local,$archs,$dist) = split('\|',$repoline);
         my $sections_array = [split(',',$sections)];
         if ($install eq 'update') {
           foreach my $section (@$sections_array) {
@@ -99,11 +99,12 @@ sub get_repolines {
           'line'        => $repoline,
           'uri'         => $uri,
           'parent'      => $parent,
-          'dist'        => $dist,
+          'release'     => $release,
           'sections'    => $sections_array,
           'installrepo' => $install,
           'localmirror' => ($local eq "local"),
-          'archs'       => [split(',',$archs)]
+          'archs'       => [split(',',$archs)],
+          'dist'        => $dist
         };
         push @repolines, $repo;
       }
@@ -144,11 +145,10 @@ sub get_packages_info {
     my $distributions = {};
     mkpath($packages_folder);
     foreach my $repo (@repolines) {
-        my $dist = $repo->{'dist'};
         my $uri = $repo->{'uri'};
         my $localuri = $uri;
         $localuri =~ s/^http:\/\///;
-        if(defined($release) && ($dist ne $release)) {
+        if(defined($release) && ($repo->{'release'} ne $release)) {
             next;
         }
 
@@ -158,12 +158,12 @@ sub get_packages_info {
         }
 
         foreach my $section (@{$repo->{'sections'}}) {
-            if(!defined $distributions->{"$dist/$section"}) {
-                $distributions->{"$dist/$section"} = {};
+            if(!defined $distributions->{$repo->{'release'}."/$section"}) {
+                $distributions->{$repo->{'release'}."/$section"} = {};
             }
-            my $packages = $distributions->{"$dist/$section"};
+            my $packages = $distributions->{$repo->{'release'}."/$section"};
             foreach my $arch (@{$repo->{'archs'}}) {
-                my $packages_file = "$packages_folder/$localuri/dists/$dist/$section/binary-$arch/Packages";
+                my $packages_file = "$packages_folder/$localuri/dists/".$repo->{'release'}."/$section/binary-$arch/Packages";
                 open (PACKAGES, "<$packages_file") or next;
                 my $parsed = {};
                 while (<PACKAGES>) {
@@ -175,13 +175,13 @@ sub get_packages_info {
                                 # If it's a local mirror, it's supposed to run the debconf crawler and have the template extracted
                                 # So we just download it (if it's not there, we assume there is no template for this package)
                                 if (grep {uc($_) eq 'TEMPLATE'} @{$attrs}) {
-                                    my $template = get("$uri/debconf.d/$dist/$section/".$parsed->{'PACKAGE'});
+                                    my $template = get("$uri/debconf.d/".$repo->{'release'}."/$section/".$parsed->{'PACKAGE'});
                                     if(defined $template) {
                                         $parsed->{'HASTEMPLATE'} = 1;
                                         $parsed->{'TEMPLATE'} = $template;
                                     }
                                 } elsif (grep {uc($_) eq 'HASTEMPLATE'} @{$attrs}) {
-                                    if(head("$uri/debconf.d/$dist/$section/".$parsed->{'PACKAGE'})) {
+                                    if(head("$uri/debconf.d/".$repo->{'release'}."/$section/".$parsed->{'PACKAGE'})) {
                                         $parsed->{'HASTEMPLATE'} = 1;
                                     }
                                 }
@@ -271,13 +271,13 @@ sub get_packages_info {
                 # If it's not a local mirror and templates where asked, we still need to extract and store them
                 my $distribs = {};
                 my @tmp = values(%{$packages});
-                $distribs->{"$dist/$section"} = \@tmp;
+                $distribs->{$repo->{'release'}."/$section"} = \@tmp;
                 cleanup_and_extract($packages_folder,$distribs);
                 foreach my $key (keys(%{$packages})) {
                     if(defined $packages->{$key}->{'TEMPLATE'}) {
                         next;
                     }
-                    my $filename = $packages_folder."/debconf.d/$dist/$section/".$packages->{$key}->{'PACKAGE'};
+                    my $filename = $packages_folder."/debconf.d/".$repo->{'release'}."/$section/".$packages->{$key}->{'PACKAGE'};
                     if(-f $filename) {
                         $packages->{$key}->{'HASTEMPLATE'} = 1;
                         if(grep {uc($_) eq 'TEMPLATE'} @{$attrs}) {
@@ -309,33 +309,33 @@ sub store_packages_file {
     my @errors;
 
     foreach my $repo (@repolines) {
+        if(defined($release) && ($repo->{'release'} ne $release)) {
+          next;
+        }
         my $uri = $repo->{'uri'};
         my $dir = $uri;
         $dir =~ s/^http:\/\///;
-        my $dist = $repo->{'dist'};
-        if(defined($release) && ($dist ne $release)) {
-            next;
-        }
+        $dir = "$packages_folder/$dir";
 
         my $localmirror = $repo->{'localmirror'};
 
         foreach my $section (@{$repo->{'sections'}}) {
-
+            my $relpath = "dists/".$repo->{'release'}."/$section";
             foreach my $arch (@{$repo->{'archs'}}) {
-              my $packages_file = "$packages_folder/$dir/dists/$dist/$section/binary-$arch/Packages";
-              mkpath("$packages_folder/$dir/dists/$dist/$section/binary-$arch/");
-              my $res = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.bz2" => $packages_file.".bz2");
+              my $packages_file = "/$relpath/binary-$arch/Packages";
+              mkpath("$dir/$relpath/binary-$arch/");
+              my $res = mirror($uri.$packages_file.".bz2" => $dir.$packages_file.".bz2");
               if(is_error($res)) {
-                  my $res2 = mirror("$uri/dists/$dist/$section/binary-$arch/Packages.gz" => $packages_file.".gz");
+                  my $res2 = mirror($uri.$packages_file.".gz" => $dir.$packages_file.".gz");
                   if(is_error($res2)) {
-                      push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.bz2 : $res";
-                      push @errors,"Could not download $uri/dists/$dist/$section/binary-$arch/Packages.gz : $res2";
+                      push @errors,"Could not download $uri".$packages_file.".bz2 : $res";
+                      push @errors,"Could not download $uri".$packages_file.".gz : $res2";
                   } else {
-                      gunzip ($packages_file.".gz" => $packages_file)
+                      gunzip ($dir.$packages_file.".gz" => $dir.$packages_file)
                           or push @errors,"could not extract Packages file : $GunzipError";
                   }
               } else {
-                  bunzip2 ($packages_file.".bz2" => $packages_file)
+                  bunzip2 ($dir.$packages_file.".bz2" => $dir.$packages_file)
                       or push @errors,"could not extract Packages file : $Bunzip2Error";
               }
             }
