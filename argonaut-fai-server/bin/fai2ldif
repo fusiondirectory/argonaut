@@ -509,7 +509,7 @@ B<-o>
 
 =head1 DESCRIPTION
 
-fai2ldif is a script to read the fai config space from LDAP and create it on the disk.
+fai2ldif is a script to read the fai classes files and create ldif files.
 
 =head1 BUGS
 
