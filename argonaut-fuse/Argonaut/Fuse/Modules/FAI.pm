@@ -75,7 +75,6 @@ sub get_pxe_config {
       'status'    => 'FAIstate',
       'kernel'    => 'gotoBootKernel',
       'cmdline'   => 'gotoKernelParameters',
-      'ldap_srv'  => 'gotoLdapServer',
       'hostname'  => 'cn',
     },
     $main::config,"(macAddress=$mac)"
@@ -98,7 +97,6 @@ sub get_pxe_config {
       return 0;
     } else {
       # "Super"-Default is 'localboot' - just use the built in disc
-      $infos->{'ldap_srv'}  = $main::ldap_uris . '/' . $main::ldap_base;
       $infos->{'status'}    = 'localboot';
 
       $log->info("$filename - defaulting to localboot\n");
@@ -108,12 +106,11 @@ sub get_pxe_config {
   my $host_dn = $infos->{'dn'};
 
   # Check, if there is still missing information
-  if (($infos->{'kernel'} eq '') || ($infos->{'ldap_srv'} eq '')) {
+  if ($infos->{'kernel'} eq '') {
     $log->error("$filename - missing information - aborting\n");
 
     my $mesg  = "$filename - missing LDAP attribs:";
     $mesg .= ' gotoBootKernel' if( $infos->{'kernel'} eq '' );
-    $mesg .= ' gotoLdapServer' if( $infos->{'ldap_srv'} eq '' );
     $mesg .= "\n";
 
     $log->info($mesg);
