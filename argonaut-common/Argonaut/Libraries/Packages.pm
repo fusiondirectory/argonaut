@@ -388,11 +388,13 @@ sub store_packages_file {
     if(defined($release) && ($repo->{'release'} ne $release)) {
       next;
     }
+    my $repo_errors;
     if ($repo->{'dist'} eq 'debian') {
-      store_package_list_debian($packages_folder,$repo);
+      $repo_errors = store_package_list_debian($packages_folder,$repo);
     } elsif ($repo->{'dist'} eq 'centos') {
-      store_package_list_centos($packages_folder,$repo);
+      $repo_errors = store_package_list_centos($packages_folder,$repo);
     }
+    @errors = (@errors, @$repo_errors);
   }
 
   return \@errors;
