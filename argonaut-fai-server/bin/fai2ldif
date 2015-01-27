@@ -87,7 +87,7 @@ GetOptions( 'v|verbose'         => \$verbose,
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage
 {
-  (@_) && print STDERR "\n@_\n\n";
+  (@_) && $_[0] ne "h" && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
  usage: $0 [-hv] [-c config_space] [-d dist] [-r release] [-o file] -b base class
@@ -99,7 +99,6 @@ sub usage
   -d  : distribution
   -r  : release
   -o  : output file
-
 EOF
   exit -1;
 }
