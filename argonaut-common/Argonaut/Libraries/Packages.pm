@@ -35,6 +35,7 @@ use File::Path;
 use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use LWP::Simple;
+use XML::Twig;
 
 use Argonaut::Libraries::Common qw(:ldap :config);
 
@@ -182,7 +183,7 @@ sub parse_package_list_centos {
             package => sub {
               my ($twig, $package) = @_;
               if ((defined $to) && ($$package_indice > $to)) {
-                $package->purge();
+                $twig->purge();
                 $twig->finish_now();
                 return;
               }
@@ -196,22 +197,22 @@ sub parse_package_list_centos {
                   }
                 }
                 if($match == 0) {
-                  $package->purge();
+                  $twig->purge();
                   return;
                 }
               }
               if (defined $packages->{$name}) {
-                $package->purge();
+                $twig->purge();
                 return;
               }
               $$package_indice++;
               if ((defined $from) && ($$package_indice < $from)) {
-                $package->purge();
+                $twig->purge();
                 return;
               }
               $packages->{$name} = {'PACKAGE' => $name};
               if (grep {uc($_) eq 'DESCRIPTION'} @{$attrs}) {
-                $packages->{$name}->{'DESCRIPTION'} = $package->first_child('description')->text;
+                $packages->{$name}->{'DESCRIPTION'} = encode_base64($package->first_child('description')->text);
               }
               if (grep {uc($_) eq 'VERSION'} @{$attrs}) {
                 $packages->{$name}->{'VERSION'} = $package->first_child('version')->{'att'}->{'ver'};
@@ -219,10 +220,9 @@ sub parse_package_list_centos {
               if (grep {uc($_) eq 'TIMESTAMP'} @{$attrs}) {
                 $packages->{$name}->{'TIMESTAMP'} = $package->first_child('time')->{'att'}->{'file'};
               }
-              $package->purge();
+              $twig->purge();
             },
           },
-        pretty_print => 'indented',
       );
       $twig->parsefile($primary_file);
     }
