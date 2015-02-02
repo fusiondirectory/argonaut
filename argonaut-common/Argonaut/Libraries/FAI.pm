@@ -1515,7 +1515,7 @@ sub resolve_classlist {
       return ("Duplicated release in classlist\n")
         if( defined $cls_release );
 
-      if (length(${class}) > 2) {
+      if (length(${class}) > 1) {
         $cls_release = substr( $class, 1 );
       } else {
         return( "Invalid release ':' in classlist\n" );
