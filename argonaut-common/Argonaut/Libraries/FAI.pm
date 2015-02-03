@@ -3,7 +3,7 @@
 # Argonaut::FAI packages - functions to get info for install from ldap
 #
 # Copyright (c) 2008 Landeshauptstadt München
-# Copyright (C) 2011-2014 FusionDirectory project
+# Copyright (C) 2011-2015 FusionDirectory project
 #
 # Author: Jan-Marek Glogowski
 #         Come Bernigaud
@@ -39,7 +39,7 @@ BEGIN
 {
   use Exporter ();
   use vars qw(%EXPORT_TAGS @ISA $VERSION);
-  $VERSION = '2011-04-11';
+  $VERSION = '2015-02-03';
   @ISA = qw(Exporter);
 
   %EXPORT_TAGS = (
@@ -50,26 +50,6 @@ BEGIN
   );
 
   Exporter::export_ok_tags(keys %EXPORT_TAGS);
-}
-
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# Prepare LDAP filter to include 'gosaUnitTag' and 'FAIstate'
-#
-sub prepare_filter {
-  my( $self, $filter ) = @_;
-
-  return $filter if( '' eq $filter );
-
-  $filter = '(' . $filter . ')'
-    if( '(' ne substr( $filter, 0, 1 ) );
-
-  if( defined $self->{ 'tag' } ) {
-    return( "(&$filter(|(gosaUnitTag="
-      . $self->{ 'tag' } . ')(FAIstate=*freeze*)))' );
-  }
-  return $filter;
 }
 
 
@@ -138,28 +118,6 @@ sub dumpdir {
   }
   else { return $self->{ 'dumpdir' }; }
 }
-
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# Get or set FusionDirectory unit tag
-#
-sub tag {
-  my( $self, $tag ) = @_;
-
-  if( defined $tag ) {
-    if( 0 > $tag ) {
-      delete( $self->{ 'tag' } );
-      return;
-    }
-    $self->{ 'tag' } = $tag;
-  }
-  elsif( exists $self->{ 'tag' } ) {
-    return $self->{ 'tag' };
-  }
-  return undef;
-}
-
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -275,14 +233,10 @@ sub get_class_cache {
   my $generate = $flags & FAI_CACHE_GENERATE ? 1 : 0;
   my $force    = $flags & FAI_CACHE_FORCE    ? 1 : 0;
 
-  # Normalize release name
-  my $norm_release = $release;
-  $norm_release =~ s/\./\//g;
-
   # Return cached values if not enforced or looked up
   if( !$force ) {
-    return $self->{ 'FAI_TREES' }{ $norm_release }
-      if( exists $self->{ 'FAI_TREES' }{ $norm_release } );
+    return $self->{ 'FAI_TREES' }{ $release }
+      if( exists $self->{ 'FAI_TREES' }{ $release } );
     return undef if( ! $generate );
   }
 
@@ -305,10 +259,6 @@ sub generate_class_cache {
   my( $rdns ) = $self->release_check( $release, $force );
   return $rdns if( ref( $rdns ) ne 'ARRAY' );
 
-  # Normalize release name
-  my $norm_release = $release;
-  $norm_release =~ s/\./\//g;
-
   my $ldap = $self->{ 'LDAP' };
   my $base = $self->{ 'base' };
 
@@ -320,7 +270,7 @@ sub generate_class_cache {
 
     my $mesg = $ldap->search(
         base => "ou=${type},@{$rdns}[0],${base}",
-        filter => $self->prepare_filter( '(objectClass=' . @{$class}[0] . ')' ),
+        filter => '(objectClass=' . @{$class}[0] . ')',
         scope => 'one',
         attrs => [ 'cn', 'FAIclass', 'FAIstate' ]);
 
@@ -357,99 +307,8 @@ sub generate_class_cache {
     }
   }
 
-  $self->{ 'FAI_TREES' }{ $norm_release } = \%cache;
+  $self->{ 'FAI_TREES' }{ $release } = \%cache;
   return \%cache;
-}
-
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#
-# $self    = Argonaut::FAI handle
-#
-# Quick fill of the class cache for all releases.
-# This fuction needs just two LDAP queries to fill the whole class cache.
-#
-sub fill_class_cache {
-  my( $self ) = @_;
-
-  my $ldap = $self->{ 'LDAP' };
-  my $base = 'ou=fai,ou=configs,ou=systems,' . $self->{ 'base' };
-
-  # Get all releases
-  my $mesg = $ldap->search(
-    base => $base,
-    filter => $self->prepare_filter( '(objectClass=FAIbranch)' ),
-    scope => 'sub',
-    attrs => [ 'dn' ] );
-  return( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
-    if( 0 != $mesg->code );
-
-  my @objects = $mesg->entries();
-  my %releases;
-  foreach my $branch ($mesg->entries()) {
-    my $norm_release = substr( $branch->dn, 0, length( $branch->dn ) - length( $base ) );
-    if( length( $norm_release ) > 0 ) {
-      $norm_release = substr( $norm_release, 0, length( $norm_release ) - 1 );
-      my @rdns = argonaut_ldap_split_dn( $norm_release );
-      $norm_release = join( ',', reverse @rdns );
-      $norm_release =~ s/,ou=/\//g;
-      $norm_release =~ s/\./\//g;
-      $norm_release = substr( $norm_release, 3 );
-    }
-  }
-
-  # Get all classes
-  my $filter = '(&(|(objectClass=FAIclass)(objectClass=FAIbranch))(|';
-  foreach my $type (values %fai_items) {
-    $filter .= '(objectClass=' . @{$type}[ 0 ] . ')'
-      if( defined @{$type}[ 0 ] );
-  }
-  $filter .= '))';
-
-  $mesg = $ldap->search(
-    base => $base,
-    filter => $self->prepare_filter( $filter ),
-    scope => 'sub',
-    attrs => [ 'cn', 'FAIclass', 'FAIstate' ] );
-  return( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
-    if( 0 != $mesg->code );
-
-  foreach my $entry ($mesg->entries()) {
-    my $dn = substr( $entry->dn, 0, length( $entry->dn ) - length( $base ) );
-    $dn = substr( $dn, 0, length( $dn ) - 1 ) if( length( $dn ) > 0 );
-    my @rdns = argonaut_ldap_split_dn( $dn );
-    my $class = $entry->get_value( 'cn' );
-    my $type = substr( $rdns[ 1 ], 3 );
-
-    my $release = join( ',', reverse splice( @rdns, 2 ) );
-    $release =~ s/,ou=/\//g;
-    $release = substr( $release, 3 );
-
-    my $norm_release = $release;
-    $norm_release =~ s/\./\//g;
-
-    if( ! exists $releases{ $norm_release  } ) {
-      warn( sprintf( "Unknown release for object '%s'", $entry->dn() ) )
-        if( ! exists $releases{ $norm_release  } );
-      next;
-    }
-    if( $type eq 'profile' ) {
-      my $classlist = $entry->get_value( 'FAIclass' );
-      $releases{ $norm_release }{ $type }{ $class }{ '_classes' } = ();
-      $releases{ $norm_release }{ $type }{ $class }{ '_state' }
-        = $entry->get_value( 'FAIstate' );
-      foreach my $profile_class (split( ' ', $classlist )) {
-        if( ":" eq substr( $profile_class, 0, 1 ) ) {
-          warn( "Release '$profile_class' found in profile '$class' of '$release'." );
-        } else {
-          push( @{$releases{ $norm_release }{ $type }{ $class }{ '_classes' }}, $profile_class );
-        }
-      }
-    }
-    else { $releases{ $norm_release }{ $type }{ $class } = undef; }
-  }
-
-  $self->{ 'FAI_TREES' } = \%releases;
 }
 
 
@@ -477,14 +336,11 @@ sub extend_class_cache {
   my %cache = ();
   my $cache_ref;
 
-  my $norm_release = $release;
-  $norm_release =~ s/\./\./g;
-
   # Return cached values if not enforced
   if( ! $force ) {
-    $cache_ref = $self->{ 'FAI_TREES' }{ $norm_release }
-      if( exists $self->{ 'FAI_TREES' }{ $norm_release } );
-    return $self->{ 'FAI_TREES' }{ $norm_release }
+    $cache_ref = $self->{ 'FAI_TREES' }{ $release }
+      if( exists $self->{ 'FAI_TREES' }{ $release } );
+    return $self->{ 'FAI_TREES' }{ $release }
       if( defined $cache_ref &&
           defined $cache_ref->{ 'extended' } );
     return undef if( ! $generate );
@@ -520,13 +376,13 @@ sub extend_class_cache {
       if( 'debconf' eq $type ) {
         $mesg = $ldap->search(
             base => "cn=${class},ou=packages,@{$rdns}[0],${base}",
-            filter => $self->prepare_filter( "(objectClass=$objclass)" ),
+            filter => "(objectClass=$objclass)",
             scope => 'one' );
       }
       elsif( 'packages' eq $type ) {
         $mesg = $ldap->search(
             base => "cn=${class},ou=${type},@{$rdns}[0],${base}",
-            filter => $self->prepare_filter( "(objectClass=$objclass)" ),
+            filter => "(objectClass=$objclass)",
             scope => 'base' );
         return( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
           if( 0 != $mesg->code );
@@ -543,8 +399,8 @@ sub extend_class_cache {
         my $class_base = "cn=${class},ou=${type},@{$rdns}[0],${base}";
         $mesg = $ldap->search(
             base => ${class_base},
-            filter => $self->prepare_filter(
-              '(|(objectClass=FAIpartitionDisk)(objectClass=FAIpartitionEntry)(objectClass=FAIpartitionTable))' ),
+            filter =>
+              '(|(objectClass=FAIpartitionDisk)(objectClass=FAIpartitionEntry)(objectClass=FAIpartitionTable))',
             scope => 'sub' );
         return( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
           if( 0 != $mesg->code );
@@ -643,7 +499,7 @@ sub extend_class_cache {
       else {
         my %search = (
           base => "cn=${class},ou=${type},@{$rdns}[0],${base}",
-          filter => $self->prepare_filter( "(objectClass=$objclass)" ),
+          filter => "(objectClass=$objclass)",
           scope => 'one'
         );
         $search{ 'attrs' } = \@attrs if( scalar @attrs );
@@ -674,9 +530,9 @@ sub extend_class_cache {
   }
 
   $cache_ref->{ 'extended' } = 1;
-  $self->{ 'FAI_TREES' }{ $norm_release } = $cache_ref;
+  $self->{ 'FAI_TREES' }{ $release } = $cache_ref;
 
-  return $self->{ 'FAI_TREES' }{ $norm_release };
+  return $self->{ 'FAI_TREES' }{ $release };
 }
 
 
@@ -715,12 +571,12 @@ sub init_dump_function {
   my( $self, $release, $classref, $flags, $type ) = @_;
 
   my $dumpdir = $self->{ 'dumpdir' };
+  my $typeref = $self->extend_class_cache( $release, $flags )->{ $type };
 
   # Fill $classref with all classes, if not supplied
   if( ! defined $classref ) {
     my %seen;
 
-    my $typeref = $self->extend_class_cache( $release, $flags )->{ $type };
     foreach my $item (keys %$typeref) {
       $seen{ $item } = 1;
     }
@@ -732,13 +588,14 @@ sub init_dump_function {
   # Merge release hashes into COW hash
   my %cow_merge;
   foreach my $class (@$classref) {
-    my $typeref = $self->extend_class_cache( $release, $flags )->{ $type };
     next if( ! exists $typeref->{ $class } );
     if( ref( $typeref->{ $class } ) eq 'HASH' ) {
       while( my($key, $value) = each %{$typeref->{ $class }} ) {
         $cow_merge{ $class }{ $key } = $value;
       }
-    } else { $cow_merge{ $class } = $typeref->{ $class }; }
+    } else {
+      $cow_merge{ $class } = $typeref->{ $class };
+    }
   }
 
   return( $classref, $dumpdir, \%cow_merge );

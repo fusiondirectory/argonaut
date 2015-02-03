@@ -46,7 +46,7 @@ my $ldapuris;
 my $dump_dir = "/var/lib/fai/config";
 my $verbose = 0;
 my $print_classes = 0;
-my( $hostname, $host_base, $host_dn, $host_tag );
+my( $hostname, $host_base, $host_dn );
 my $fai_mirror;
 my $dry_run = 0;
 my $release_var = 'FAIclientRelease';
@@ -243,7 +243,7 @@ sub get_classes {
   $mesg = $ldap->search(
     base => "$base",
     filter => $filter,
-    attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror', 'gosaUnitTag', 'gotoBootKernel' ]);
+    attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror', 'gotoBootKernel' ]);
   $mesg->code && do_exit( 2, sprintf( "LDAP error: %s (%i)", $mesg->error, __LINE__ ) );
 
   # normally, only one value should be returned
@@ -266,11 +266,8 @@ sub get_classes {
   $entry = ($mesg->entries)[0];
   $host_dn = $entry->dn;
   $hostname = $entry->get_value( 'cn' );
-  $host_tag = $entry->get_value( 'gosaUnitTag' );
   $kernel = $entry->get_value( 'gotoBootKernel' );
   $real_hostname = $hostname;
-
-  $faiobj->tag( $host_tag ) if( defined $host_tag );
 
   # set $host_base
   my @rdn = argonaut_ldap_split_dn( $host_dn );
