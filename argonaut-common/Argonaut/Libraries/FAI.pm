@@ -1349,6 +1349,7 @@ sub resolve_classlist {
     next if( exists $seen{ $class } );
 
     my $cache = $self->get_class_cache( $cls_release );
+    return $cache if( 'HASH' ne ref( $cache ) );
 
     if( exists $cache->{ 'profiles' } ) {
       if( exists $cache->{ 'profiles' }->{ $class } ) {
