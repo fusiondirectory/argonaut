@@ -174,11 +174,11 @@ sub release_check {
 
   my $mesg = $ldap->search(
     base => "$fai_base,$base",
-    filter => "((objectClass=FAIbranch)(ou=$release))",
+    filter => "(&(objectClass=FAIbranch)(ou=$release))",
     attrs => [ 'ou', 'FAIstate' ],
     scope => 'sub' );
   $mesg->code && return( sprintf( "Release not found (%s)!"
-    . " Release LDAP base not accessible (%s) - LDAP error: %s",
+    . " Release LDAP base not accessible (%s) - LDAP error: %s\n",
       $release, "$fai_base,$base", $mesg->error ) );
 
   my $full_base = 0;
@@ -187,7 +187,7 @@ sub release_check {
     push( @result_rdns, $entry->dn );
   }
 
-  return( sprintf( "No release base for (%s) found!", $release ) )
+  return( sprintf( "No release base for (%s) found!\n", $release ) )
     if( ! $full_base  );
 
   $self->{ 'CHECKS' }->{ $release } =
