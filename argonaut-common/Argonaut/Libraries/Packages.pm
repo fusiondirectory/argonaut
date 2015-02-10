@@ -35,7 +35,9 @@ use File::Path;
 use IO::Uncompress::Bunzip2 qw(bunzip2 $Bunzip2Error);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use LWP::Simple;
-use XML::Twig;
+use Encode qw(encode);
+use XML::SAX::RPMHandler;
+use XML::SAX;
 
 use Argonaut::Libraries::Common qw(:ldap :config);
 
@@ -170,63 +172,44 @@ sub parse_package_list_centos {
   my $localuri = $uri;
   $localuri =~ s/^http:\/\///;
 
+  my $handler = XML::SAX::RPMHandler->new(
+    undef,
+    {
+      'name' => 'PACKAGE',
+      'description' => sub {
+        my ($package, undef, $data, $attrs) = @_;
+        $package->{'DESCRIPTION'} = encode_base64(encode('utf8',$data));
+      },
+      'version' => sub {
+        my ($package, undef, $data, $attrs) = @_;
+        $package->{'VERSION'} = $attrs->{'{}ver'}->{'Value'}.'-'.$attrs->{'{}rel'}->{'Value'};
+      }
+    },
+    $filters,
+    $from,
+    $to,
+    $$package_indice
+  );
+  my $parser = XML::SAX::ParserFactory->parser(
+    Handler => $handler
+  );
+
   foreach my $section (@{$repo->{'sections'}}) {
     if(!defined $distributions->{$repo->{'release'}."/$section"}) {
       $distributions->{$repo->{'release'}."/$section"} = {};
     }
-    my $packages = $distributions->{$repo->{'release'}."/$section"};
+    $handler->{packages} = $distributions->{$repo->{'release'}."/$section"};
     foreach my $arch (@{$repo->{'archs'}}) {
       my $primary_file = "$packages_folder/$localuri/".$repo->{'release'}."/$section/$arch/primary.xml";
-      my $twig = XML::Twig->new(
-        twig_handlers =>
-          {
-            package => sub {
-              my ($twig, $package) = @_;
-              if ((defined $to) && ($$package_indice > $to)) {
-                $twig->purge();
-                $twig->finish_now();
-                return;
-              }
-              my $name = $package->first_child('name')->text;
-              if(defined $filters) {
-                my $match = 0;
-                foreach my $filter (@{$filters}) {
-                  if($name =~ /$filter/) {
-                    $match = 1;
-                    last;
-                  }
-                }
-                if($match == 0) {
-                  $twig->purge();
-                  return;
-                }
-              }
-              if (defined $packages->{$name}) {
-                $twig->purge();
-                return;
-              }
-              $$package_indice++;
-              if ((defined $from) && ($$package_indice < $from)) {
-                $twig->purge();
-                return;
-              }
-              $packages->{$name} = {'PACKAGE' => $name};
-              if (grep {uc($_) eq 'DESCRIPTION'} @{$attrs}) {
-                $packages->{$name}->{'DESCRIPTION'} = encode_base64($package->first_child('description')->text);
-              }
-              if (grep {uc($_) eq 'VERSION'} @{$attrs}) {
-                $packages->{$name}->{'VERSION'} = $package->first_child('version')->{'att'}->{'ver'};
-              }
-              if (grep {uc($_) eq 'TIMESTAMP'} @{$attrs}) {
-                $packages->{$name}->{'TIMESTAMP'} = $package->first_child('time')->{'att'}->{'file'};
-              }
-              $twig->purge();
-            },
-          },
-      );
-      $twig->parsefile($primary_file);
+      eval {
+        $parser->parse_uri($primary_file);
+      };
+      if ($@ && ($@ !~ m/^LIMIT_REACHED/)) {
+        die $@;
+      }
     }
   }
+  $$package_indice = $handler->{indice};
 }
 
 sub parse_package_list_debian {
