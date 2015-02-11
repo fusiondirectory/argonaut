@@ -95,10 +95,11 @@ sub argonaut_ldap2zone
   create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
   unless ($norefresh) {
-    system("$RNDC reconfig")  == 0 or die "$RNDC reconfig failed : $?";
-    system("$RNDC freeze")    == 0 or die "$RNDC freeze failed : $?";
-    system("$RNDC reload")    == 0 or die "$RNDC reload failed : $?";
-    system("$RNDC thaw")      == 0 or die "$RNDC thaw failed : $?";
+    system("named-checkconf -z")  == 0 or die "named-checkconf failed : $?";
+    system("$RNDC reconfig")      == 0 or die "$RNDC reconfig failed : $?";
+    system("$RNDC freeze")        == 0 or die "$RNDC freeze failed : $?";
+    system("$RNDC reload")        == 0 or die "$RNDC reload failed : $?";
+    system("$RNDC thaw")          == 0 or die "$RNDC thaw failed : $?";
   }
 }
 
