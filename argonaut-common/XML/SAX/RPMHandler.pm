@@ -16,6 +16,12 @@ use base qw(XML::SAX::Base);
     return bless $self, $type;
   }
 
+  sub start_document {
+    my ($self, $doc) = @_;
+    $self->{package}  = undef;
+    $self->{key}      = undef;
+  }
+
   sub start_element {
     my ($self, $el) = @_;
     if ($el->{LocalName} eq 'package') {
@@ -88,10 +94,7 @@ my $parser = XML::SAX::ParserFactory->parser(
   Handler => XML::SAX::RPMHandler->new(
     $packages,
     {
-      'name' => sub {
-        my ($package, undef, $data) = @_;
-        $package->{'PACKAGE'} = $data;
-      },
+      'name' => 'PACKAGE',
       'description' => sub {
         my ($package, undef, $data) = @_;
         $package->{'DESCRIPTION'} = $data;

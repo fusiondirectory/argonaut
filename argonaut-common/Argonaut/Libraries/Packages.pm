@@ -37,6 +37,7 @@ use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use LWP::Simple;
 use Encode qw(encode);
 use XML::SAX::RPMHandler;
+use XML::SAX::RPMRepomdHandler;
 use XML::SAX;
 
 use Argonaut::Libraries::Common qw(:ldap :config);
@@ -392,6 +393,10 @@ sub store_package_list_centos {
   $dir =~ s/^http:\/\///;
   $dir = "$packages_folder/$dir";
 
+  my $parser = XML::SAX::ParserFactory->parser(
+    Handler => XML::SAX::RPMRepomdHandler->new()
+  );
+
   foreach my $section (@{$repo->{'sections'}}) {
     my $relpath = $repo->{'release'}."/$section";
     foreach my $arch (@{$repo->{'archs'}}) {
@@ -402,10 +407,8 @@ sub store_package_list_centos {
         push @errors,"Could not download $uri".$repodata."repomd.xml: $res";
         next;
       }
-      my $twig = XML::Twig->new();
-      $twig->parsefile($dir.$repodata."repomd.xml");
-      my $data = $twig->root->first_child('data[@type="primary"]');
-      my $primary = $data->first_child('location')->{'att'}->{'href'};
+      $parser->parse_uri($dir.$repodata."repomd.xml");
+      my $primary = $parser->{Handler}->{result};
       $res = mirror($uri."/$relpath/$arch/".$primary => $dir."/$relpath/$arch/".$primary);
       if(is_error($res)) {
         push @errors,"Could not download $uri"."/$relpath/$arch/".$primary.": $res";
