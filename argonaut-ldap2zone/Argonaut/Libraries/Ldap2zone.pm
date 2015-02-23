@@ -37,6 +37,8 @@ use Argonaut::Libraries::Common qw(:ldap :config);
 
 my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
 
+my $NAMEDCHECKCONF = 'named-checkconf';
+
 =item argonaut_ldap2zone
 Write a zone file for the LDAP zone and its reverse, generate named.conf files and assure they are included
 Params : zone name, verbose flag
@@ -95,7 +97,8 @@ sub argonaut_ldap2zone
   create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
   unless ($norefresh) {
-    system("named-checkconf -z")  == 0 or die "named-checkconf failed : $?";
+    my $output = `$NAMEDCHECKCONF -z`;
+    $? == 0 or die "$NAMEDCHECKCONF failed:\n$output\n";
     system("$RNDC reconfig")      == 0 or die "$RNDC reconfig failed : $?";
     system("$RNDC freeze")        == 0 or die "$RNDC freeze failed : $?";
     system("$RNDC reload")        == 0 or die "$RNDC reload failed : $?";
