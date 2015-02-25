@@ -184,7 +184,9 @@ sub release_check {
   my $full_base = 0;
   foreach my $entry ($mesg->entries()) {
     $full_base = 1;
-    push( @result_rdns, $entry->dn );
+    my $rdn = $entry->dn;
+    $rdn =~ s/,$base$//;
+    push( @result_rdns, $rdn );
   }
 
   return( sprintf( "No release base for (%s) found!\n", $release ) )
