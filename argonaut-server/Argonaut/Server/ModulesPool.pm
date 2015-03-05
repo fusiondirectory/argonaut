@@ -133,6 +133,7 @@ sub module_thread_result_handler {
       if (not defined $action->[2]->{timestamp}) {
         $action->[2]->{timestamp} = time();
       }
+      $action->[2]->{parent_taskid} = $object->{taskid};
       $kernel->post( $_[HEAP]->{sender}, "add", undef, undef, @$action);
     }
   }
