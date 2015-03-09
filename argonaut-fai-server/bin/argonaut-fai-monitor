@@ -278,16 +278,30 @@ __END__
 
 =head1 NAME
 
-argonaut-fai-monitor - read status of installation from fai-monitor and send them to argonaut-server
+argonaut-fai-monitor - read status of installation and send information to argonaut-server for FusionDirectory
 
 =head1 SYNOPSIS
 
-fai-monitor | argonaut-fai-monitor
+argonaut-fai-monitor [OPTIONS]
 
 =head1 DESCRIPTION
 
 argonaut-fai-monitor replaces fai-monitor and send information to argonaut-server for FusionDirectory to
 show them in deployment queue
+
+=head1 OPTIONS
+
+=over 2
+
+=item B<p port>
+
+Set port to listen to. Default is 4711.
+
+=item B<t timeout>
+
+Timeout for bad clients. 0 to disable.
+
+=back 
 
 =head1 BUGS
 
