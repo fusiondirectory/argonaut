@@ -80,8 +80,13 @@ sub get_pxe_config {
     $main::config,"(macAddress=$mac)"
   );
 
-  # If we don't have a FAI state
-  if ($infos->{'status'} eq '') {
+  if ($infos-{'locked'}) {
+    # Locked machine: go to 'localboot'
+    $infos->{'status'} = 'localboot';
+
+    $log->info("$filename - is locked so localboot\n");
+  } elsif ($infos->{'status'} eq '') {
+    # If we don't have a FAI state
     # Handle our default action
     if ($main::default_mode eq 'fallback') {
       # Remove PXE config and rely on 'default' fallback
