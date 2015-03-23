@@ -106,8 +106,10 @@ $pid->pid($$);
 $pid->write;
 
 $filesystem = {
-  root => {
-    content => {}
+  'man' => {
+    'content' =>  "If you see this file, it means argonaut-fuse has mounted this folder.\n".
+                  "You can use it for PXE boot.\n".
+                  "It will create PXE boot files as they are requested, if a computer with the asked Mac address exists in the LDAP tree.\n"
   }
 };
 
@@ -147,14 +149,14 @@ sub sig_int_handler {
 
 sub readConfig
 {
-    $config = argonaut_read_config;
+  $config = argonaut_read_config;
 
-    my $settings = argonaut_get_fuse_settings($config,$config->{'client_ip'});
+  my $settings = argonaut_get_fuse_settings($config,$config->{'client_ip'});
 
-    $default_mode           =   $settings->{"default_mode"};
-    $tftp_root              =   $settings->{"pxelinux_cfg"};
+  $default_mode = $settings->{"default_mode"}; # Used by modules
+  $tftp_root    = $settings->{"pxelinux_cfg"};
 
-    $logdir                 =   $settings->{"logdir"};
+  $logdir       = $settings->{"logdir"};
 }
 
 #===  FUNCTION  ================================================================
@@ -193,39 +195,34 @@ sub getattr {
   # regular file
   my $type = 0100;
   my $bits = 0644;
-
-  my $current = $filesystem->{'root'}->{'content'};
-  my @path_elements = split('/',$filename);
-  my $current_type = 'file';
-
-  if ( @path_elements > 1 ) {
-    foreach my $path_element (@path_elements[1..$#path_elements]) {
-      if ($path_element =~ /^([0-9a-f]{1,2}-){6}[0-9a-f]{1,2}$/i) {
-        # Always generate a fresh config
-        delete $current->{$path_element} if(exists($current->{$path_element}));
-
-        # Process known Modules
-        MODULE: foreach my $module (keys %{$known_modules}) {
-          $log->info("Processing Module $module with argument ${path_element}\n");
-          my $answer = eval($module.'::get_pxe_config("'.$path_element.'")');
-          if (exists($current->{$path_element})) {
-            last MODULE;
-          }
-          if ($@) {
-            $log->error("ERROR: Processing Module $module failed with $@\n");
-          }
-        }
-      }
-      $current_type = $current->{$path_element}->{'type'};
-      $last_attred_file = $current->{$path_element} if ($current_type eq 'file');
-      $current = $current->{$path_element}->{'content'} if ($current_type eq 'dir');
-    }
-  }
+  my $size = 0;
 
   # if directory, set type to dir and mode to 0755
-  if ($filename eq '/' || $current_type eq 'dir') {
+  if ($filename eq '/') {
     $type = 0040;
     $bits = 0755;
+  } else {
+    $filename =~ s|^.*/||; # Keep only filename
+    if ($filename =~ /^([0-9a-f]{1,2}-){6}[0-9a-f]{1,2}$/i) {
+      # Always generate a fresh config
+      delete $filesystem->{$filename} if(exists($filesystem->{$filename}));
+
+      # Process known Modules
+      MODULE: foreach my $module (keys %{$known_modules}) {
+        $log->info("Processing Module $module with argument ${filename}\n");
+        my $answer = eval($module.'::get_pxe_config("'.$filename.'")');
+        if ($@) {
+          $log->error("ERROR: Processing Module $module failed with $@\n");
+        }
+        if (exists($filesystem->{$filename})) {
+          last MODULE;
+        }
+      }
+    }
+    if (not exists($filesystem->{$filename})) {
+      return -ENOENT();
+    }
+    $size = length( $filesystem->{$filename}->{'content'} ) if($filesystem->{$filename}->{'content'});
   }
 
   my $mode = $type << 9 | $bits;
@@ -234,11 +231,6 @@ sub getattr {
   my ($gid) = split / /, $(;
   my $rdev = 0;
   my $atime = time;
-  my $size = 0;
-
-  if ($current_type eq 'file') {
-    $size = length( $last_attred_file->{'content'} ) if($last_attred_file->{'content'});
-  }
 
   my $mtime = $atime;
   my $ctime = $atime;
@@ -253,33 +245,24 @@ sub getattr {
 }
 
 sub read {
-  my ($pathname, $requestedsize, $offset) = @_;
-  my $current= $filesystem->{'root'}->{'content'};
-  my @path_elements= split('/', $pathname);
+  my ($filename, $requestedsize, $offset) = @_;
 
-  if (@path_elements > 1) {
-    foreach my $path_element (@path_elements[1..$#path_elements]) {
-      $current = $current->{$path_element}->{'content'};
-    }
+  $filename =~ s|^.*/||; # Keep only filename
+
+  if (defined $filesystem->{$filename}) {
+    return $filesystem->{$filename}->{'content'};
   }
 
-  return $current;
+  return -ENOENT();
 }
 
 sub getdir {
   my ($filename) = @_;
-  my $current = $filesystem->{'root'}->{'content'};
-  my @path_elements= split('/', $filename);
-  my @result= ('.', '..');
+  my @result = ('.', '..');
 
-  if (@path_elements > 1) {
-    foreach my $path_element (@path_elements[1..$#path_elements]) {
-      return(-1*ENOENT) if(not defined($current->{$path_element}));
-      $current= $current->{$path_element}->{'content'};
-    }
+  if ($filename eq '/') {
+    push @result, keys(%{$filesystem});
   }
-
-  push @result, keys(%{$current});
 
   push @result, 0;
   return @result;
@@ -307,8 +290,8 @@ sub write_pxe_config_file {
   }
 
   # store in hash
-  $filesystem->{'root'}->{'content'}->{$file}->{'type'}     = 'file';
-  $filesystem->{'root'}->{'content'}->{$file}->{'content'}  = $file_content;
+  $filesystem->{$file}->{'type'}     = 'file';
+  $filesystem->{$file}->{'content'}  = $file_content;
 
   return 0;
 }
