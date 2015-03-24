@@ -231,7 +231,7 @@ sub parse_init_disk
   print $outfile 'objectClass: FAIclass'."\n";
   print $outfile "objectClass: FAIpartitionTable\n";
   print $outfile "FAIpartitionMethod: setup-storage\n";
-    print $outfile "\n";
+  print $outfile "\n";
 
   return {};
 }
@@ -469,7 +469,7 @@ sub print_ldif
     print $outfile 'objectClass: FAIclass'."\n";
     print $outfile "objectClass: ".$faitypes{$parser->{'type'}}->{'subclass'}."\n";
     foreach (@{$node->{'lines'}}) {
-      print;
+      print $outfile $_;
     }
     print $outfile "\n";
   }
