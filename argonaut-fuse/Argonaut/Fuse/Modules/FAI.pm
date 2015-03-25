@@ -80,7 +80,7 @@ sub get_pxe_config {
     $main::config,"(macAddress=$mac)"
   );
 
-  if ($infos-{'locked'}) {
+  if ($infos->{'locked'}) {
     # Locked machine: go to 'localboot'
     $infos->{'status'} = 'localboot';
 
