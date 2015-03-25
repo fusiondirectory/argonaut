@@ -34,6 +34,7 @@ my %options= (
 );
 
 unless( GetOptions(
+  'h|help'                        => \&usage,
   'diff!'                         => \$options{diff},
   'flag|f=s'                      => \$options{flag},
   'base|b=s'                      => \$options{base},
@@ -53,7 +54,32 @@ unless( GetOptions(
     $options{questions_file}= '/var/log/installer/cdebconf/questions.dat';
     $options{flag}=           'preseed';
   }
-)) { die "Can't parse options: $!\n"};
+)) { usage("Can't parse options: $!\n")};
+
+sub usage
+{
+  (@_) && print STDERR "\n@_\n\n";
+
+  print STDERR << "EOF";
+ usage: $0 [-h] [--diff | --nodiff] [-f flag] [-b base] [-t templates-tree] [-q questions-tree] [--templates-file file] [--questions-file file] [-k keys-file] [-p | --noprefer-preseed] [-d | -c]
+
+  -h                : this (help) message
+
+  --diff            : to see diff between templates and questions
+  -f                : flag (default: preseed)
+  -b                : LDAP base, usually ou=templatename,<ldap_base>
+  -t                : Templates branch (default: ou=templates)
+  -q                : Questions branch (default: ou=questions)
+  --templates-file  : Templates file path (default: /var/log/installer/cdebconf/templates.dat)
+  --questions-file  : Questions file path (default: /var/log/installer/cdebconf/questions.dat)
+  -k                : Preseed keys file path (optional)
+  -p                : Allow type/value specs from preseed file to have precedence over values from templates/questions files
+  -d                : Overrides flag and templates/questions paths to use /var/cache/debconf/
+  -c                : Overrides flag and templates/questions paths to use /var/log/installer/cdebconf
+
+EOF
+  exit -1;
+}
 
 my( %open, %data, %add_domain);
 
