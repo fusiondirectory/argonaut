@@ -58,7 +58,7 @@ unless( GetOptions(
 
 sub usage
 {
-  (@_) && print STDERR "\n@_\n\n";
+  (@_) && $_[0] ne "h" && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
  usage: $0 [-h] [--diff | --nodiff] [-f flag] [-b base] [-t templates-tree] [-q questions-tree] [--templates-file file] [--questions-file file] [-k keys-file] [-p | --noprefer-preseed] [-d | -c]

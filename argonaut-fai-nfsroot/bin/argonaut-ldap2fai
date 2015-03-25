@@ -150,7 +150,7 @@ exit 0;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage
 {
-  (@_) && print STDERR "\n@_\n\n";
+  (@_) && $_[0] ne "h" && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
  usage: $0 [-hnvW] [-c config_space] [-n hostname] [-m mac_address | -i ip_address]
