@@ -1,0 +1,149 @@
+#!/usr/bin/perl -w
+
+#######################################################################
+#
+# yumgroup2yumi
+#
+# Copyright (c) 2015 The FusionDirectory Project <contact@fusiondirectory.org>
+#
+# Authors: Côme Bernigaud
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Getopt::Long;
+use Path::Class;
+
+my $dump_dir      = "/var/lib/fai/config";
+my $verbose       = 0;
+my $outfile;
+my $outfilename   = '';
+
+Getopt::Long::Configure ("bundling");
+
+GetOptions( 'v|verbose'         => \$verbose,
+            'h|help'            => \&usage,
+            'c|config-space=s'  => \$dump_dir,
+            'o|output-file=s'   => \$outfilename,
+          )
+  or usage( 'Wrong parameters' );
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub usage
+{
+  (@_) && $_[0] ne "h" && print STDERR "\n@_\n\n";
+
+  print STDERR << "EOF";
+ usage: $0 [-hv] [-c config_space] [-o file] class
+
+  -h  : this (help) message
+  -v  : be verbose
+  -c  : config space (default: ${dump_dir})
+  -o  : output file
+EOF
+  exit -1;
+}
+
+my $class = shift or usage('Missing class parameter');
+
+if ($outfilename) {
+  open($outfile, '>'.$outfilename) or die "Could not open '$outfilename'\n";
+} else {
+  $outfile = *STDOUT;
+}
+
+parse_class("package_config/$class", sub {return {};}, \&line_parser_package);
+
+sub parse_class
+{
+  my ($filepath, $init_parser, $line_parser) = @_;
+  $filepath = "$dump_dir/$filepath";
+
+  if (-f $filepath) {
+    my $file = file($filepath);
+
+    print "# parsing $file\n" if $verbose;
+
+    my $parser = &$init_parser();
+
+    my @lines = $file->slurp;
+    foreach my $line ( @lines ) {
+      # remove comments
+      $line =~ s/#.*$//;
+      # remove \n from the end of each line
+      chomp $line;
+      # ignore empty lines
+      next if ( $line =~ /^$/ );
+
+      $parser->$line_parser($line);
+    }
+
+    return $parser;
+  }
+}
+
+sub line_parser_package
+{
+  my $infos = shift;
+  my $line = shift;
+  # only process for lines beginning with "class", and extracting the 2nd word (the class name)
+  if ( $line =~ /^PACKAGES\s+([^ ]+)(\s+([^ ]*))?/ ) {
+    my $cn = $class;
+    my $name = $3;
+    if ($3) {
+      $cn .= '-'.$3;
+      $infos->{'main'} = 0;
+    } else {
+      $name = 'YUMGROUP';
+      $infos->{'main'} = 1;
+    }
+    $infos->{'method'} = $1;
+    if ($infos->{'method'} eq 'yumgroup') {
+      print $outfile "\n";
+      print $outfile "PACKAGES yumi $name\n";
+    }
+  } elsif ($infos->{'method'} eq 'yumgroup') {
+    my @groups = split(/\s+/, $line);
+    foreach my $group (@groups) {
+      my @packages = qx"env LANGUAGE=C yum groupinfo $group";
+      my $list = -1;
+      my %lists = (
+        0 => [],
+        1 => [],
+        2 => [],
+      );
+      foreach my $package (@packages) {
+        if ($package =~ m/^\s*(Mandatory|Optional|Default) Packages/i) {
+          $list++;
+        } elsif ($list >= 0) {
+          chomp $package;
+          $package =~ s/(^\s+|\s+$)//;
+          push @{$lists{$list}}, $package;
+        }
+      }
+      foreach my $package (@{$lists{0}}) {
+        print "$package\n";
+      }
+      foreach my $package (@{$lists{1}}) {
+        print "$package\n";
+      }
+    }
+  }
+}
