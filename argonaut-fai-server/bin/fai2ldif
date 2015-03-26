@@ -123,22 +123,23 @@ parse_complete_class($class);
 
 sub parse_complete_class
 {
-  my ($class) = @_;
+  my ($parsing_class) = @_;
+  $class = $parsing_class;
   # Debconf first as it could change package_config handling
   %configured_packages = ();
   $debconf_output = '';
   parse_class("debconf/$class",         sub {return {};},       \&line_parser_debconf);
-  my $package_parser = parse_class("package_config/$class",  sub {return {'used' => [], 'package_classes' => ()};},       \&line_parser_package);
+  my $package_parser = parse_class("package_config/$class",  sub {return {'used' => [], 'package_classes' => []};},       \&line_parser_package);
   handle_package_list_end($package_parser);
-  # Classes having the same name as package sublist *may* be related so we pull them as well
-  foreach my $package_class (@{$package_parser->{'package_classes'}}) {
-    parse_complete_class($package_class);
-  }
   parse_class("disk_config/$class",     \&parse_init_disk,      \&line_parser_disk);
   parse_class("class/$class.var",       \&parse_init_variables, \&line_parser_variables);
   parse_files('script',   \&file_parser_script,   "scripts/$class");
   parse_files('template', \&file_parser_template, "files");
   parse_files('hook',     \&file_parser_hook,     "hooks");
+  # Classes having the same name as package sublist *may* be related so we pull them as well
+  foreach my $package_class (@{$package_parser->{'package_classes'}}) {
+    parse_complete_class($package_class);
+  }
 }
 
 sub parse_class
