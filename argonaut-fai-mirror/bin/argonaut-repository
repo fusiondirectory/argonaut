@@ -45,7 +45,7 @@ my $result;
 
 my $outdir = "/etc/argonaut/fai";
 my $crond_dir= "/etc/cron.daily";
-my $logfile = "ldap2repository.log";
+my $logfile = "argonaut-repository.log";
 
 my $config;
 
