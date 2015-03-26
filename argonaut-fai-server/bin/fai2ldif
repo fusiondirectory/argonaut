@@ -119,6 +119,8 @@ if ($outfilename) {
 my %configured_packages;
 my $debconf_output;
 
+parse_complete_class($class);
+
 sub parse_complete_class
 {
   my ($class) = @_;
