@@ -205,7 +205,7 @@ sub line_parser_package
 sub handle_package_list_end
 {
   my $infos = shift;
-  if (not $infos->{'main'}) { # We had no main package list
+  if ((not $infos->{'main'}) && (grep {$configured_packages{$_}} keys %configured_packages)) { # We had no main package list
     print $outfile "\n";
     print $outfile "dn: cn=$class,".$faitypes{'package'}->{'rdn'}.",$faibaserdn,$base\n";
     print $outfile "cn: $class\n";
