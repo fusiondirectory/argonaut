@@ -139,10 +139,10 @@ sub line_parser_package
         }
       }
       foreach my $package (@{$lists{0}}) {
-        print "$package\n";
+        print $outfile "$package\n";
       }
       foreach my $package (@{$lists{1}}) {
-        print "$package\n";
+        print $outfile "$package\n";
       }
     }
   }
