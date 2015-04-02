@@ -470,7 +470,7 @@ sub cleanup_and_extract {
         mkpath($outdir);
 
         foreach my $package (@{$packages}) {
-            if (-f $outdir/".$package->{'PACKAGE'}") {
+            if ((-f "$outdir/".$package->{'PACKAGE'}) || (-f "$outdir/".$package->{'PACKAGE'}.'-NOTEMPLATE')) {
               next;
             }
             system( "dpkg -e '$servdir/".$package->{'FILENAME'}."' '$tmpdir/DEBIAN'" );
@@ -482,6 +482,10 @@ sub cleanup_and_extract {
                 print FILE $tmpl;
                 close(FILE);
                 unlink("$tmpdir/DEBIAN/templates");
+            } else {
+                open (FILE, ">$outdir/".$package->{'PACKAGE'}.'-NOTEMPLATE') or die "cannot open file";
+                print FILE "1\n";
+                close(FILE);
             }
         }
     }
