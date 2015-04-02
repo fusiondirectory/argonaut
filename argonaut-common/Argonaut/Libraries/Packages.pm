@@ -353,7 +353,6 @@ sub parse_package_list_debian {
                   }
               }
           }
-          rmtree($packages_folder."/debconf.d/");
       }
   }
 }
@@ -471,6 +470,9 @@ sub cleanup_and_extract {
         mkpath($outdir);
 
         foreach my $package (@{$packages}) {
+            if (-f $outdir/".$package->{'PACKAGE'}") {
+              next;
+            }
             system( "dpkg -e '$servdir/".$package->{'FILENAME'}."' '$tmpdir/DEBIAN'" );
 
             if( -f "$tmpdir/DEBIAN/templates" ) {
