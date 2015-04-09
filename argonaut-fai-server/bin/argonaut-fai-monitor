@@ -37,6 +37,10 @@ use Log::Handler;
 use Socket;
 use Getopt::Std;
 
+use Proc::Daemon;
+
+Proc::Daemon::Init;
+
 my ($port, $timeout);
 our ($opt_h,$opt_p,$opt_t);
 
