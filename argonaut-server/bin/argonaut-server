@@ -418,10 +418,10 @@ POE::Session->create(
             error     => ""
           };
           if (defined $data->{parent_taskid} && defined $heap->{tasks}->{$data->{parent_taskid}}) {
-            if (not defined $heap->{tasks}->{$data->{parent_taskid}}->{data}->{child_taskids}) {
-              $heap->{tasks}->{$data->{parent_taskid}}->{data}->{child_taskids} = [];
+            if (not defined $heap->{tasks}->{$data->{parent_taskid}}->{child_taskids}) {
+              $heap->{tasks}->{$data->{parent_taskid}}->{child_taskids} = [];
             }
-            push @{$heap->{tasks}->{$data->{parent_taskid}}->{data}->{child_taskids}}, $taskid;
+            push @{$heap->{tasks}->{$data->{parent_taskid}}->{child_taskids}}, $taskid;
           }
           $log->debug("action $action scheduled on target $target");
         },
