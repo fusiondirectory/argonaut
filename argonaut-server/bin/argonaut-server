@@ -374,11 +374,17 @@ POE::Session->create(
             $heap->{tasks}->{$taskid}->{progress} = $progress;
             if (($progress > 0) &&
                 (defined $heap->{tasks}->{$taskid}->{child_taskids})) {
+              my @delList;
+              my $i = 0;
               foreach my $id (@{$heap->{tasks}->{$taskid}->{child_taskids}}) {
-                if ($heap->{tasks}->{$id}->action eq 'System.reboot') {
+                if ($heap->{tasks}->{$id}->{action} eq 'System.reboot') {
                   $kernel->call($session => 'set_task_substatus' => $id,'Canceled by parent task',100);
+                  push @delList, $i;
                 }
+                $i++;
               }
+              # Delete canceled tasks from child list
+              splice @{$heap->{tasks}->{$taskid}->{child_taskids}}, $_, 1 for reverse @delList;
             }
             if ($progress >= 100) {
               $kernel->call($session => 'set_task_processed' => $taskid);
