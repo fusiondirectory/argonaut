@@ -158,6 +158,11 @@ sub parse_line
 
   my ($host,$keyword,$taskname,$errorcode) = split(/\s+/,$line);
 
+  if(($keyword eq "TASKBEGIN") && ($taskname eq "confdir")) {
+    # Clear cache as this is a new task
+    delete $taskids{$host};
+  }
+
   my $taskid = eval {get_id($host);};
   if ($@) {
     if (($keyword eq "TASKBEGIN") ||
@@ -200,6 +205,7 @@ sub parse_line
       "set_error",
       [$taskid,$taskname." ".$errorcode],
     );
+    delete $taskids{$host};
   } else {
     print "$line\n";
   }
@@ -305,7 +311,7 @@ Set port to listen to. Default is 4711.
 
 Timeout for bad clients. 0 to disable.
 
-=back 
+=back
 
 =head1 BUGS
 
