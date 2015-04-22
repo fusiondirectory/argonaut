@@ -123,17 +123,20 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "LDAP2FAI 1"
-.TH LDAP2FAI 1 "2014-06-24" "Argonaut 0.9.1" "Argonaut Documentation"
+.IX Title "YUMGROUP2YUMI 1"
+.TH YUMGROUP2YUMI 1 "2015-04-22" "Argonaut 0.9.2" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-ldap2fai \- read FAI config from LDAP and create config space.
+yumgroup2yumi \- read yumgroups and create ldif files for use
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-ldap2fai [\-hnv] [\-c config_space] [\-h hostname] [\-m mac_address | \-i ip_address]
+yumgroup2yumi [\-hv] [\-c config_space] [\-o output filename]
+.SH "DESCRIPTION"
+.IX Header "DESCRIPTION"
+yumgroup2yumi is a script to read yumgroups and create ldif files in yumi format
 .SH "OPTIONS"
 .IX Header "OPTIONS"
 \&\fB\-h\fR
@@ -142,23 +145,11 @@ ldap2fai [\-hnv] [\-c config_space] [\-h hostname] [\-m mac_address | \-i ip_add
 \&\fB\-v\fR
     be verbose (multiple v's will increase verbosity)
 .PP
-\&\fB\-d\fR
-    dry run (includes verbose)
-.PP
 \&\fB\-c\fR
-    output dir (default: /var/lib/fai/config)
+    config sapce (default: /var/lib/fai/config)
 .PP
-\&\fB\-h\fR
-    check hostname
-.PP
-\&\fB\-m\fR
-    mac address
-.PP
-\&\fB\-i\fR
-    ip address
-.SH "DESCRIPTION"
-.IX Header "DESCRIPTION"
-ldap2fai is a script to read the fai config space from \s-1LDAP\s0 and create it on the disk.
+\&\fB\-o\fR
+    output filename
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
@@ -166,14 +157,8 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of FusionDirectory <http://www.fusiondirectory.org>
-.IP "Copyright (c) 2008 Landeshauptstadt Munchen" 3
-.IX Item "Copyright (c) 2008 Landeshauptstadt Munchen"
-.PD 0
-.IP "Copyright (C) 2007\-2010 The GOsa project" 3
-.IX Item "Copyright (C) 2007-2010 The GOsa project"
-.IP "Copyright (C) 2011\-2014 FusionDirectory project" 3
-.IX Item "Copyright (C) 2011-2014 FusionDirectory project"
-.PD
+.IP "Copyright (C) 2015 FusionDirectory project" 3
+.IX Item "Copyright (C) 2015 FusionDirectory project"
 .PP
 This program is distributed in the hope that it will be useful,
 but \s-1WITHOUT\s0 \s-1ANY\s0 \s-1WARRANTY\s0; without even the implied warranty of

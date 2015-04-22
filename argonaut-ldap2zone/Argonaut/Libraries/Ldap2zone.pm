@@ -2,22 +2,23 @@
 #
 # Argonaut::Libraries::Ldap2zone -- create zone files from LDAP DNS zones
 #
-# Copyright (C) 2012-2014 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2015 FusionDirectory project <contact@fusiondirectory.org>
 #
 # Author: Côme BERNIGAUD
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 #######################################################################
 
@@ -36,6 +37,8 @@ use DNS::ZoneParse;
 use Argonaut::Libraries::Common qw(:ldap :config);
 
 my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
+
+my $NAMEDCHECKCONF = 'named-checkconf';
 
 =item argonaut_ldap2zone
 Write a zone file for the LDAP zone and its reverse, generate named.conf files and assure they are included
@@ -95,10 +98,12 @@ sub argonaut_ldap2zone
   create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
   unless ($norefresh) {
-    system("$RNDC reconfig")  == 0 or die "$RNDC reconfig failed : $?";
-    system("$RNDC freeze")    == 0 or die "$RNDC freeze failed : $?";
-    system("$RNDC reload")    == 0 or die "$RNDC reload failed : $?";
-    system("$RNDC thaw")      == 0 or die "$RNDC thaw failed : $?";
+    my $output = `$NAMEDCHECKCONF -z`;
+    $? == 0 or die "$NAMEDCHECKCONF failed:\n$output\n";
+    system("$RNDC reconfig")      == 0 or die "$RNDC reconfig failed : $?";
+    system("$RNDC freeze")        == 0 or die "$RNDC freeze failed : $?";
+    system("$RNDC reload")        == 0 or die "$RNDC reload failed : $?";
+    system("$RNDC thaw")          == 0 or die "$RNDC thaw failed : $?";
   }
 }
 

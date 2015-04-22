@@ -1,6 +1,139 @@
 Argonaut changelog
 ==================
 
+* Argonaut 0.9.2
+
+[Feature] Bugs #2229: adding software on demand onto the opsi service
+[Fix] Bugs #2454: gotoLdapServer seems unused
+[Fix] Bugs #2577: Reboot with Opsi Client
+[Fix] Bugs #2906: debconf2ldif is missing an help option
+[Fix] Bugs #3140: adding debconf and freeradius to the argonaut 0.9.2 branch
+[Fix] Bugs #3146: OPSI havewrong module place
+[Fix] Bugs #3155: when I want to configure OPSI softwarelist with FD I got : Erreur: Request error: Error : No such a method : 'Argonaut.ClientDaemon.Modules.OPSI.get_localboots'.
+[Fix] Bugs #3286: put comment around pod explanation in argonaut-server to correct error in manpage
+[Fix] Bugs #3376: No client module can handle action Deployment.reinstall for target ff:ff:aa:aa:aa:aa
+[Fix] Bugs #3382: quota plugins et block size
+[Fix] Bugs #3390: rename ldap2fai into argonaut-ldap2fai to remove potential clash with the goto software from gonicus
+[Fix] Bugs #3449: fusioninventory ldap schema generator is not in git anymore
+[Feature] Bugs #3481: adding centos/rpm support to argonaut Packages.pm library
+[Fix] Bugs #3526: add a switch to select the good library when in wheezy or jessie for argonaut-client
+[Fix] Bugs #3541: fail2ldif manpage is wrong in the description
+[Fix] Bugs #3542: when the parent serveur is on level up than the son for the fai repository it doesnt find it correctly
+[Fix] Bugs #3543: when asking for the help of the fai2ldif command we get an extra h 1
+[Feature] Bugs #3556: Support de Centos dans argonaut-common-fai
+[Fix] Bugs #3558: argonaut-common-fai - Création de partition LVM
+[Fix] Bugs #3574: fusioninventory ldap schema generator is not in git anymore
+[Fix] Bugs #3576: clean and rename the freeradius argonaut code
+[Fix] Bugs #3611: we should merge fai-monitor and argonaut-fai-monitor
+[Fix] Bugs #3612: argonaut fuse module fai should check if the system is lock or not
+[Fix] Bugs #3646: argonaut-fuse should be cleaned up
+[Fix] Bugs #3649: fai2ldif -o missed some information
+[Fix] Bugs #3656: fai2ldif doesnt convert the script associated to a class inside a class
+[Fix] Bugs #3657: argonaut-repository doesnt find the parent depot server
+[Fix] Bugs #3658: logfile name is wrong in argonaut-repository
+[Fix] Bugs #3661: fai2ldif creates a package list even if there is no need
+[Feature] Bugs #3662: Convert yumgroup to ldif
+[Fix] Bugs #3664: Daemon for argonaut-fai-monitor
+[Fix] Bugs #3665: remove debconf code as it is glpv3 only
+[Fix] Bugs #3668: timeout when using distant repository for debian packages
+[Fix] Bugs #3697: Ask task id back with the error "This task does not exists"
+[Fix] Bugs #3707: update all man pages to 0.9.2 and adapt date also
+[Fix] Bugs #3714: argonaut-repository should have a --verbose option
+[Fix] Bugs #3715: argonaut2repository tell it cannot find parent servers of parent servers
+[Feature] Wishlist #3314: optional "named-checkconf -z" after running argonaut-ldap2zone on dns servers with output to see if configuration is correct
+
+* Argonaut 0.9.1
+
+[Fix] Bugs #282: in fai-backend the fai-backend hooks don't finish correctly if NFSROOT_LOCALE is used
+[Fix] Bugs #303: when using setup storage with latest svn ldap2fai always return Invalid disk config entry 'cn=toto,cn=DEBIAN-DISK,ou=disk, ...' - skipped
+[Fix] Bugs #305: when using setup storage fonctionnality the size of the partition is wrongly writtent in the ldap tree
+[Fix] Bugs #576: fuse and server init.d scripts fail if interface is not up yet
+[Fix] Bugs #583: FAIstate stuck at "install"
+[Fix] Bugs #1364: mirror-update-cronjob couldn't be executed
+[Fix] Bugs #2032: clean the fai classes in ldif format to be more easy to use
+[Fix] Bugs #2230: Inverted logic for FAI mirror
+[Fix] Bugs #2439: Argonaut-fuse stuck on mounting filesystem
+[Fix] Bugs #2455: Argonaut FAI server module is not working
+[Feature] Bugs #2459: create an argonaut-client module for dovecot
+[Fix] Bugs #2475: Error while running make-fai-nfsroot (in Wheezy)
+[Fix] Bugs #2582: argonaut-fai-client - modified to use fai live boot
+[Fix] Bugs #2887: adding manpages and licence
+[Fix] Bugs #2889: cleanup copyright and manpages
+[Fix] Bugs #2890: remove old code
+[Fix] Bugs #2891: move code into the correct directories
+[Feature] Bugs #2905: ldap2fai should have a mode when given a directory containing fai config file it make ldif out of them
+[Fix] Bugs #2909: Could not download deb http://debian.der.edf.fr/debian-security//dists/wheezy/main/binary-amd64/Packages.bz2 in the case of an update repository
+[Fix] Bugs #2911: argonaut server service should have an option to not get packages even if a mirror is created in FusionDirectory
+[Fix] Bugs #2959: removing argonaut-fai-progress
+[Fix] Bugs #2960: removing argonaut-fusioninventory
+[Fix] Bugs #2961: make-fai-nfsroot is now called fai-make-nfsroot
+[Fix] Bugs #2964: clean the argonaut-fai-server source
+[Fix] Bugs #2965: create a replacement for fai-monitor-gui that send status about fai client to argonaut
+[Fix] Bugs #2968: removing the argonaut-fai-client package and moving tools into argonaut-nfsroot packages
+[Fix] Bugs #2972: Argonaut doesn't do TLS (with beginnings of patch)
+[Fix] Bugs #2973: error message in argonaut tools should not send critical data to the console
+[Fix] Bugs #2974: Useless functions in Argonaut::Common
+[Fix] Bugs #2975: argonaut-fuse is using old code and should be migrated to argonaut-common ldap code
+[Fix] Bugs #2976: removing old obsolete option from argonaut-fuse
+[Fix] Bugs #2980: in argonaut-fuse when it create the file to be put in pxeling.cfg it doesnt put the ip in the commentary
+[Fix] Bugs #2981: in argonaut-nfsroot-integration script we can not symlink vmlinuz-install and initrd.img
+[Fix] Bugs #2982: remove tftp_static_root fonctionnality from argonaut-fuse
+[Fix] Bugs #2983: remove commented module option loading
+[Fix] Bugs #2985: group membership checking in argonaut-fuse should be reworked
+[Fix] Bugs #2986: remove old integration scripts inside the nfsroot
+[Fix] Bugs #2990: moving the get-config-dir-argonaut to the argonaut-fai-nfsroot package
+[Fix] Bugs #2991: bug with verbose mode in fai when running ldap2fai
+[Fix] Bugs #2992: we need a subroutine in ldap2fai to create dirs in the config space of fai client
+[Fix] Bugs #2993: ldap2fai doesnt write the script stored in the ldap tree
+[Fix] Bugs #2994: ldap2fai crash when trying to export variables
+[Fix] Bugs #2995: options of ldap2fai should be reorganised to be more logical
+[Fix] Bugs #2998: adding the argonaut-fai-monitor to the argonaut-fai-server package
+[Fix] Bugs #2999: the protocol is stored as http inside the argonautProtocol attribute but the code does no add :// after it
+[Fix] Bugs #3000: error in the filter when running argonaut-server and FAi module
+[Fix] Bugs #3001: remove fixed code inside ldap2fai
+[Fix] Bugs #3003: redo the get-config-dir-argonaut to make it more standard
+[Fix] Bugs #3004: Config file read code is duplicated
+[Fix] Bugs #3008: perl error : Global symbol "$client_ip"
+[Fix] Bugs #3009: perl error : Global symbol "$server_ip"
+[Fix] Bugs #3010: error when trying to create the cronjob for creating debian mirror
+[Fix] Bugs #3012: Name "main::ID" used only once: possible typo at /usr/sbin/argonaut-fai-monitor line 98, <DATA> line 558.
+[Fix] Bugs #3013: argonaut-repository make use of /usr/lib/argonaut, but it doesnt exist anymore
+[Fix] Bugs #3016: rename argonaut-apply-quota to argonaut-quota to be more in sync with all the tools
+[Fix] Bugs #3017: rename argonaut-client-fai-getid to remove the fai inside the name
+[Fix] Bugs #3018: argonaut-client-fai-sendmon should be removed now that we are using argonaut-fai-monitor to integrate directly with faimond
+[Fix] Bugs #3019: remove empty lib dir in argonaut-fai-server
+[Fix] Bugs #3025: moving fai2ldif to argonaut-fai-server
+[Fix] Bugs #3043: OPSI.pm needs a task_processed method
+[Feature] Bugs #3046: adding three variable into argonaut-nfsroot-integration
+[Fix] Bugs #3054: Problem installing argonaut packages
+[Fix] Bugs #3057: argonaut-server doesn't run
+[Fix] Bugs #3061: FAL ssl certs not copied if /etc/ssl doesn't exist
+[Fix] Bugs #3062: argonaut-fuse
+[Fix] Bugs #3068: Weird issues with custom ldap.conf in argonaut.conf
+[Fix] Bugs #3069: fai.conf isn't copied in the livefs when runninf fai-setup
+[Fix] Bugs #3070: argonaut.conf copied on new FAI setup isn't correct (wrong IP)
+[Feature] Bugs #3093: add an option to not refresh zone when running ldap2zone from console
+[Feature] Bugs #3094: add an option to wirte the zone file in an other location for testing purpose
+[Fix] Bugs #3101: Can't call method "start_tls" on an undefined value at /usr/share/perl5/Argonaut/Libraries/Common.pm line 176
+[Fix] Bugs #3119: argonaut.conf isn't copied in right place during fai-setup
+[Fix] Bugs #3130: add a switch to select the good library when in wheezy or jessie for argonaut-client
+[Fix] Bugs #3131: add a switch to select the good library when in wheezy or jessie for argonaut-server
+[Fix] Bugs #3133: fetching list of package
+[Fix] Bugs #3135: all the argonaut tools should check for the presence of the console tools they need and abort if not present
+[Fix] Bugs #3136: argonaut client didn't start anymore
+[Fix] Bugs #3139: since argonaut-fai-monitor argonaut-getid is not needed anymore
+[Fix] Bugs #3142: Clearer error messages are needed for fai-monitor
+[Fix] Bugs #3143: the fai installing does not work
+[Fix] Bugs #3154: when plan a (re) install action for FAI I always got a task "reboot" in error
+[Fix] Bugs #3166: put back the opsi.pm argonaut server component back into argonaut 0.9.1
+[Fix] Bugs #3167: put back the opsi.pm fuse component back into argonaut 0.9.1
+[Fix] Bugs #3173: When trying to add a OPSI profile to a windows workstation I got an error
+[Fix] Bugs #3176: Switch modules is uselessly loaded
+[Fix] Bugs #3180: fai2ldif misses a man page
+[Fix] Bugs #3183: argonaut-fai-monitor need a manpage
+[Fix] Wishlist #558: special default classes
+[Fix] Wishlist #1978: Being able of getting settings with asref in get_generic_settings
+
 * Argonaut 0.9
 
   First upstream release

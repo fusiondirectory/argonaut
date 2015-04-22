@@ -4,20 +4,26 @@
 #
 # argonaut-fai-monitor
 #
-# Copyright (C) 2014 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2014-2015 FusionDirectory project <contact@fusiondirectory.org>
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
+# Using code from fai-monitor:
+#   Copyright (C) 2003-2012 by Thomas Lange
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# Author: Côme BERNIGAUD
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 #######################################################################
 
@@ -31,6 +37,15 @@ use Argonaut::Libraries::Common qw(:ldap :file :config);
 use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
 use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
 use Log::Handler;
+use Socket;
+use Getopt::Std;
+
+use Proc::Daemon;
+
+Proc::Daemon::Init;
+
+my ($port, $timeout);
+our ($opt_h,$opt_p,$opt_t);
 
 my $logfile = "argonaut-fai-monitor.log";
 
@@ -38,7 +53,7 @@ my $config = argonaut_read_config;
 
 my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
 
-my $logdir        = $client_settings->{'logdir'};
+my $logdir          = $client_settings->{'logdir'};
 
 my $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
@@ -138,14 +153,18 @@ sub rpc_call
   }
 }
 
-=pod This program read on stdin the fai-monitor output, extract useful information and send them to argonaut-server.
-=cut
+sub parse_line
+{
+  my ($line) = @_;
 
-while (my $line = <STDIN>) {
-  next if $line =~/^FAI monitoring daemon start/; # ignore start up messages from fai-monitor
   chomp $line;
 
   my ($host,$keyword,$taskname,$errorcode) = split(/\s+/,$line);
+
+  if(($keyword eq "TASKBEGIN") && ($taskname eq "confdir")) {
+    # Clear cache as this is a new task
+    delete $taskids{$host};
+  }
 
   my $taskid = eval {get_id($host);};
   if ($@) {
@@ -154,7 +173,7 @@ while (my $line = <STDIN>) {
         (($keyword eq "TASKEND") && ($taskname eq "faiend"))) {
       print "Could not find taskid for line '$line':\n $@\n";
       $log->error($@);
-      next;
+      return;
     } else {
       $log->debug($@);
     }
@@ -189,26 +208,113 @@ while (my $line = <STDIN>) {
       "set_error",
       [$taskid,$taskname." ".$errorcode],
     );
+    delete $taskids{$host};
   } else {
     print "$line\n";
   }
 }
+
+sub server_init
+{
+  my ($port) = @_;
+  $log->info("Argonaut FAI monitoring daemon starting..\n") or die "log: $!";
+
+  # Listen
+  my $proto = getprotobyname('tcp');
+  socket(SERVER, PF_INET, SOCK_STREAM, $proto) or die "socket: $!";
+  setsockopt(SERVER, SOL_SOCKET, SO_REUSEADDR, 1) or die "setsockopt: $!";
+
+  my $paddr = sockaddr_in($port, INADDR_ANY);
+
+  bind(SERVER, $paddr) or die "bind: $!";
+  listen(SERVER, SOMAXCONN) or die "listen: $!";
+  $log->info("Argonaut FAI monitoring daemon started on port $port with pid $$\n") or die "log: $!";
+}
+
+sub big_loop
+{
+  # accept a connection, print message received and close
+  my ($client_addr);
+  while ($client_addr = accept(CLIENT, SERVER)) {
+    my ($port, $iaddr) = sockaddr_in($client_addr);
+    my $ip = inet_ntoa($iaddr);
+
+    my $inp = '';
+
+    eval {
+      local $SIG{__DIE__};
+      local $SIG{__WARN__};
+      local $SIG{'ALRM'} = sub { die("Timeout"); };
+
+      alarm($timeout);
+      $inp = <CLIENT>;
+      alarm(0);
+    };
+
+    close CLIENT;
+
+    if (!defined($inp) || $inp eq '') {
+      # Client did not send anything, or alarm went off
+      logline("$ip:$port: No data or timeout.\n") or die "log: $!";
+      next;
+    }
+
+    parse_line($inp);
+  }
+}
+
+sub usage
+{
+
+  print << "EOF";
+argonaut-fai-monitor, Argonaut FAI monitor daemon.
+
+Usage: argonaut-fai-monitor [OPTIONS]
+
+    -p PORT             Set port to listen to. Default is 4711.
+    -t TIMEOUT          Timeout for bad clients. 0 to disable.
+
+EOF
+  exit 0;
+}
+
+getopts('hp:t:') || usage;
+$opt_h && usage;
+$port = $opt_p || 4711;
+$timeout = $opt_t || 5;
+
+server_init($port);
+big_loop;
 
 __END__
 
 
 =head1 NAME
 
-argonaut-fai-monitor - read status of installation from fai-monitor and send them to argonaut-server 
+argonaut-fai-monitor - read status of installation and send information to argonaut-server for FusionDirectory
 
 =head1 SYNOPSIS
 
-fai-monitor | argonaut-fai-monitor
+argonaut-fai-monitor [OPTIONS]
 
 =head1 DESCRIPTION
 
-argonaut-fai-monitor read fai-monitor status and send them to argonaut-server for FusionDirectory to 
+argonaut-fai-monitor replaces fai-monitor and send information to argonaut-server for FusionDirectory to
 show them in deployment queue
+
+=head1 OPTIONS
+
+=over 2
+
+=item B<p port>
+
+Set port to listen to. Default is 4711.
+
+=item B<t timeout>
+
+Timeout for bad clients. 0 to disable.
+
+=back
 
 =head1 BUGS
 
@@ -221,7 +327,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =over 3
 
-=item Copyright (C) 2011-2014 FusionDirectory project
+=item Copyright (C) 2011-2015 FusionDirectory project
 
 =back
 

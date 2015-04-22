@@ -5,20 +5,21 @@
 # Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
 # Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
 # Copyright (c) 2008,2009, 2010 by Jan Wenzel <wenzel@gonicus.de>
-# Copyright (C) 2011-2014 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2011-2015 FusionDirectory project <contact@fusiondirectory.org>
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 #######################################################################
 
@@ -75,14 +76,18 @@ sub get_pxe_config {
       'status'    => 'FAIstate',
       'kernel'    => 'gotoBootKernel',
       'cmdline'   => 'gotoKernelParameters',
-      'ldap_srv'  => 'gotoLdapServer',
       'hostname'  => 'cn',
     },
     $main::config,"(macAddress=$mac)"
   );
 
-  # If we don't have a FAI state
-  if ($infos->{'status'} eq '') {
+  if ($infos->{'locked'}) {
+    # Locked machine: go to 'localboot'
+    $infos->{'status'} = 'localboot';
+
+    $log->info("$filename - is locked so localboot\n");
+  } elsif ($infos->{'status'} eq '') {
+    # If we don't have a FAI state
     # Handle our default action
     if ($main::default_mode eq 'fallback') {
       # Remove PXE config and rely on 'default' fallback
@@ -98,7 +103,6 @@ sub get_pxe_config {
       return 0;
     } else {
       # "Super"-Default is 'localboot' - just use the built in disc
-      $infos->{'ldap_srv'}  = $main::ldap_uris . '/' . $main::ldap_base;
       $infos->{'status'}    = 'localboot';
 
       $log->info("$filename - defaulting to localboot\n");
@@ -108,12 +112,11 @@ sub get_pxe_config {
   my $host_dn = $infos->{'dn'};
 
   # Check, if there is still missing information
-  if (($infos->{'kernel'} eq '') || ($infos->{'ldap_srv'} eq '')) {
+  if ($infos->{'kernel'} eq '') {
     $log->error("$filename - missing information - aborting\n");
 
     my $mesg  = "$filename - missing LDAP attribs:";
     $mesg .= ' gotoBootKernel' if( $infos->{'kernel'} eq '' );
-    $mesg .= ' gotoLdapServer' if( $infos->{'ldap_srv'} eq '' );
     $mesg .= "\n";
 
     $log->info($mesg);

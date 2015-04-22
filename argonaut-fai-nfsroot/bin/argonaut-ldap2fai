@@ -2,29 +2,30 @@
 
 #######################################################################
 #
-# ldap2fai
+# argonaut-ldap2fai
 #
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (c) 2008-2010 GONICUS GmbH  <gosa-devel@oss.gonicus.de>
-# Copyright (c) 2011-2014 The FusionDirectory Project <contact@fusiondirectory.org>
+# Copyright (c) 2011-2015 The FusionDirectory Project <contact@fusiondirectory.org>
 #
 # Authors: Jan-Marek Glogowski
 #          Cajus Pollmeier
 #          Benoit Mortier
 #          Come Bernigaud
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 #######################################################################
 
@@ -46,7 +47,7 @@ my $ldapuris;
 my $dump_dir = "/var/lib/fai/config";
 my $verbose = 0;
 my $print_classes = 0;
-my( $hostname, $host_base, $host_dn, $host_tag );
+my( $hostname, $host_base, $host_dn );
 my $fai_mirror;
 my $dry_run = 0;
 my $release_var = 'FAIclientRelease';
@@ -150,7 +151,7 @@ exit 0;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage
 {
-  (@_) && print STDERR "\n@_\n\n";
+  (@_) && $_[0] ne "h" && print STDERR "\n@_\n\n";
 
   print STDERR << "EOF";
  usage: $0 [-hnvW] [-c config_space] [-n hostname] [-m mac_address | -i ip_address]
@@ -243,7 +244,7 @@ sub get_classes {
   $mesg = $ldap->search(
     base => "$base",
     filter => $filter,
-    attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror', 'gosaUnitTag', 'gotoBootKernel' ]);
+    attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror', 'gotoBootKernel' ]);
   $mesg->code && do_exit( 2, sprintf( "LDAP error: %s (%i)", $mesg->error, __LINE__ ) );
 
   # normally, only one value should be returned
@@ -266,11 +267,8 @@ sub get_classes {
   $entry = ($mesg->entries)[0];
   $host_dn = $entry->dn;
   $hostname = $entry->get_value( 'cn' );
-  $host_tag = $entry->get_value( 'gosaUnitTag' );
   $kernel = $entry->get_value( 'gotoBootKernel' );
   $real_hostname = $hostname;
-
-  $faiobj->tag( $host_tag ) if( defined $host_tag );
 
   # set $host_base
   my @rdn = argonaut_ldap_split_dn( $host_dn );
@@ -524,7 +522,7 @@ sub generate_kernel_packagelist {
       || do_exit( 4, "Can't create ${dump_dir}/scripts/LAST/99-install-kernel. $!\n" );
 
     print SOURCES "#!/bin/sh\n";
-    print SOURCES "# - automatically created by ldap2fai -\n";
+    print SOURCES "# - automatically created by argonaut-ldap2fai -\n";
     print SOURCES "\$ROOTCMD aptitude -o \"Aptitude::CmdLine::Ignore-Trust-Violations=yes\" -y install $kernel\n";
     close (SOURCES);
     chmod 0700, "${dump_dir}/scripts/LAST/99-install-kernel";
@@ -535,11 +533,11 @@ __END__
 
 =head1 NAME
 
-ldap2fai - read FAI config from LDAP and create config space.
+argonaut-ldap2fai - read FAI config from LDAP and create config space.
 
 =head1 SYNOPSIS
 
-ldap2fai [-hnv] [-c config_space] [-h hostname] [-m mac_address | -i ip_address]
+argonaut-ldap2fai [-hnv] [-c config_space] [-h hostname] [-m mac_address | -i ip_address]
 
 =head1 OPTIONS
 
@@ -566,7 +564,7 @@ B<-i>
 
 =head1 DESCRIPTION
 
-ldap2fai is a script to read the fai config space from LDAP and create it on the disk.
+argonaut-ldap2fai is a script to read the fai config space from LDAP and create it on the disk.
 
 =head1 BUGS
 
@@ -583,7 +581,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =item Copyright (C) 2007-2010 The GOsa project
 
-=item Copyright (C) 2011-2014 FusionDirectory project
+=item Copyright (C) 2011-2015 FusionDirectory project
 
 =back
 

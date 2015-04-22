@@ -6,22 +6,23 @@
 #
 # Copyright (c) 2005,2006 Jan-Marek Glogowski <glogow@fbihome.de>
 # Copyrignt (c) 2007,2009 The GOsa project <gosa-devel@oss.gonicus.de>
-# Copyright (C) 2011-2014 FusionDirectory project
+# Copyright (C) 2011-2015 FusionDirectory project
 #
-# Author: Come Bernigaud
+# Author: Côme BERNIGAUD
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 #######################################################################
 
@@ -45,11 +46,19 @@ my $result;
 
 my $outdir = "/etc/argonaut/fai";
 my $crond_dir= "/etc/cron.daily";
-my $logfile = "ldap2repository.log";
+my $logfile = "argonaut-repository.log";
 
 my $config;
 
 readConfig();
+
+# Verbose can be overridden by command line argument
+foreach my $arg ( @ARGV ) {
+  if (lc($arg) eq "--verbose") {
+    $verbose = "TRUE";
+    print "Verbose mode set with --verbose\n";
+  }
+}
 
 argonaut_create_dir($logdir);
 
@@ -178,22 +187,22 @@ sub generate_cronjob_script {
     my $uri = $repo->{'uri'};
     my ($localuri) = $uri;
     my $parent_or_opts = $repo->{'parent'};
-    my $dist = $repo->{'dist'};
+    my $release = $repo->{'release'};
     my $sections = join(',',@{$repo->{'sections'}});
     my (@section_list) = @{$repo->{'sections'}};
     my $archs = join(',',@{$repo->{'archs'}}); # archs comma-separated
     my $repoline = $repo->{'line'};
 
     if ("" eq "$parent_or_opts") {
-      print( "No parent for '$repoline'\n" );
+      print( "No parent for '$repoline'\n" ) if( $verbose eq "TRUE" );
       $log->info ("No parent for '$repoline'\n");
       next;
     }
 
-    print SOURCES "deb $uri $dist @section_list\n";
+    print SOURCES "deb $uri $release @section_list\n";
 
     print "parent: $parent_or_opts\n" if( $verbose eq "TRUE" );
-    print "sources.list: deb $uri $dist @section_list\n" if( $verbose eq "TRUE" );
+    print "sources.list: deb $uri $release @section_list\n" if( $verbose eq "TRUE" );
 
 
     my @par_repos = get_repolines(undef,$parent_or_opts);
@@ -217,9 +226,9 @@ sub generate_cronjob_script {
         next;
       }
 
-      my $par_dist = $par_repo->{'dist'};
+      my $par_release = $par_repo->{'release'};
       my @outline = ();
-      if ("$dist" eq "$par_dist") {
+      if ("$release" eq "$par_release") {
         foreach my $section (@{$par_repo->{'sections'}}) {
           if (argonaut_array_find_and_remove( \@section_list, ${section})) {
             push (@outline, $section);
@@ -228,7 +237,7 @@ sub generate_cronjob_script {
         }
 
         if (0 != scalar @{outline}) {
-          my $cron_line = "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${dist} --section=" . join(",", @{outline})
+          my $cron_line = "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${release} --section=" . join(",", @{outline})
                     . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/\n";
           print CRON $cron_line;
           print "mirror-update-cronjob: ".$cron_line."\n" if( $verbose eq "TRUE" );
@@ -238,7 +247,7 @@ sub generate_cronjob_script {
     }
 
     if (scalar @section_list != 0) {
-      print "No repository was found in parent $parent_or_opts for release $dist, for sections ".join(",", @section_list)."\n" if( $verbose eq "TRUE" );
+      print "No repository was found in parent $parent_or_opts for release $release, for sections ".join(",", @section_list)."\n" if( $verbose eq "TRUE" );
     }
   }
   close (SOURCES);
@@ -275,7 +284,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =item Copyright (C) 2007-2010 The GOsa project
 
-=item Copyright (C) 2011-2014 FusionDirectory project
+=item Copyright (C) 2011-2015 FusionDirectory project
 
 =back
 

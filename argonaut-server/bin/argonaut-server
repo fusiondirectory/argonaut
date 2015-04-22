@@ -4,22 +4,23 @@
 #
 # argonaut-server -- Json-rpc server for deployment
 #
-# Copyright (C) 2011-2014 FusionDirectory project
+# Copyright (C) 2011-2015 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 2 of the License, or
-# (at your option) any later version.
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 #######################################################################
 
@@ -136,11 +137,11 @@ sub getIpFromMac {
   return $ip;
 }
 
-=pod
-=item getMacFromCn
-Search in the ldap for the Mac associated to a host name.
-Parameter : the host name
-=cut
+#=pod
+#=item getMacFromCn
+#Search in the ldap for the Mac associated to a host name.
+#Parameter : the host name
+#=cut
 sub getMacFromCn {
   my ($host, $filter) = @_;
 
@@ -169,12 +170,12 @@ sub getMacFromCn {
   return $mac;
 }
 
-=pod
-=item wakeOnLan
-Send a wake on lan package to a mac address
-Parameter : the mac address
-inspired by WakeOnLan.pm file from FusionInventory
-=cut
+#=pod
+#=item wakeOnLan
+#Send a wake on lan package to a mac address
+#Parameter : the mac address
+#inspired by WakeOnLan.pm file from FusionInventory
+#=cut
 sub wakeOnLan {
     my ($macaddress) = @_;
 
@@ -372,6 +373,20 @@ POE::Session->create(
           $heap->{tasks}->{$taskid}->{substatus} = $substatus;
           if (defined $progress) {
             $heap->{tasks}->{$taskid}->{progress} = $progress;
+            if (($progress > 0) &&
+                (defined $heap->{tasks}->{$taskid}->{child_taskids})) {
+              my @delList;
+              my $i = 0;
+              foreach my $id (@{$heap->{tasks}->{$taskid}->{child_taskids}}) {
+                if ($heap->{tasks}->{$id}->{action} eq 'System.reboot') {
+                  $kernel->call($session => 'set_task_substatus' => $id,'Canceled by parent task',100);
+                  push @delList, $i;
+                }
+                $i++;
+              }
+              # Delete canceled tasks from child list
+              splice @{$heap->{tasks}->{$taskid}->{child_taskids}}, $_, 1 for reverse @delList;
+            }
             if ($progress >= 100) {
               $kernel->call($session => 'set_task_processed' => $taskid);
             }
@@ -409,6 +424,12 @@ POE::Session->create(
             progress  => 0,
             error     => ""
           };
+          if (defined $data->{parent_taskid} && defined $heap->{tasks}->{$data->{parent_taskid}}) {
+            if (not defined $heap->{tasks}->{$data->{parent_taskid}}->{child_taskids}) {
+              $heap->{tasks}->{$data->{parent_taskid}}->{child_taskids} = [];
+            }
+            push @{$heap->{tasks}->{$data->{parent_taskid}}->{child_taskids}}, $taskid;
+          }
           $log->debug("action $action scheduled on target $target");
         },
         add => sub {
@@ -745,7 +766,7 @@ This code is part of FusionDirectory <http://www.fusiondirectory.org>
 
 =over 1
 
-=item Copyright (C) 2011-2014 FusionDirectory project
+=item Copyright (C) 2011-2015 FusionDirectory project
 
 =back
 
