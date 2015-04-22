@@ -51,6 +51,14 @@ my $config;
 
 readConfig();
 
+# Verbose can be overridden by command line argument
+foreach my $arg ( @ARGV ) {
+  if (lc($arg) eq "--verbose") {
+    $verbose = "TRUE";
+    print "Verbose mode set with --verbose\n";
+  }
+}
+
 argonaut_create_dir($logdir);
 
 my $log = Log::Handler->create_logger("ldap2repository");
