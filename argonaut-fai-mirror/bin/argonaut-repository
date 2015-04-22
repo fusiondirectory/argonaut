@@ -193,7 +193,7 @@ sub generate_cronjob_script {
     my $repoline = $repo->{'line'};
 
     if ("" eq "$parent_or_opts") {
-      print( "No parent for '$repoline'\n" );
+      print( "No parent for '$repoline'\n" ) if( $verbose eq "TRUE" );
       $log->info ("No parent for '$repoline'\n");
       next;
     }
