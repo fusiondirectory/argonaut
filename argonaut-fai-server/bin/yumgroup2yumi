@@ -159,6 +159,10 @@ yumgroup2yumi - read yumgroups and create ldif files for use
 
 yumgroup2yumi [-hv] [-c config_space] [-o output filename] 
 
+=head1 DESCRIPTION
+
+yumgroup2yumi is a script to read yumgroups and create ldif files in yumi format
+
 =head1 OPTIONS
 
 B<-h>
@@ -172,11 +176,6 @@ B<-c>
 
 B<-o>
     output filename
-
-
-=head1 DESCRIPTION
-
-fai2ldif is a script to read the fai classes files and create ldif files.
 
 =head1 BUGS
 
