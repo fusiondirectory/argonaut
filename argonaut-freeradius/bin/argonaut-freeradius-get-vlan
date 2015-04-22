@@ -1,8 +1,15 @@
+#!/usr/bin/perl -w
+
 #######################################################################
 #
-# getvlan
+# argonaut-freeradius-get-vlan - Is used to get the vlan from the user radius group from ldap
 #
 # Copyright (C) 2011-2015 FusionDirectory project
+#
+# Based in the example code of rlm_perl 
+#
+# Authors: Côme BERNIGAUD
+#          Alejandro Escanero Blanco
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,12 +23,10 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
-#
-# Based in the example code of rlm_perl
-# Is used to get the vlan from the user radius group from ldap
-#
+#######################################################################
+
 
 use strict;
 use Net::LDAP;

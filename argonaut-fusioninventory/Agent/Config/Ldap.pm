@@ -1,3 +1,28 @@
+#######################################################################
+#
+# FusionInventory::Agent::Config::Ldap - get fusioninventory config from ldap
+#
+# Copyright (C) 2013-2015 FusionDirectory project <contact@fusiondirectory.org>
+#
+# Authors: Côme BERNIGAUD
+#
+#  This program is free software; 
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+#######################################################################
+
 package FusionInventory::Agent::Config::Ldap;
 
 use strict;
@@ -215,4 +240,28 @@ FusionInventory::Agent::Config::LDAP - LDAP-based configuration backend
 
 =head1 DESCRIPTION
 
-This is a LDAP configuration backend.
+This is a FusionInventory LDAP configuration backend.
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+=over 5
+
+=item Copyright (C) 2013-2015 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
+
+# vim:ts=2:sw=2:expandtab:shiftwidth=2:syntax:paste
