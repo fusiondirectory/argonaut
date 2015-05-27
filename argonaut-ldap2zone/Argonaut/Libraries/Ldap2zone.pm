@@ -150,13 +150,23 @@ sub zoneparse
     }
     while(my ($type,$list) = each %{$records}){
       foreach my $value ($entry->get_value($type."Record")) {
-        if($name ne "@") {
-          push @{$list},{ name => $name, class => $class,
-                          host => $value, ttl => $ttl, ORIGIN => $zone };
+        if($type eq "txt") {
+          if($name ne "@") {
+            push @{$list},{ name => $name, class => $class,
+                            txt-data => $value, ttl => $ttl, ORIGIN => $zone };
+          } else {
+            push @{$list},{ txt-data => $value, ttl => $ttl, ORIGIN => $zone };
+          }
+          print "Added record $type $name $class $value $ttl\n" if $verbose;
         } else {
-          push @{$list},{ host => $value, ttl => $ttl, ORIGIN => $zone };
+          if($name ne "@") {
+            push @{$list},{ name => $name, class => $class,
+                            host => $value, ttl => $ttl, ORIGIN => $zone };
+          } else {
+            push @{$list},{ host => $value, ttl => $ttl, ORIGIN => $zone };
+          }
+          print "Added record $type $name $class $value $ttl\n" if $verbose;
         }
-        print "Added record $type $name $class $value $ttl\n" if $verbose;
       }
     }
     my $soa = $entry->get_value("soaRecord");
