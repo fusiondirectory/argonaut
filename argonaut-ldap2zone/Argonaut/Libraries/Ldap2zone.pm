@@ -153,9 +153,9 @@ sub zoneparse
         if($type eq "txt") {
           if($name ne "@") {
             push @{$list},{ name => $name, class => $class,
-                            txt-data => $value, ttl => $ttl, ORIGIN => $zone };
+                            text => $value, ttl => $ttl, ORIGIN => $zone };
           } else {
-            push @{$list},{ txt-data => $value, ttl => $ttl, ORIGIN => $zone };
+            push @{$list},{ text => $value, ttl => $ttl, ORIGIN => $zone };
           }
           print "Added record $type $name $class $value $ttl\n" if $verbose;
         } else {
