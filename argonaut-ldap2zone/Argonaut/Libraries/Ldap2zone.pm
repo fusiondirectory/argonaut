@@ -67,6 +67,9 @@ sub argonaut_ldap2zone
   my $ALLOW_TRANSFER          =   $settings->{'allowtransfer'};
   my $TTL                     =   $settings->{'ttl'};
   my $RNDC                    =   $settings->{'rndc'};
+  if (not defined $noreverse) {
+    $noreverse = $settings->{'noreverse'};
+  }
 
   if (not -d $output_BIND_DIR) {
     die "Bind directory '$output_BIND_DIR' does not exist\n";

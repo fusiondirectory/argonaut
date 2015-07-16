@@ -765,6 +765,7 @@ sub argonaut_get_ldap2zone_settings {
       'allowtransfer' => 'argonautLdap2zoneAllowTransfer',
       'ttl'           => 'argonautLdap2zoneTTL',
       'rndc'          => 'argonautLdap2zoneRndc',
+      'noreverse'     => 'argonautLdap2zoneNoReverse',
     },
     @_
   );

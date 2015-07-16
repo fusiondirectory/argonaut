@@ -34,7 +34,7 @@ use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 my $zone_arg = undef;
 my $verbose_arg = 0;
 my $norefresh = 0;
-my $noreverse = 0;
+my $noreverse;
 my $dumpdir = '';
 
 sub print_usage
