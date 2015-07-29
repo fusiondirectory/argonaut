@@ -68,7 +68,7 @@ sub argonaut_ldap2zone
   my $TTL                     =   $settings->{'ttl'};
   my $RNDC                    =   $settings->{'rndc'};
   if (not defined $noreverse) {
-    $noreverse = $settings->{'noreverse'};
+    $noreverse = ($settings->{'noreverse'} eq 'TRUE');
   }
 
   if (not -d $output_BIND_DIR) {
