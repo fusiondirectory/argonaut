@@ -711,6 +711,9 @@ sub argonaut_get_server_settings {
       'ip'                    => "ipHostNumber",
       'port'                  => "argonautPort",
       'protocol'              => "argonautProtocol",
+      'keyfile'               => "argonautKeyPath",
+      'certfile'              => "argonautCertPath",
+      'cacertfile'            => "argonautCaCertPath",
       'iptool'                => "argonautIpTool",
       'delete_finished_tasks' => "argonautDeleteFinished",
       'fetch_packages'        => "argonautFetchPackages",
@@ -729,6 +732,7 @@ sub argonaut_get_client_settings {
     'argonautClient',
     {
       'port'        => "argonautClientPort",
+      'protocol'    => "argonautClientProtocol",
       'interface'   => "argonautClientWakeOnLanInterface",
       'logdir'      => "argonautClientLogDir",
       'taskidfile'  => "argonautTaskIdFile"
