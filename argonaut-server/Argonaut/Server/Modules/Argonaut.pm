@@ -124,7 +124,7 @@ sub launch { # if ip pings, send the request
     $client = new JSON::RPC::Client;
   }
   $client->version('1.0');
-  if ($main::protocol eq 'https') {
+  if ($self->{'protocol'} eq 'https') {
     if ($client->ua->can('ssl_opts')) {
       $client->ua->ssl_opts(verify_hostname => 1,SSL_ca_file => "dummy_ca.crt");
     }
@@ -136,7 +136,7 @@ sub launch { # if ip pings, send the request
     params  => [$params],
   };
 
-  my $res = $client->call($main::protocol."://".$ip.":".$self->{'port'}, $callobj);
+  my $res = $client->call($self->{'protocol'}."://".$ip.":".$self->{'port'}, $callobj);
 
   if($res) {
     if ($res->is_error) {

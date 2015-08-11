@@ -40,6 +40,8 @@ use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
 use File::Path;
 use Config::IniFiles;
+use Digest::SHA;
+use MIME::Base64;
 
 my $iptool = "ifconfig";
 
@@ -711,6 +713,7 @@ sub argonaut_get_server_settings {
       'ip'                    => "ipHostNumber",
       'port'                  => "argonautPort",
       'protocol'              => "argonautProtocol",
+      'token'                 => "argonautServerToken",
       'keyfile'               => "argonautKeyPath",
       'certfile'              => "argonautCertPath",
       'cacertfile'            => "argonautCaCertPath",
@@ -854,6 +857,41 @@ sub argonaut_gen_random_str {
   my $randstr = join '',
     map @$symbolset[rand @$symbolset], 0..($strlen-1);
   return $randstr;
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Hash token using SSHA scheme
+#
+sub argonaut_gen_ssha_token {
+  my ($token, $salt) = @_;
+  if (not defined $salt) {
+    $salt = argonaut_gen_random_str(8);
+  }
+
+  my $ctx = Digest::SHA->new(1);
+  $ctx->add($token);
+  $ctx->add($salt);
+
+  return '{SSHA}'.encode_base64($ctx->digest.$salt, '');
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Check if token match ssha hash
+#
+sub argonaut_check_ssha_token {
+  my ($hash, $token) = @_;
+
+  $hash = decode_base64(substr($hash, 6));
+  my $salt = substr($hash, 20);
+  $hash = substr($hash, 0, 20);
+
+  if ($hash eq argonaut_gen_ssha_token($token, $salt)) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
