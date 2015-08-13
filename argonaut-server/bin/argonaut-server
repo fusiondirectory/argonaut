@@ -63,7 +63,7 @@ use Socket;
 
 our ($config,$protocol,$server_ip,$server_port);
 my ($sslkeyfile,$sslcertfile,$sslcacertfile,$iptool,$delete_finished_tasks,
-    $interface,$logdir,$packages_folder,$fetch_packages);
+    $interface,$logdir,$packages_folder,$fetch_packages,$token);
 my $logfile = "argonaut-server.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-server.pid";
@@ -106,6 +106,7 @@ sub readConfig {
   $sslkeyfile             = $settings->{'keyfile'};
   $sslcertfile            = $settings->{'certfile'};
   $sslcacertfile          = $settings->{'cacertfile'};
+  $token                  = $settings->{'token'};
 
   $packages_folder        = "/var/cache/argonaut/packages";
 }
@@ -254,7 +255,7 @@ sub token_authenticate {
     return 0;
   }
 
-  return argonaut_check_ssha_token($hash, $config->{'token'});
+  return argonaut_check_ssha_token($hash, $token);
 }
 
 sub refresh_task {
