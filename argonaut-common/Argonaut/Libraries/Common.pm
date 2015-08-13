@@ -86,6 +86,8 @@ BEGIN
     )],
     'string' => [qw(
       &argonaut_gen_random_str
+      &argonaut_gen_ssha_token
+      &argonaut_check_ssha_token
     )],
      'net' => [qw(
       &argonaut_get_mac

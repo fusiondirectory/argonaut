@@ -34,7 +34,7 @@ use warnings;
 
 use 5.010;
 
-use Argonaut::Libraries::Common qw(:ldap :config :file);
+use Argonaut::Libraries::Common qw(:ldap :config :file :string);
 use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file);
 
 use POE qw(Component::Schedule Component::Server::JSONRPC::Http);
