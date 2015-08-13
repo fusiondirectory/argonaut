@@ -885,9 +885,7 @@ sub argonaut_gen_ssha_token {
 sub argonaut_check_ssha_token {
   my ($hash, $token) = @_;
 
-  $hash = decode_base64(substr($hash, 6));
-  my $salt = substr($hash, 20);
-  $hash = substr($hash, 0, 20);
+  my $salt = substr(decode_base64(substr($hash, 6)), 20);
 
   if ($hash eq argonaut_gen_ssha_token($token, $salt)) {
     return 1;
