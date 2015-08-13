@@ -738,6 +738,9 @@ sub argonaut_get_client_settings {
     {
       'port'        => "argonautClientPort",
       'protocol'    => "argonautClientProtocol",
+      'keyfile'     => "argonautClientKeyPath",
+      'certfile'    => "argonautClientCertPath",
+      'certcn'      => "argonautClientCertCN",
       'interface'   => "argonautClientWakeOnLanInterface",
       'logdir'      => "argonautClientLogDir",
       'taskidfile'  => "argonautTaskIdFile"

@@ -68,6 +68,9 @@ sub handle_client {
     $main::log->debug("[Argonaut] Can't handle client : $@");
     return 0;
   };
+  my $server_settings = argonaut_get_server_settings($main::config,$main::server_ip);
+  $self->{cacertfile} = $server_settings->{cacertfile};
+  $self->{token} = $server_settings->{token};
 
   return 1;
 }
@@ -126,9 +129,9 @@ sub launch { # if ip pings, send the request
   $client->version('1.0');
   if ($self->{'protocol'} eq 'https') {
     if ($client->ua->can('ssl_opts')) {
-      $client->ua->ssl_opts(verify_hostname => 1,SSL_ca_file => "dummy_ca.crt");
+      $client->ua->ssl_opts(verify_hostname => 1,SSL_ca_file => $self->{'cacertfile'});
     }
-    $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "foo", "secret");
+    $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "", argonaut_gen_ssha_token($self->{'token'}));
   }
 
   my $callobj = {
