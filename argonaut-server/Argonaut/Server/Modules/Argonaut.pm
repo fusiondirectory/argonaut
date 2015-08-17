@@ -129,7 +129,11 @@ sub launch { # if ip pings, send the request
   $client->version('1.0');
   if ($self->{'protocol'} eq 'https') {
     if ($client->ua->can('ssl_opts')) {
-      $client->ua->ssl_opts(verify_hostname => 1,SSL_ca_file => $self->{'cacertfile'});
+      $client->ua->ssl_opts(
+        verify_hostname   => 1,
+        SSL_ca_file       => $self->{'cacertfile'},
+        SSL_verifycn_name => $self->{'certcn'}
+      );
     }
     $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "", argonaut_gen_ssha_token($self->{'token'}));
   }
