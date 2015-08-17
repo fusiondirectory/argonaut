@@ -29,7 +29,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file :config);
+use Argonaut::Libraries::Common qw(:ldap :file :config :string);
 
 my @unlocked_actions = ['System.halt', 'System.reboot'];
 
