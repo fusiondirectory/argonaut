@@ -740,6 +740,7 @@ sub argonaut_get_client_settings {
       'protocol'    => "argonautClientProtocol",
       'keyfile'     => "argonautClientKeyPath",
       'certfile'    => "argonautClientCertPath",
+      'cacertfile'  => "argonautClientCaCertPath",
       'certcn'      => "argonautClientCertCN",
       'interface'   => "argonautClientWakeOnLanInterface",
       'logdir'      => "argonautClientLogDir",
