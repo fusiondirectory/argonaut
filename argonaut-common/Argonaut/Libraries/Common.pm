@@ -719,6 +719,7 @@ sub argonaut_get_server_settings {
       'keyfile'               => "argonautKeyPath",
       'certfile'              => "argonautCertPath",
       'cacertfile'            => "argonautCaCertPath",
+      'certcn'                => "argonautCertCN",
       'iptool'                => "argonautIpTool",
       'delete_finished_tasks' => "argonautDeleteFinished",
       'fetch_packages'        => "argonautFetchPackages",

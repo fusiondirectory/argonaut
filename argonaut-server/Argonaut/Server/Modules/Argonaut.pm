@@ -134,8 +134,8 @@ sub launch { # if ip pings, send the request
         SSL_ca_file       => $self->{'cacertfile'},
         SSL_verifycn_name => $self->{'certcn'}
       );
+      $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "", argonaut_gen_ssha_token($self->{'token'}));
     }
-    $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "", argonaut_gen_ssha_token($self->{'token'}));
   }
 
   my $callobj = {

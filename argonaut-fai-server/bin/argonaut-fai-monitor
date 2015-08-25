@@ -95,20 +95,10 @@ sub get_id
 {
   my $host = shift;
   unless (exists $taskids{$host}) {
-    my $client;
-    if (USE_LEGACY_JSON_RPC) {
-      $client = new JSON::RPC::Legacy::Client;
-    } else {
-      $client = new JSON::RPC::Client;
-    }
-    $client->version('1.0');
-
-    my $callobj = {
-      method  => "get_host_id",
-      params  => [$host, '(objectClass=FAIobject)'],
-    };
-
-    my $taskid = $client->call($protocol."://".$config->{'server_ip'}.":".$server_port, $callobj);
+    my $taskid = rpc_call(
+      "get_host_id",
+      [$host, '(objectClass=FAIobject)']
+    );
 
     if($taskid) {
       if ($taskid->is_error) {
@@ -117,7 +107,7 @@ sub get_id
         $taskids{$host} = $taskid->content->{result};
       }
     } else {
-      die "Error while trying to contact Argonaut server : ".$client->status_line."\n";
+      die "Error while trying to contact Argonaut server\n";
     }
   }
   return $taskids{$host};
@@ -135,9 +125,13 @@ sub rpc_call
   }
   $client->version('1.0');
   if ($protocol eq 'https') {
-    #~ if ($client->ua->can('ssl_opts')) {
-      #~ $client->ua->ssl_opts(verify_hostname => 1, SSL_ca_file => "dummy_ca.crt");
-    #~ }
+    if ($client->ua->can('ssl_opts')) {
+      $client->ua->ssl_opts(
+        verify_hostname   => 1,
+        SSL_ca_file       => $client_settings->{'cacertfile'},
+        SSL_verifycn_name => $server_settings->{'certcn'}
+      );
+    }
     $client->ua->credentials($config->{'server_ip'}.":".$server_port, "JSONRPCRealm", "", argonaut_gen_ssha_token($server_settings->{'token'}));
   }
 
@@ -157,6 +151,8 @@ sub rpc_call
     $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
     print "Error while trying to contact Argonaut server : ".$client->status_line."\n";
   }
+
+  return $res;
 }
 
 sub parse_line
