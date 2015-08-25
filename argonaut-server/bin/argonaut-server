@@ -342,7 +342,7 @@ POE::Session->create(
             $log->info("searching taskid for $mac");
 
             while (my ($taskid,$entry) = each(%{$heap->{tasks}})) {
-                if(($entry->{target} eq $mac)&&($entry->{status} eq "processing")) {
+                if(($entry->{target} eq lc($mac))&&($entry->{status} eq "processing")) {
                     $heap->{tasks}->{$taskid}->{substatus} = "";
                     $kernel->post( $jsonrpc => 'result' => $id, $taskid);
                     return;
