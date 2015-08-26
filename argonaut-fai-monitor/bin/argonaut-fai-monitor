@@ -51,9 +51,18 @@ my $logfile = "argonaut-fai-monitor.log";
 
 my $config = argonaut_read_config;
 
-my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
+my $settings        = argonaut_get_generic_settings(
+  'argonautFAIMonitorConfig',
+  {
+    'logdir'      => "argonautFAIMonitorLogDir",
+    'cacertfile'  => "argonautFAIMonitorCaCertPath",
+    'port'        => "argonautFAIMonitorPort",
+    'timeout'     => "argonautFAIMonitorTimeout"
+  },
+  $config,$config->{'client_ip'}
+);
 
-my $logdir          = $client_settings->{'logdir'};
+my $logdir          = $settings->{'logdir'};
 
 my $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
@@ -128,7 +137,7 @@ sub rpc_call
     if ($client->ua->can('ssl_opts')) {
       $client->ua->ssl_opts(
         verify_hostname   => 1,
-        SSL_ca_file       => $client_settings->{'cacertfile'},
+        SSL_ca_file       => $settings->{'cacertfile'},
         SSL_verifycn_name => $server_settings->{'certcn'}
       );
     }
@@ -282,8 +291,12 @@ EOF
 
 getopts('hp:t:') || usage;
 $opt_h && usage;
-$port = $opt_p || 4711;
-$timeout = $opt_t || 5;
+$port = $opt_p || $settings->{'port'};
+if (defined $opt_t) {
+  $timeout = $opt_t;
+} else {
+  $timeout = $settings-{'timeout'};
+}
 
 server_init($port);
 big_loop;
