@@ -1,0 +1,11 @@
+[Unit]
+Description=Start argonaut-server
+ConditionPathExists=/usr/sbin/argonaut-server
+
+[Service]
+Type=forking
+ExecStart=/usr/sbin/argonaut-server
+PIDFile=/var/run/argonaut/argonaut-server.pid
+
+[Install]
+WantedBy=muli-user.target
