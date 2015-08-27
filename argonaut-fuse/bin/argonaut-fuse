@@ -48,6 +48,10 @@ use Argonaut::Libraries::Common qw(:ldap :config :file);
 
 use constant USEC => 1000000;
 
+use Proc::Daemon;
+
+Proc::Daemon::Init;
+
 # Predefined variables for config
 our ($default_mode, $tftp_root);
 our ($config, $ldap_base, $ldap_handle, $ldap_uris, $ldapinfos);
@@ -100,7 +104,7 @@ my $pid = File::Pid->new({
 my $pidrunning = $pid->running;
 
 if ($pidrunning) {
-  die "Argonaut Server is already running $pidrunning\n";
+  die "Argonaut Fuse is already running $pidrunning\n";
 }
 
 $pid->pid($$);
