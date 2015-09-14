@@ -74,8 +74,6 @@ sub get_pxe_config {
     'FAIobject',
     {
       'status'    => 'FAIstate',
-      'kernel'    => 'gotoBootKernel',
-      'cmdline'   => 'gotoKernelParameters',
       'hostname'  => 'cn',
     },
     $main::config,"(macAddress=$mac)"
@@ -111,38 +109,17 @@ sub get_pxe_config {
 
   my $host_dn = $infos->{'dn'};
 
-  # Check, if there is still missing information
-  if ($infos->{'kernel'} eq '') {
-    $log->error("$filename - missing information - aborting\n");
-
-    my $mesg  = "$filename - missing LDAP attribs:";
-    $mesg .= ' gotoBootKernel' if( $infos->{'kernel'} eq '' );
-    $mesg .= "\n";
-
-    $log->info($mesg);
-    return undef;
-  }
-
-  # Strip ldap parameter and all multiple and trailing spaces
-  $infos->{'cmdline'} =~ s/ldap(=[^\s]*[\s]*|[\s]*$|\s+)//g;
-  $infos->{'cmdline'} =~ s/[\s]+$//g;
-  $infos->{'cmdline'} =~ s/\s[\s]+/ /g;
-
   my $tftp_parent;
   if ($main::tftp_root =~ /^(.*?)\/pxelinux.cfg$/) {
     $tftp_parent = $1;
   }
 
   # Get kernel and initrd from TFTP root
-  if (($infos->{'kernel'} eq '') || ($infos->{'kernel'} eq 'default') ||
-     ($tftp_parent and not -e "$tftp_parent/$infos->{'kernel'}")) {
-    $infos->{'kernel'} = 'vmlinuz-install';
-  }
+  $infos->{'kernel'} = 'vmlinuz-install';
+  $infos->{'cmdline'} = '';
 
-  if ( $infos->{'kernel'} =~ m/^vmlinuz-(.*)$/ ) {
-    if ($tftp_parent and -e "$tftp_parent/initrd.img-$1") {
-      $infos->{'cmdline'} .= " initrd=initrd.img-$1";
-    }
+  if ($tftp_parent and -e "$tftp_parent/initrd.img-$1") {
+    $infos->{'cmdline'} .= " initrd=initrd.img-$1";
   }
 
   my $chboot_cmd;

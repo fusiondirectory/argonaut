@@ -53,7 +53,6 @@ my $dry_run = 0;
 my $release_var = 'FAIclientRelease';
 my $check_hostname;
 my $sources_list;
-my $kernel;
 my $ldapinfos;
 my $mac = '';
 my $ip  = '';
@@ -140,8 +139,6 @@ print $error . "\n" if( defined $error );
 generate_files_dir_configspace();
 
 generate_sources_list( $sections ) if ($sources_list);
-
-generate_kernel_packagelist( $kernel );
 
 $ldap->unbind();   # take down session
 $ldap->disconnect();
@@ -244,7 +241,7 @@ sub get_classes {
   $mesg = $ldap->search(
     base => "$base",
     filter => $filter,
-    attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror', 'gotoBootKernel' ]);
+    attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror' ]);
   $mesg->code && do_exit( 2, sprintf( "LDAP error: %s (%i)", $mesg->error, __LINE__ ) );
 
   # normally, only one value should be returned
@@ -267,7 +264,6 @@ sub get_classes {
   $entry = ($mesg->entries)[0];
   $host_dn = $entry->dn;
   $hostname = $entry->get_value( 'cn' );
-  $kernel = $entry->get_value( 'gotoBootKernel' );
   $real_hostname = $hostname;
 
   # set $host_base
@@ -306,7 +302,7 @@ sub get_classes {
     $mesg = $ldap->search(
       base => "$base",
       filter => $faiobj->prepare_filter( $filter ),
-      attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror', 'gotoBootKernel' ]);
+      attrs => [ 'FAIclass', 'cn', 'FAIdebianMirror' ]);
     $mesg->code && do_exit( 2, sprintf( "LDAP error: %s (%i)", $mesg->error, __LINE__ ) );
 
     if( 1 != $mesg->count ) {
@@ -328,14 +324,6 @@ sub get_classes {
     print( "Found FAI information in object group '" . $entry->get_value( 'cn' )  . "'\n"
           . '  + Object group:       ' . $entry->dn() . "\n" )
       if( $verbose );
-
-    if (not defined $kernel){
-      $kernel = $entry->get_value( 'gotoBootKernel' );
-    }
-  }
-
-  if (not defined $kernel){
-      do_exit( 3, "There is no kernel defined for this client: check the gotoBootKernel attribute!\n" );
   }
 
   $fai_mirror = $entry->get_value( 'FAIdebianMirror' );
@@ -503,29 +491,6 @@ BAILOUT_CHECK_SERVER:
       }
     }
     exit -2;
-  }
-}
-
-
-sub generate_kernel_packagelist {
-  my $kernel= shift;
-  my( $mesg, $entry, $line, @deblines, @modsections, @rdns, %saw, $debline );
-
-  if ($verbose) {
-    print "Generate kernel package script for class 'LAST'\n"
-        . " - kernel: ${kernel}\n"
-  }
-
-  create_dir( "${dump_dir}/scripts/LAST" );
-  if( ! $dry_run ) {
-    open (SOURCES,">${dump_dir}/scripts/LAST/99-install-kernel")
-      || do_exit( 4, "Can't create ${dump_dir}/scripts/LAST/99-install-kernel. $!\n" );
-
-    print SOURCES "#!/bin/sh\n";
-    print SOURCES "# - automatically created by argonaut-ldap2fai -\n";
-    print SOURCES "\$ROOTCMD aptitude -o \"Aptitude::CmdLine::Ignore-Trust-Violations=yes\" -y install $kernel\n";
-    close (SOURCES);
-    chmod 0700, "${dump_dir}/scripts/LAST/99-install-kernel";
   }
 }
 
