@@ -32,7 +32,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file :config);
+use Argonaut::Libraries::Common qw(:ldap :file :config :string);
 
 use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
 use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
@@ -51,9 +51,18 @@ my $logfile = "argonaut-fai-monitor.log";
 
 my $config = argonaut_read_config;
 
-my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
+my $settings        = argonaut_get_generic_settings(
+  'argonautFAIMonitorConfig',
+  {
+    'logdir'      => "argonautFAIMonitorLogDir",
+    'cacertfile'  => "argonautFAIMonitorCaCertPath",
+    'port'        => "argonautFAIMonitorPort",
+    'timeout'     => "argonautFAIMonitorTimeout"
+  },
+  $config,$config->{'client_ip'}
+);
 
-my $logdir          = $client_settings->{'logdir'};
+my $logdir          = $settings->{'logdir'};
 
 my $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
@@ -95,20 +104,10 @@ sub get_id
 {
   my $host = shift;
   unless (exists $taskids{$host}) {
-    my $client;
-    if (USE_LEGACY_JSON_RPC) {
-      $client = new JSON::RPC::Legacy::Client;
-    } else {
-      $client = new JSON::RPC::Client;
-    }
-    $client->version('1.0');
-
-    my $callobj = {
-      method  => "get_host_id",
-      params  => [$host, '(objectClass=FAIobject)'],
-    };
-
-    my $taskid = $client->call($protocol."://".$config->{'server_ip'}.":".$server_port, $callobj);
+    my $taskid = rpc_call(
+      "get_host_id",
+      [$host, '(objectClass=FAIobject)']
+    );
 
     if($taskid) {
       if ($taskid->is_error) {
@@ -117,7 +116,7 @@ sub get_id
         $taskids{$host} = $taskid->content->{result};
       }
     } else {
-      die "Error while trying to contact Argonaut server : ".$client->status_line."\n";
+      die "Error while trying to contact Argonaut server\n";
     }
   }
   return $taskids{$host};
@@ -134,6 +133,16 @@ sub rpc_call
     $client = new JSON::RPC::Client;
   }
   $client->version('1.0');
+  if ($protocol eq 'https') {
+    if ($client->ua->can('ssl_opts')) {
+      $client->ua->ssl_opts(
+        verify_hostname   => 1,
+        SSL_ca_file       => $settings->{'cacertfile'},
+        SSL_verifycn_name => $server_settings->{'certcn'}
+      );
+    }
+    $client->ua->credentials($config->{'server_ip'}.":".$server_port, "JSONRPCRealm", "", argonaut_gen_ssha_token($server_settings->{'token'}));
+  }
 
   my $callobj = {
     method  => "$method",
@@ -151,6 +160,8 @@ sub rpc_call
     $log->error("Error while trying to contact Argonaut server : ".$client->status_line);
     print "Error while trying to contact Argonaut server : ".$client->status_line."\n";
   }
+
+  return $res;
 }
 
 sub parse_line
@@ -280,8 +291,12 @@ EOF
 
 getopts('hp:t:') || usage;
 $opt_h && usage;
-$port = $opt_p || 4711;
-$timeout = $opt_t || 5;
+$port = $opt_p || $settings->{'port'};
+if (defined $opt_t) {
+  $timeout = $opt_t;
+} else {
+  $timeout = $settings-{'timeout'};
+}
 
 server_init($port);
 big_loop;

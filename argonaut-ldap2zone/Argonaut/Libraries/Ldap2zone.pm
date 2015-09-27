@@ -46,7 +46,7 @@ Params : zone name, verbose flag
 =cut
 sub argonaut_ldap2zone
 {
-  my($zone,$verbose,$norefresh,$dumpdir) = @_;
+  my($zone,$verbose,$norefresh,$dumpdir,$noreverse) = @_;
 
   my $config = argonaut_read_config;
 
@@ -67,6 +67,9 @@ sub argonaut_ldap2zone
   my $ALLOW_TRANSFER          =   $settings->{'allowtransfer'};
   my $TTL                     =   $settings->{'ttl'};
   my $RNDC                    =   $settings->{'rndc'};
+  if (not defined $noreverse) {
+    $noreverse = ($settings->{'noreverse'} eq 'TRUE');
+  }
 
   if (not -d $output_BIND_DIR) {
     die "Bind directory '$output_BIND_DIR' does not exist\n";
@@ -90,10 +93,13 @@ sub argonaut_ldap2zone
 
   my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
 
-  my $reverse_zone = get_reverse_zone($ldap,$ldap_base,$dn);
-  print "Reverse zone is $reverse_zone\n" if $verbose;
+  my $reverse_zone = 0;
+  unless ($noreverse) {
+    $reverse_zone = get_reverse_zone($ldap,$ldap_base,$dn);
+    print "Reverse zone is $reverse_zone\n" if $verbose;
 
-  zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+    zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+  }
 
   create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
@@ -150,11 +156,16 @@ sub zoneparse
     }
     while(my ($type,$list) = each %{$records}){
       foreach my $value ($entry->get_value($type."Record")) {
-        if($name ne "@") {
+        if($type eq "txt") {
           push @{$list},{ name => $name, class => $class,
-                          host => $value, ttl => $ttl, ORIGIN => $zone };
+                          text => $value, ttl => $ttl, ORIGIN => $zone };
         } else {
-          push @{$list},{ host => $value, ttl => $ttl, ORIGIN => $zone };
+          if($name ne "@") {
+            push @{$list},{ name => $name, class => $class,
+                            host => $value, ttl => $ttl, ORIGIN => $zone };
+          } else {
+            push @{$list},{ host => $value, ttl => $ttl, ORIGIN => $zone };
+          }
         }
         print "Added record $type $name $class $value $ttl\n" if $verbose;
       }
@@ -254,6 +265,9 @@ zone "$zone" {
   $ALLOW_UPDATE
   $ALLOW_TRANSFER
 };
+EOF
+  if ($reverse_zone) {
+    print $namedfile <<EOF;
 zone "$reverse_zone" {
   type master;
   $ALLOW_NOTIFY
@@ -262,6 +276,7 @@ zone "$reverse_zone" {
   $ALLOW_TRANSFER
 };
 EOF
+  }
   close $namedfile;
 
   print "Writing file $output_BIND_DIR/named.conf.ldap2zone\n" if $verbose;

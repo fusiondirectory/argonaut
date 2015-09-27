@@ -40,6 +40,8 @@ use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT LDAP_REFERRAL);
 use URI;
 use File::Path;
 use Config::IniFiles;
+use Digest::SHA;
+use MIME::Base64;
 
 my $iptool = "ifconfig";
 
@@ -84,6 +86,8 @@ BEGIN
     )],
     'string' => [qw(
       &argonaut_gen_random_str
+      &argonaut_gen_ssha_token
+      &argonaut_check_ssha_token
     )],
      'net' => [qw(
       &argonaut_get_mac
@@ -711,6 +715,11 @@ sub argonaut_get_server_settings {
       'ip'                    => "ipHostNumber",
       'port'                  => "argonautPort",
       'protocol'              => "argonautProtocol",
+      'token'                 => "argonautServerToken",
+      'keyfile'               => "argonautKeyPath",
+      'certfile'              => "argonautCertPath",
+      'cacertfile'            => "argonautCaCertPath",
+      'certcn'                => "argonautCertCN",
       'iptool'                => "argonautIpTool",
       'delete_finished_tasks' => "argonautDeleteFinished",
       'fetch_packages'        => "argonautFetchPackages",
@@ -729,6 +738,11 @@ sub argonaut_get_client_settings {
     'argonautClient',
     {
       'port'        => "argonautClientPort",
+      'protocol'    => "argonautClientProtocol",
+      'keyfile'     => "argonautClientKeyPath",
+      'certfile'    => "argonautClientCertPath",
+      'cacertfile'  => "argonautClientCaCertPath",
+      'certcn'      => "argonautClientCertCN",
       'interface'   => "argonautClientWakeOnLanInterface",
       'logdir'      => "argonautClientLogDir",
       'taskidfile'  => "argonautTaskIdFile"
@@ -765,6 +779,7 @@ sub argonaut_get_ldap2zone_settings {
       'allowtransfer' => 'argonautLdap2zoneAllowTransfer',
       'ttl'           => 'argonautLdap2zoneTTL',
       'rndc'          => 'argonautLdap2zoneRndc',
+      'noreverse'     => 'argonautLdap2zoneNoReverse',
     },
     @_
   );
@@ -849,6 +864,39 @@ sub argonaut_gen_random_str {
   my $randstr = join '',
     map @$symbolset[rand @$symbolset], 0..($strlen-1);
   return $randstr;
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Hash token using SSHA scheme
+#
+sub argonaut_gen_ssha_token {
+  my ($token, $salt) = @_;
+  if (not defined $salt) {
+    $salt = argonaut_gen_random_str(8);
+  }
+
+  my $ctx = Digest::SHA->new(1);
+  $ctx->add($token);
+  $ctx->add($salt);
+
+  return '{SSHA}'.encode_base64($ctx->digest.$salt, '');
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Check if token match ssha hash
+#
+sub argonaut_check_ssha_token {
+  my ($hash, $token) = @_;
+
+  my $salt = substr(decode_base64(substr($hash, 6)), 20);
+
+  if ($hash eq argonaut_gen_ssha_token($token, $salt)) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -29,7 +29,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file :config);
+use Argonaut::Libraries::Common qw(:ldap :file :config :string);
 
 my @unlocked_actions = ['System.halt', 'System.reboot'];
 
@@ -68,6 +68,9 @@ sub handle_client {
     $main::log->debug("[Argonaut] Can't handle client : $@");
     return 0;
   };
+  my $server_settings = argonaut_get_server_settings($main::config,$main::server_ip);
+  $self->{cacertfile} = $server_settings->{cacertfile};
+  $self->{token} = $server_settings->{token};
 
   return 1;
 }
@@ -124,11 +127,15 @@ sub launch { # if ip pings, send the request
     $client = new JSON::RPC::Client;
   }
   $client->version('1.0');
-  if ($main::protocol eq 'https') {
+  if ($self->{'protocol'} eq 'https') {
     if ($client->ua->can('ssl_opts')) {
-      $client->ua->ssl_opts(verify_hostname => 1,SSL_ca_file => "dummy_ca.crt");
+      $client->ua->ssl_opts(
+        verify_hostname   => 1,
+        SSL_ca_file       => $self->{'cacertfile'},
+        SSL_verifycn_name => $self->{'certcn'}
+      );
+      $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "", argonaut_gen_ssha_token($self->{'token'}));
     }
-    $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "foo", "secret");
   }
 
   my $callobj = {
@@ -136,7 +143,7 @@ sub launch { # if ip pings, send the request
     params  => [$params],
   };
 
-  my $res = $client->call($main::protocol."://".$ip.":".$self->{'port'}, $callobj);
+  my $res = $client->call($self->{'protocol'}."://".$ip.":".$self->{'port'}, $callobj);
 
   if($res) {
     if ($res->is_error) {

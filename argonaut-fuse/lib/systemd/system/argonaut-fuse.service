@@ -1,0 +1,14 @@
+[Unit]
+Description=Start argonaut-fuse
+ConditionPathExists=/usr/sbin/argonaut-fuse
+
+[Service]
+Type=forking
+User=root
+ExecStart=/usr/sbin/argonaut-fuse
+ExecStop=/bin/sh -c "/bin/fusermount -u $(cat /var/log/argonaut/argonaut-fuse.log | grep Mounting | tail -n 1 | cut -d ' ' -f7)"
+PIDFile=/var/run/argonaut/argonaut-fuse.pid
+
+[Install]
+WantedBy=muli-user.target
+

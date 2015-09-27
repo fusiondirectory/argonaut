@@ -34,11 +34,12 @@ use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 my $zone_arg = undef;
 my $verbose_arg = 0;
 my $norefresh = 0;
+my $noreverse;
 my $dumpdir = '';
 
 sub print_usage
 {
-  print "Usage : argonaut-ldap2zone [--verbose] [--norestart] [--dumpdir dir] ZONE\n";
+  print "Usage : argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] ZONE\n";
   exit(0);
 }
 
@@ -49,6 +50,8 @@ foreach my $arg ( @ARGV ) {
     $dumpdir = $arg;
   } elsif (lc($arg) eq "--verbose") {
     $verbose_arg = 1;
+  } elsif (lc($arg) eq "--noreverse") {
+    $noreverse = 1;
   } elsif (lc($arg) eq "--norestart") {
     $norefresh = 1;
   } elsif (lc($arg) eq "--dumpdir") {
@@ -70,7 +73,7 @@ if (!$zone_arg) {
   print_usage();
 }
 
-argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir);
+argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir,$noreverse);
 
 __END__
 
@@ -80,7 +83,7 @@ argonaut-ldap2zone - creating bind zone files and refreshing the server
 
 =head1 SYNOPSIS
 
-argonaut-ldap2zone [--verbose] [--norestart] [--dumpdir dir] ZONE
+argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] ZONE
 
 =head1 DESCRIPTION
 
@@ -94,9 +97,13 @@ argonaut-ldap2zone is a program used to create bind zone files and refresh the b
 
 be verbose
 
+=item B<--noreverse>
+
+Do not write reverse zone
+
 =item B<--norestart>
 
-Do not refresh bind zone with rndc 
+Do not refresh bind zone with rndc
 
 =item B<--dumpdir>
 
@@ -109,7 +116,7 @@ Dump the zones and bind configuration to another dir for testing purposes
 B<argonaut-ldap2zone --verbose fusiondirectory.org.>
 
  Write the updated zones from ldap and refresh bind
- 
+
 B<argonaut-ldap2zone --verbose --norestart --dumpdir dnszone/ master.fdi>
 
  Write the updated zones from ldap to another directory and don't refresh bind

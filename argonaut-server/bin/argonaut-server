@@ -34,7 +34,7 @@ use warnings;
 
 use 5.010;
 
-use Argonaut::Libraries::Common qw(:ldap :config :file);
+use Argonaut::Libraries::Common qw(:ldap :config :file :string);
 use Argonaut::Libraries::Packages qw(get_packages_info store_packages_file);
 
 use POE qw(Component::Schedule Component::Server::JSONRPC::Http);
@@ -62,8 +62,8 @@ use English qw(-no_match_vars);
 use Socket;
 
 our ($config,$protocol,$server_ip,$server_port);
-my ($sslkeyfile,$sslcertfile,$iptool,$delete_finished_tasks,
-    $interface,$logdir,$packages_folder,$fetch_packages);
+my ($sslkeyfile,$sslcertfile,$sslcacertfile,$iptool,$delete_finished_tasks,
+    $interface,$logdir,$packages_folder,$fetch_packages,$token);
 my $logfile = "argonaut-server.log";
 my $piddir = "/var/run/argonaut";
 my $pidfile = "argonaut-server.pid";
@@ -105,6 +105,8 @@ sub readConfig {
   $logdir                 = $settings->{'logdir'};
   $sslkeyfile             = $settings->{'keyfile'};
   $sslcertfile            = $settings->{'certfile'};
+  $sslcacertfile          = $settings->{'cacertfile'};
+  $token                  = $settings->{'token'};
 
   $packages_folder        = "/var/cache/argonaut/packages";
 }
@@ -246,6 +248,16 @@ sub ldap_authenticate {
   return 1;
 }
 
+sub token_authenticate {
+  my ($login, $hash) = @_;
+
+  if (!defined($hash)) {
+    return 0;
+  }
+
+  return argonaut_check_ssha_token($hash, $token);
+}
+
 sub refresh_task {
   my ($kernel,$heap,$session,$id) = @_;
   if (defined $heap->{tasks}->{$id}->{'handler'}) {
@@ -286,7 +298,8 @@ POE::Session->create(
                 },
                 ($protocol eq 'https')  ? ( SslKey  => $sslkeyfile,
                                             SslCert => $sslcertfile,
-                                            Authenticate => \&ldap_authenticate,)
+                                            SslCaCert => $sslcacertfile,
+                                            Authenticate => \&token_authenticate,)
                                         : ()
             );
             $_[HEAP]{modulepool} = Argonaut::Server::ModulesPool->new(
@@ -329,7 +342,7 @@ POE::Session->create(
             $log->info("searching taskid for $mac");
 
             while (my ($taskid,$entry) = each(%{$heap->{tasks}})) {
-                if(($entry->{target} eq $mac)&&($entry->{status} eq "processing")) {
+                if(($entry->{target} eq lc($mac))&&($entry->{status} eq "processing")) {
                     $heap->{tasks}->{$taskid}->{substatus} = "";
                     $kernel->post( $jsonrpc => 'result' => $id, $taskid);
                     return;
