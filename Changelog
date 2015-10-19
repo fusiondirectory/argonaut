@@ -1,6 +1,18 @@
 Argonaut changelog
 ==================
 
+* Argonaut 0.9.3
+
+[Feature] Bugs #943: argonaut should work on ssl mode https
+[Fix] Bugs #3791: Add TXT values in global zone record
+[Feature] Bugs #3803: ldap2zone needs an option to not write reverse zone
+[Feature] Bugs #3945: Add a option to not touch at the reverse zone
+[Fix] Bugs #4046: I have an error in argonaut-fai-monitor log when I try to use it
+[Feature] Bugs #4048: read the configuration from argonaut-fai-monitor service
+[Feature] Bugs #4049: split argonaut-fai-monitor in his own package
+[Fix] Bugs #4052: Argonaut-server must support that we send a MAC in uppercase
+[Fix] Bugs #4166: update all manpages for 0.9.3
+
 * Argonaut 0.9.2
 
 [Feature] Bugs #2229: adding software on demand onto the opsi service
