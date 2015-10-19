@@ -88,7 +88,7 @@ sub write_quotatab_file {
   my @quotaDeviceParameters = @{$settings->{'device_parameters'}};
   if ($#quotaDeviceParameters >= 0) {
     foreach (@quotaDeviceParameters) {
-      my @quotaDeviceParameter = split /:/;
+      my @quotaDeviceParameter = split /:/, $_, -1;
       print QUOTATAB $quotaDeviceParameter[0].":".$quotaDeviceParameter[2]."\n";
     }
   }
