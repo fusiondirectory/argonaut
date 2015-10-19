@@ -628,8 +628,7 @@ sub argonaut_get_generic_settings {
 
   my $mesg = $ldap->search( # perform a search
             base   => $ldap_base,
-            filter => "(&(objectClass=$objectClass)$filter)",
-            attrs => ['macAddress','gotoMode','ipHostNumber',values(%{$params})]
+            filter => "(&(objectClass=$objectClass)$filter)"
             );
 
   my $settings = {
