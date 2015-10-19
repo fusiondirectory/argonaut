@@ -72,8 +72,7 @@ sub write_warnquota_file {
   print WARNQUOTA "LDAP_SEARCH_ATTRIBUTE  = ".$settings->{'ldap_searchattribute'}."\n";
   print WARNQUOTA "LDAP_MAIL_ATTRIBUTE    = mail\n";
   print WARNQUOTA "LDAP_BASEDN            = ".$settings->{'ldap_basedn'}."\n";
-  print WARNQUOTA "LDAP_HOST              = ".$settings->{'ldap_host'}."\n";
-  print WARNQUOTA "LDAP_PORT              = ".$settings->{'ldap_port'}."\n";
+  print WARNQUOTA "LDAP_URI               = ".$settings->{'ldap_uri'}."\n";
   print WARNQUOTA "LDAP_USER_DN           = ".$settings->{'ldap_userdn'}."\n";
   print WARNQUOTA "LDAP_PASSWORD          = ".$settings->{'ldap_userpwd'}."\n";
   # end of warnquota.conf
@@ -129,10 +128,8 @@ sub get_quota_settings {
   if ($mesg->count <= 0) {
     die "Could not found LDAP server ".$settings->{'ldap_dn'}."\n";
   }
-  my $uri = URI->new(($mesg->entries)[0]->get_value('goLdapURI'));
   $settings->{'ldap_basedn'}  = ($mesg->entries)[0]->get_value('goLdapBase');
-  $settings->{'ldap_host'}    = $uri->host;
-  $settings->{'ldap_port'}    = $uri->port;
+  $settings->{'ldap_uri'}     = ($mesg->entries)[0]->get_value('goLdapURI');
 
   return $settings;
 }
