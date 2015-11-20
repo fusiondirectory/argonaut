@@ -70,8 +70,8 @@ sub manage : Public {
   my ($service,$action) = @{$args};
   my $folder  = getServiceName("folder");
   my $exec    = getServiceName($service);
-  $main::log->notice("manage service called: $service ($folder/$exec) $action");
-  system ("$folder/$exec $action\n") == 0 or die "$folder/$exec $action returned error $?";;
+  $main::log->notice("manage service called: $service ($folder$exec) $action");
+  system ("$folder$exec $action\n") == 0 or die "$folder$exec $action returned error $?";;
   return "done : $action $exec";
 }
 
@@ -83,8 +83,8 @@ sub is_running : Public {
   my ($service) = @{$args};
   my $folder  = getServiceName("folder");
   my $exec    = getServiceName($service);
-  $main::log->notice("is_running service called: $service ($folder/$exec) status");
-  my $lsb_code = system ("$folder/$exec status\n");
+  $main::log->notice("is_running service called: $service ($folder$exec) status");
+  my $lsb_code = system ("$folder$exec status\n");
   if ($lsb_code == 0) {
     return "yes";
   } else {
