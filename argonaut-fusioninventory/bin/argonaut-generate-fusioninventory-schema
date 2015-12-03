@@ -50,8 +50,13 @@ while (my ($a, $b) = each(%fields)) {
 
 print "##\n## inventory-fd.schema - Needed by Fusion Directory for managing inventories\n##\n";
 print "\n# Attributes\n";
+print "attributetype ( 1.3.6.1.4.1.38414.39.1.1 NAME 'fdInventoryVERSIONCLIENT'
+  DESC 'FusionDirectory - inventory, client version'
+  EQUALITY caseExactMatch
+  SUBSTR caseExactSubstringsMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )\n\n";
 
-my $i = 1;
+my $i = 2;
 
 for my $f (keys(%fields2)) {
   print "attributetype ( 1.3.6.1.4.1.38414.39.1.$i NAME 'fdInventory$f'
@@ -66,7 +71,7 @@ print "\n# Object classes\n";
 print "objectclass ( 1.3.6.1.4.1.38414.39.2.1 NAME 'fdInventoryContent'
   DESC 'FusionDirectory inventory information'
   MUST ( cn )
-  MAY ( macAddress ) )\n\n";
+  MAY ( macAddress \$ ipHostNumber \$ fdInventoryVERSIONCLIENT ) )\n\n";
 
 $i = 2;
 
