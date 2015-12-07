@@ -48,9 +48,7 @@ use Argonaut::Libraries::Common qw(:ldap :config :file);
 
 use constant USEC => 1000000;
 
-use Proc::Daemon;
-
-Proc::Daemon::Init;
+use App::Daemon qw(daemonize);
 
 # Predefined variables for config
 our ($default_mode, $tftp_root);
@@ -95,20 +93,13 @@ $log->info("Argonaut-Fuse Started\n");
 use Module::Pluggable search_path => 'Argonaut::Fuse::Modules', sub_name => 'modules', require => 1;
 import_modules();
 
+$App::Daemon::pidfile = "$piddir/$pidfile";
+$App::Daemon::logfile = "$logdir/$logfile";
+$App::Daemon::as_user = "root";
+
 argonaut_create_dir($piddir);
 
-my $pid = File::Pid->new({
-    file => "$piddir/$pidfile",
-  });
-
-my $pidrunning = $pid->running;
-
-if ($pidrunning) {
-  die "Argonaut Fuse is already running $pidrunning\n";
-}
-
-$pid->pid($$);
-$pid->write;
+daemonize();
 
 $filesystem = {
   'man' => {
@@ -140,7 +131,7 @@ if ($@) {
 exit 0;
 
 sub sig_int_handler {
-  $pid->remove;
+  $pidfile->remove;
   exit(0);
 }
 
