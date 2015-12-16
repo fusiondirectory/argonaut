@@ -1,6 +1,14 @@
 Argonaut changelog
 ==================
 
+* Argonaut 0.9.4
+
+[Fix] Bugs #4110: Remove all uses of gotoBootKernel
+[Fix] Bugs #4291: Error when I try to grab centos packages with an argonaut-server on centos
+[Fix] Bugs #4293: Problem when I try to restart a service on Centos7
+[Fix] Bugs #4322: generate-fusioninventory-schema should read Agent/Inventory.pm directly from an installed fusioninventory-agent
+[Fix] Bugs #4355: Use App::Daemon for argonaut-fai-monitor and argonaut-fuse
+
 * Argonaut 0.9.3
 
 [Feature] Bugs #943: argonaut should work on ssl mode https
