@@ -11,10 +11,11 @@ documentation and additional help.
 * Antoine Gallavardin <antoine.gallavardin@free.fr>
   Quota original code
 
-* Bernigaud Côme <come.bernigaud@laposte.net>
+* Bernigaud Côme <come.bernigaud@opensides.be>
   All the new deployment stuff :)
 
 * Samuel Bosquin <samuel.bosquin@ibcp.fr>
   Help and test with the RPM code and FAI
   
-  
+* Jonathan Swaelens <jonathan@opensides.be>
+  QA, Testing, Systemd units  

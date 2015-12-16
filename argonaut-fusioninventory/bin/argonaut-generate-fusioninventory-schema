@@ -1,0 +1,91 @@
+#!/usr/bin/perl -w
+
+#######################################################################
+#
+# argonaut-generate-fusioninventory-schema
+#
+# grab data from fusioniventory and create a proper ldap schema
+#
+# Copyright (C) 2013-2015 FusionDirectory project
+#
+# Authors: Côme BERNIGAUD
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+# This is taken from Agent/Inventory.pm
+use lib '/usr/share/fusioninventory/lib';
+use FusionInventory::Agent::Inventory;
+
+my $inventory = FusionInventory::Agent::Inventory->new();
+my %fields;
+while (my ($a, $b) = each(%{$inventory->{'fields'}})) {
+  $fields{$a} = [keys(%$b)]
+}
+
+my %fields2;
+
+while (my ($a, $b) = each(%fields)) {
+  foreach my $c (@$b) {
+    $c =~ s/_//g;
+  }
+  @fields2{@$b} = ();
+}
+
+print "##\n## inventory-fd.schema - Needed by Fusion Directory for managing inventories\n##\n";
+print "\n# Attributes\n";
+print "attributetype ( 1.3.6.1.4.1.38414.39.1.1 NAME 'fdInventoryVERSIONCLIENT'
+  DESC 'FusionDirectory - inventory, client version'
+  EQUALITY caseExactMatch
+  SUBSTR caseExactSubstringsMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )\n\n";
+
+my $i = 2;
+
+for my $f (keys(%fields2)) {
+  print "attributetype ( 1.3.6.1.4.1.38414.39.1.$i NAME 'fdInventory$f'
+  DESC 'FusionDirectory - inventory, $f'
+  EQUALITY caseExactMatch
+  SUBSTR caseExactSubstringsMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15 )\n\n";
+  $i++;
+}
+
+print "\n# Object classes\n";
+print "objectclass ( 1.3.6.1.4.1.38414.39.2.1 NAME 'fdInventoryContent'
+  DESC 'FusionDirectory inventory information'
+  MUST ( cn )
+  MAY ( macAddress \$ ipHostNumber \$ fdInventoryVERSIONCLIENT ) )\n\n";
+
+$i = 2;
+
+while (my ($a, $b) = each(%fields)) {
+  $a =~ s/_//g;
+  print "objectclass ( 1.3.6.1.4.1.38414.39.2.$i NAME 'fdInventory$a'
+  DESC 'FusionDirectory inventory information - $a'
+  MUST ( cn )
+  MAY ( ";
+  foreach my $c (@$b) {
+    $c =~ s/_//g;
+    $c = "fdInventory$c";
+  }
+  print join(' $ ',@$b);
+  print " ) )\n\n";
+  $i++;
+}

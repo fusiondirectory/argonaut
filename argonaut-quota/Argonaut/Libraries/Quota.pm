@@ -72,8 +72,7 @@ sub write_warnquota_file {
   print WARNQUOTA "LDAP_SEARCH_ATTRIBUTE  = ".$settings->{'ldap_searchattribute'}."\n";
   print WARNQUOTA "LDAP_MAIL_ATTRIBUTE    = mail\n";
   print WARNQUOTA "LDAP_BASEDN            = ".$settings->{'ldap_basedn'}."\n";
-  print WARNQUOTA "LDAP_HOST              = ".$settings->{'ldap_host'}."\n";
-  print WARNQUOTA "LDAP_PORT              = ".$settings->{'ldap_port'}."\n";
+  print WARNQUOTA "LDAP_URI               = ".$settings->{'ldap_uri'}."\n";
   print WARNQUOTA "LDAP_USER_DN           = ".$settings->{'ldap_userdn'}."\n";
   print WARNQUOTA "LDAP_PASSWORD          = ".$settings->{'ldap_userpwd'}."\n";
   # end of warnquota.conf
@@ -88,7 +87,7 @@ sub write_quotatab_file {
   my @quotaDeviceParameters = @{$settings->{'device_parameters'}};
   if ($#quotaDeviceParameters >= 0) {
     foreach (@quotaDeviceParameters) {
-      my @quotaDeviceParameter = split /:/;
+      my @quotaDeviceParameter = split /:/, $_, -1;
       print QUOTATAB $quotaDeviceParameter[0].":".$quotaDeviceParameter[2]."\n";
     }
   }
@@ -101,16 +100,16 @@ sub get_quota_settings {
     'quotaService',
     {
       'hostname'              => 'cn',
-      'mail_cmd'              => "quotaMailCommand",
-      'cc_to'                 => "quotaCarbonCopyMail",
-      'from'                  => "quotaMsgFromSupport",
-      'subject'               => "quotaMsgSubjectSupport",
-      'support'               => "quotaMsgContactSupport",
-      'message'               => "quotaMsgContentSupport",
-      'signature'             => "quotaMsgSignatureSupport",
-      'charset'               => "quotaMsgCharsetSupport",
-      'ldap_searchattribute'  => "quotaLdapSearchIdAttribute",
-      'ldap_userdn'           => "quotaLdapServerUserDn",
+      'mail_cmd'              => 'quotaMailCommand',
+      'cc_to'                 => 'quotaCarbonCopyMail',
+      'from'                  => 'quotaMsgFromSupport',
+      'subject'               => 'quotaMsgSubjectSupport',
+      'support'               => 'quotaMsgContactSupport',
+      'message'               => 'quotaMsgContentSupport',
+      'signature'             => 'quotaMsgSignatureSupport',
+      'charset'               => 'quotaMsgCharsetSupport',
+      'ldap_searchattribute'  => 'quotaLdapSearchIdAttribute',
+      'ldap_userdn'           => 'quotaLdapServerUserDn',
       'ldap_userpwd'          => 'quotaLdapServerUserPassword',
       'ldap_dn'               => 'quotaLdapServer',
       'device_parameters'     => ['quotaDeviceParameters', asref => 1],
@@ -129,10 +128,8 @@ sub get_quota_settings {
   if ($mesg->count <= 0) {
     die "Could not found LDAP server ".$settings->{'ldap_dn'}."\n";
   }
-  my $uri = URI->new(($mesg->entries)[0]->get_value('goLdapURI'));
   $settings->{'ldap_basedn'}  = ($mesg->entries)[0]->get_value('goLdapBase');
-  $settings->{'ldap_host'}    = $uri->host;
-  $settings->{'ldap_port'}    = $uri->port;
+  $settings->{'ldap_uri'}     = ($mesg->entries)[0]->get_value('goLdapURI');
 
   return $settings;
 }

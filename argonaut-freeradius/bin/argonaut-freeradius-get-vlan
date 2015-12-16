@@ -34,7 +34,7 @@ use Net::LDAP::Util;
 use Net::LDAP::Message;
 use Net::LDAP::Search;
 
-use Argonaut::Common qw(:ldap);
+use Argonaut::Libraries::Common qw(:ldap);
 
 # use ...
 # This is very important ! Without this script will not get the filled hashesh from main.

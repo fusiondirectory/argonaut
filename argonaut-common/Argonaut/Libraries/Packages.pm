@@ -91,7 +91,7 @@ sub get_repolines {
     my @repolines = ();
     foreach my $entry ($mesg->entries()) {
       foreach my $repoline ($entry->get_value('FAIrepository')) {
-        my ($uri,$parent,$release,$sections,$install,$local,$archs,$dist) = split('\|',$repoline);
+        my ($uri,$parent,$release,$sections,$install,$local,$archs,$dist,$pathmask) = split('\|',$repoline);
         my $sections_array = [split(',',$sections)];
         if ($install eq 'update') {
           foreach my $section (@$sections_array) {
@@ -109,7 +109,8 @@ sub get_repolines {
           'installrepo' => $install,
           'localmirror' => ($local eq "local"),
           'archs'       => [split(',',$archs)],
-          'dist'        => $dist
+          'dist'        => $dist,
+          'pathmask'    => $pathmask
         };
         push @repolines, $repo;
       }
@@ -202,7 +203,11 @@ sub parse_package_list_centos {
     }
     $handler->{packages} = $distributions->{$repo->{'release'}."/$section"};
     foreach my $arch (@{$repo->{'archs'}}) {
-      my $primary_file = "$packages_folder/$localuri/".$repo->{'release'}."/$section/$arch/primary.xml";
+      my $relpath = $repo->{'pathmask'};
+      $relpath =~ s/%RELEASE%/$repo->{'release'}/i;
+      $relpath =~ s/%SECTION%/$section/i;
+      $relpath =~ s/%ARCH%/$arch/i;
+      my $primary_file = "$packages_folder/$localuri/".$relpath."/primary.xml";
       eval {
         $parser->parse_uri($primary_file);
       };
@@ -398,23 +403,25 @@ sub store_package_list_centos {
   );
 
   foreach my $section (@{$repo->{'sections'}}) {
-    my $relpath = $repo->{'release'}."/$section";
     foreach my $arch (@{$repo->{'archs'}}) {
-      my $repodata = "/$relpath/$arch/repodata/";
-      mkpath($dir.$repodata);
-      my $res = mirror($uri.$repodata."repomd.xml" => $dir.$repodata."repomd.xml");
+      my $relpath = $repo->{'pathmask'};
+      $relpath =~ s/%RELEASE%/$repo->{'release'}/i;
+      $relpath =~ s/%ARCH%/$arch/i;
+      $relpath =~ s/%SECTION%/$section/i;
+      mkpath($dir.$relpath."/repodata");
+      my $res = mirror($uri.$relpath."repodata/repomd.xml" => $dir.$relpath."repodata/repomd.xml");
       if(is_error($res)) {
-        push @errors,"Could not download $uri".$repodata."repomd.xml: $res";
+        push @errors,"Could not download $uri".$relpath."repodata/repomd.xml: $res";
         next;
       }
-      $parser->parse_uri($dir.$repodata."repomd.xml");
+      $parser->parse_uri($dir.$relpath."repodata/repomd.xml");
       my $primary = $parser->{Handler}->{result};
-      $res = mirror($uri."/$relpath/$arch/".$primary => $dir."/$relpath/$arch/".$primary);
+      $res = mirror($uri."/$relpath/".$primary => $dir."/$relpath/".$primary);
       if(is_error($res)) {
-        push @errors,"Could not download $uri"."/$relpath/$arch/".$primary.": $res";
+        push @errors,"Could not download $uri"."/$relpath/".$primary.": $res";
         next;
       }
-      gunzip ($dir."/$relpath/$arch/".$primary => $dir."/$relpath/$arch/primary.xml")
+      gunzip ($dir."/$relpath/".$primary => $dir."/$relpath/primary.xml")
         or push @errors,"could not extract Packages file : $GunzipError";
     }
   }
