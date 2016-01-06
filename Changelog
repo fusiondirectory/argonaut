@@ -1,6 +1,11 @@
 Argonaut changelog
 ==================
 
+* Argonaut 0.9.5
+
+[Fix] Bugs #4293: Problem when I try to restart a service on Centos7
+[Fix] Bugs #4432: renomed and added the Service.systemd.pm and System.systemd.pm
+
 * Argonaut 0.9.4
 
 [Fix] Bugs #4110: Remove all uses of gotoBootKernel
