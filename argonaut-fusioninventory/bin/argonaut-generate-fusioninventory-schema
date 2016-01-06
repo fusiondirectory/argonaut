@@ -6,7 +6,7 @@
 #
 # grab data from fusioniventory and create a proper ldap schema
 #
-# Copyright (C) 2013-2015 FusionDirectory project
+# Copyright (C) 2013-2016 FusionDirectory project
 #
 # Authors: Côme BERNIGAUD
 #

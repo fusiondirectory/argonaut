@@ -3,7 +3,7 @@
 # Argonaut::FAI packages - functions to get info for install from ldap
 #
 # Copyright (c) 2008 Landeshauptstadt München
-# Copyright (C) 2011-2015 FusionDirectory project
+# Copyright (C) 2011-2016 FusionDirectory project
 #
 # Authors: Jan-Marek Glogowski
 #          Come Bernigaud
@@ -41,7 +41,7 @@ BEGIN
 {
   use Exporter ();
   use vars qw(%EXPORT_TAGS @ISA $VERSION);
-  $VERSION = '2015-02-03';
+  $VERSION = '2016-06-01';
   @ISA = qw(Exporter);
 
   %EXPORT_TAGS = (

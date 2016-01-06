@@ -2,7 +2,7 @@
 #
 # XML::SAX::RPMHandler -- get and parse RPM Packages.
 #
-# Copyright (C) 2015 FusionDirectory project
+# Copyright (C) 2015-2016 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #

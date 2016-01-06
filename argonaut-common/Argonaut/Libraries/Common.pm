@@ -3,7 +3,7 @@
 # Argonaut::Libraries::Common -- Argonaut basic functions.
 #
 # Copyright (c) 2008 Landeshauptstadt München
-# Copyright (C) 2011-2015 FusionDirectory project
+# Copyright (C) 2011-2016 FusionDirectory project
 #
 # Authors: Matthias S. Benkmann
 #         Come Bernigaud

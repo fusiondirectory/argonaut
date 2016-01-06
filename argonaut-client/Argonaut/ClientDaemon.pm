@@ -2,7 +2,7 @@
 #
 # Argonaut::ClientDaemon -- Action to be done on clients
 #
-# Copyright (C) 2011-2015 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2011-2016 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #

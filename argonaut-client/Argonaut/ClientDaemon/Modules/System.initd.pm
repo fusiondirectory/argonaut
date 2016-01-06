@@ -1,8 +1,9 @@
 #######################################################################
 #
 # Argonaut::ClientDaemon::Modules::System -- System management
+# init.d version
 #
-# Copyright (C) 2012-2015 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2016 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #

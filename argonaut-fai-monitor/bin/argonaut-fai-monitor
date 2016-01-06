@@ -2,9 +2,10 @@
 
 #######################################################################
 #
-# argonaut-fai-monitor
+# argonaut-fai-monitor - read status of installation and send information
+# to argonaut-server for FusionDirectory
 #
-# Copyright (C) 2014-2015 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2014-2016 FusionDirectory project
 #
 # Using code from fai-monitor:
 #   Copyright (C) 2003-2012 by Thomas Lange
@@ -344,11 +345,11 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 
 =head1 LICENCE AND COPYRIGHT
 
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
+This code is part of Argonaut Project <https://www.argonaut-project.org>
 
 =over 3
 
-=item Copyright (C) 2011-2015 FusionDirectory project
+=item Copyright (C) 2011-2016 FusionDirectory project
 
 =back
 

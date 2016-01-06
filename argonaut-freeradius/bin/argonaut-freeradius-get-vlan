@@ -2,9 +2,10 @@
 
 #######################################################################
 #
-# argonaut-freeradius-get-vlan - Is used to get the vlan from the user radius group from ldap
+# argonaut-freeradius-get-vlan - script used to get the vlan from the 
+# user radius group from ldap
 #
-# Copyright (C) 2011-2015 FusionDirectory project
+# Copyright (C) 2011-2016 FusionDirectory project
 #
 # Based in the example code of rlm_perl 
 #

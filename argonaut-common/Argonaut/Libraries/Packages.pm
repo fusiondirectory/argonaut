@@ -2,7 +2,7 @@
 #
 # Argonaut::Libraries::Packages -- get and parse Debian Packages.
 #
-# Copyright (C) 2011-2015 FusionDirectory project
+# Copyright (C) 2011-2016 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
