@@ -2,9 +2,9 @@
 
 #######################################################################
 #
-# argonaut-debconf-crawler
+# argonaut-debconf-crawler - Extract debconf templates from packages
 #
-# Copyright (C) 2011-2015 FusionDirectory project
+# Copyright (C) 2011-2016 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
@@ -74,11 +74,11 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 
 =head1 LICENCE AND COPYRIGHT
 
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
+This code is part of Argonaut Project <https://www.argonaut-project.org>
 
 =over 1
 
-=item Copyright (C) 2011-2015 FusionDirectory project
+=item Copyright (C) 2011-2016 FusionDirectory project
 
 =back
 

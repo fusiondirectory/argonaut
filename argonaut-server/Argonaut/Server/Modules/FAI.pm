@@ -2,7 +2,7 @@
 #
 # Argonaut::Server::Modules::FAI -- FAI client module
 #
-# Copyright (C) 2012-2015 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2016 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #

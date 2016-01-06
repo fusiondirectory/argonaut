@@ -2,7 +2,7 @@
 #
 # FusionInventory::Agent::Config::Ldap - get fusioninventory config from ldap
 #
-# Copyright (C) 2013-2015 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2013-2016 FusionDirectory project
 #
 # Authors: Côme BERNIGAUD
 #
@@ -249,11 +249,11 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 
 =head1 LICENCE AND COPYRIGHT
 
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
+This code is part of Argonaut Project <https://www.argonaut-project.org/>
 
 =over 5
 
-=item Copyright (C) 2013-2015 FusionDirectory project
+=item Copyright (C) 2013-2016 FusionDirectory project
 
 =back
 

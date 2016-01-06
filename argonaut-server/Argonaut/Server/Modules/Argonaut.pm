@@ -2,7 +2,7 @@
 #
 # Argonaut::Server::Modules::Argonaut -- Argonaut client module
 #
-# Copyright (C) 2012-2015 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2016 FusionDirectory project
 #
 # Authors: Côme BERNIGAUD
 #

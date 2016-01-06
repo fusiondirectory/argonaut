@@ -1,8 +1,9 @@
 #######################################################################
 #
 # Argonaut::ClientDaemon::Modules::Service -- Service management
+# Systemd version
 #
-# Copyright (C) 2012-2015 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2012-2016 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
@@ -68,10 +69,9 @@ return a string that begins with "done" if it worked.
 sub manage : Public {
   my ($s, $args) = @_;
   my ($service,$action) = @{$args};
-  my $folder  = getServiceName("folder");
   my $exec    = getServiceName($service);
-  $main::log->notice("manage service called: $service ($folder$exec) $action");
-  system ("$folder$exec $action\n") == 0 or die "$folder$exec $action returned error $?";;
+  $main::log->notice("manage service called: $service ($exec) $action");
+  system ("systemctl $action $exec\n") == 0 or die "systemctl $action $exec returned error $?";;
   return "done : $action $exec";
 }
 
@@ -81,11 +81,10 @@ returns "yes" or "no" wether if a service is running or not
 sub is_running : Public {
   my ($s, $args) = @_;
   my ($service) = @{$args};
-  my $folder  = getServiceName("folder");
   my $exec    = getServiceName($service);
-  $main::log->notice("is_running service called: $service ($folder$exec) status");
-  my $lsb_code = system ("$folder$exec status\n");
-  if ($lsb_code == 0) {
+  $main::log->notice("is_running service called: $service ($exec) status");
+  my $code = system ("systemctl status $exec\n");
+  if ($code == 0) {
     return "yes";
   } else {
     return "no";

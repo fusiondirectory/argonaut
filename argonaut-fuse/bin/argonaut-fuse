@@ -9,7 +9,7 @@
 # Copyright (c) 2005,2006,2007 by Jan-Marek Glogowski <glogow@fbihome.de>
 # Copyright (c) 2008 by Cajus Pollmeier <pollmeier@gonicus.de>
 # Copyright (c) 2008,2009, 2010 by Jan Wenzel <wenzel@gonicus.de>
-# Copyright (C) 2011-2014 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2011-2016 FusionDirectory project
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -316,7 +316,7 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 
 =head1 LICENCE AND COPYRIGHT
 
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
+This code is part of Argonaut Project <https://www.argonaut-project.org/>
 
 This code was Based on ctftpd
 
@@ -330,7 +330,7 @@ This code was Based on ctftpd
 
 =item Copyright (C) 2010 by Jan Wenzel <wenzel@gonicus.de>
 
-=item Copyright (C) 2011-2015 FusionDirectory project
+=item Copyright (C) 2011-2016 FusionDirectory project
 
 =back
 

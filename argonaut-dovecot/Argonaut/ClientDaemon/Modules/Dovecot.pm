@@ -2,7 +2,7 @@
 #
 # Argonaut::ClientDaemon::Modules::Dovecot -- Dovecot mailbox creation
 #
-# Copyright (C) 2013-2015 FusionDirectory project <contact@fusiondirectory.org>
+# Copyright (C) 2013-2016 FusionDirectory project 
 #
 # Author: Côme BERNIGAUD
 #
