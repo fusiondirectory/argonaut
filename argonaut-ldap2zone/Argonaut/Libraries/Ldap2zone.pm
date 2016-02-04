@@ -93,15 +93,17 @@ sub argonaut_ldap2zone
 
   my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
 
-  my $reverse_zone = 0;
+  my $reverse_zones = [];
   unless ($noreverse) {
-    $reverse_zone = get_reverse_zone($ldap,$ldap_base,$dn);
-    print "Reverse zone is $reverse_zone\n" if $verbose;
+    $reverse_zones = get_reverse_zones($ldap,$ldap_base,$dn);
 
-    zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+    foreach $reverse_zone (@$reverse_zones) {
+      print "Parsing reverse zone '$reverse_zone'\n" if $verbose;
+      zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+    }
   }
 
-  create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+  create_namedconf($zone,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
   unless ($norefresh) {
     my $output = `$NAMEDCHECKCONF -z`;
@@ -206,35 +208,38 @@ sub zoneparse
   return $dn;
 }
 
-=item get_reverse_zone
+=item get_reverse_zones
 Params : ldap handle, ldap base, zone dn
-Returns : reverse zone name
+Returns : reverse zones names
 =cut
-sub get_reverse_zone
+sub get_reverse_zones
 {
   my($ldap,$ldap_base,$zone_dn) = @_;
   my $mesg = $ldap->search( # Searching reverse zone name
           base   => $zone_dn,
-          filter => "(&(zoneName=*)(relativeDomainName=@))",
+          filter => "(&(zoneName=*arpa*)(relativeDomainName=@))",
           scope => 'one',
           attrs => [ 'zoneName' ]
           );
 
   $mesg->code && die "Error while searching DNS reverse zone :".$mesg->error;
 
-  die "Error : found ".scalar($mesg->entries())." results  (1 expected) for reverse DNS zone of dn $zone_dn\n" if (scalar($mesg->entries()) != 1);
+  my @reverse_zones = ();
+  foreach my $entry ($mesg->entries()) {
+    push @reverse_zones, $entry->get_value("zoneName");
+  }
 
-  return ($mesg->entries)[0]->get_value("zoneName");
+  return \@reverse_zones;
 }
 
 =item create_namedconf
 Create file $output_BIND_DIR/named.conf.ldap2zone
-Params : zone name, reverse zone name
+Params : zone name, reverse zone names
 Returns :
 =cut
 sub create_namedconf
 {
-  my($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
+  my($zone,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
 
   if($ALLOW_NOTIFY eq "TRUE") {
     $ALLOW_NOTIFY = "notify yes;";
@@ -266,7 +271,7 @@ zone "$zone" {
   $ALLOW_TRANSFER
 };
 EOF
-  if ($reverse_zone) {
+  foreach my $reverse_zone (@$reverse_zones) {
     print $namedfile <<EOF;
 zone "$reverse_zone" {
   type master;
