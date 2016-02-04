@@ -36,7 +36,7 @@ use DNS::ZoneParse;
 
 use Argonaut::Libraries::Common qw(:ldap :config);
 
-my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
+my @record_types = ('a','aaaa','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
 
 my $NAMEDCHECKCONF = 'named-checkconf';
 
