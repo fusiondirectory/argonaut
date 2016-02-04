@@ -97,7 +97,7 @@ sub argonaut_ldap2zone
   unless ($noreverse) {
     $reverse_zones = get_reverse_zones($ldap,$ldap_base,$dn);
 
-    foreach $reverse_zone (@$reverse_zones) {
+    foreach my $reverse_zone (@$reverse_zones) {
       print "Parsing reverse zone '$reverse_zone'\n" if $verbose;
       zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
     }
