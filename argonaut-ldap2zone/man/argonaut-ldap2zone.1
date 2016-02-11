@@ -133,7 +133,7 @@
 .\" ========================================================================
 .\"
 .IX Title "ARGONAUT-LDAP2ZONE 1"
-.TH ARGONAUT-LDAP2ZONE 1 "2016-01-06" "Argonaut 0.9.5" "FusionDirectory Documentation"
+.TH ARGONAUT-LDAP2ZONE 1 "2016-02-11" "Argonaut 0.9.6" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -142,7 +142,7 @@
 argonaut\-ldap2zone \- creating bind zone files and refreshing the server
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-argonaut\-ldap2zone [\-\-verbose] [\-\-noreverse] [\-\-norestart] [\-\-dumpdir dir] \s-1ZONE\s0
+argonaut\-ldap2zone [\-\-verbose] [\-\-noreverse] [\-\-norestart] [\-\-dumpdir dir] [\-\-ldap2view view] \s-1ZONE\s0
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 argonaut\-ldap2zone is a program used to create bind zone files and refresh the bind service
@@ -160,6 +160,9 @@ Do not refresh bind zone with rndc
 .IP "\fB\-\-dumpdir\fR" 3
 .IX Item "--dumpdir"
 Dump the zones and bind configuration to another dir for testing purposes
+.IP "\fB\-\-ldap2view\fR" 3
+.IX Item "--ldap2view"
+Write the zones in view format when you want to do split horizon dns
 .SH "EXAMPLE"
 .IX Header "EXAMPLE"
 \&\fBargonaut\-ldap2zone \-\-verbose fusiondirectory.org.\fR
@@ -168,10 +171,16 @@ Dump the zones and bind configuration to another dir for testing purposes
 \& Write the updated zones from ldap and refresh bind
 .Ve
 .PP
-\&\fBargonaut\-ldap2zone \-\-verbose \-\-norestart \-\-dumpdir dnszone/ master.fdi\fR
+\&\fBargonaut\-ldap2zone \-\-verbose \-\-norestart \-\-dumpdir dnszone/ fusiondirectory.org\fR
 .PP
 .Vb 1
 \& Write the updated zones from ldap to another directory and don\*(Aqt refresh bind
+.Ve
+.PP
+\&\fBargonaut\-ldap2zone \-\-verbose \-\-ldap2view internal fusiondirectory.org\fR
+.PP
+.Vb 1
+\& Write the updated zones from ldap in a bind view named internal and refresh bind
 .Ve
 .SH "BUGS"
 .IX Header "BUGS"
