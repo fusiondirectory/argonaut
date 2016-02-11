@@ -140,7 +140,6 @@ sub zoneparse
   foreach my $record (@record_types) {
     eval { #try
       $records->{$record} = $zonefile->$record();
-      $recordsUnicity->{$record} = [];
     };
     if ($@) { # catch
       print "This DNS::ZoneParse version does not support '$record' record\n" if $verbose;
