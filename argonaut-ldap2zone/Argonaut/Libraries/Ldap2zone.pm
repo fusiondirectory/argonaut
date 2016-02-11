@@ -139,6 +139,7 @@ sub zoneparse
   foreach my $record (@record_types) {
     eval { #try
       $records->{$record} = $zonefile->$record();
+      $recordsUnicity->{$record} = [];
     };
     if ($@) { # catch
       print "This DNS::ZoneParse version does not support '$record' record\n" if $verbose;
@@ -146,6 +147,8 @@ sub zoneparse
   }
 
   my $dn; # Dn of zone entry;
+
+  my %unicityTest = ();
 
   foreach my $entry ($mesg->entries()) {
     my $name = $entry->get_value("relativeDomainName");
@@ -158,6 +161,12 @@ sub zoneparse
     }
     while(my ($type,$list) = each %{$records}){
       foreach my $value ($entry->get_value($type."Record")) {
+        if (defined $unicityTest{$type.$name.$value.$class.$ttl}) {
+          # Avoid putting twice the same record
+          next;
+        } else {
+          $unicityTest{$type.$name.$value.$class.$ttl} = 1;
+        }
         if($type eq "txt") {
           push @{$list},{ name => $name, class => $class,
                           text => $value, ttl => $ttl, ORIGIN => $zone };
