@@ -92,18 +92,19 @@ sub argonaut_ldap2zone
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
   my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+  create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
-  my $reverse_zones = [];
   unless ($noreverse) {
-    $reverse_zones = get_reverse_zones($ldap,$ldap_base,$dn);
+    my $reverse_zones = get_reverse_zones($ldap,$ldap_base,$dn);
 
     foreach my $reverse_zone (@$reverse_zones) {
       print "Parsing reverse zone '$reverse_zone'\n" if $verbose;
       zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+      create_namedconf($reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
     }
   }
 
-  create_namedconf($zone,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+  refresh_main_namedconf($BIND_DIR,$output_BIND_DIR,$verbose);
 
   unless ($norefresh) {
     my $output = `$NAMEDCHECKCONF -z`;
@@ -248,7 +249,7 @@ Returns :
 =cut
 sub create_namedconf
 {
-  my($zone,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
+  my($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
 
   if($ALLOW_NOTIFY eq "TRUE") {
     $ALLOW_NOTIFY = "notify yes;";
@@ -280,20 +281,15 @@ zone "$zone" {
   $ALLOW_TRANSFER
 };
 EOF
-  foreach my $reverse_zone (@$reverse_zones) {
-    print $namedfile <<EOF;
-zone "$reverse_zone" {
-  type master;
-  $ALLOW_NOTIFY
-  file "$BIND_CACHE_DIR/db.$reverse_zone";
-  $ALLOW_UPDATE
-  $ALLOW_TRANSFER
-};
-EOF
-  }
   close $namedfile;
+}
+
+sub refresh_main_namedconf
+{
+  my($BIND_DIR,$output_BIND_DIR,$verbose) = @_;
 
   print "Writing file $output_BIND_DIR/named.conf.ldap2zone\n" if $verbose;
+  my $namedfile;
   open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone";
   opendir DIR, $output_BIND_DIR or die "Error while openning $output_BIND_DIR!";
   my @files = readdir DIR;
