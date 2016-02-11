@@ -46,7 +46,7 @@ Params : zone name, verbose flag
 =cut
 sub argonaut_ldap2zone
 {
-  my($zone,$verbose,$norefresh,$dumpdir,$noreverse) = @_;
+  my($zone,$verbose,$norefresh,$dumpdir,$noreverse,$ldap2view) = @_;
 
   my $config = argonaut_read_config;
 
@@ -91,16 +91,21 @@ sub argonaut_ldap2zone
 
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
-  my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
-  create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+  if ($ldap2view) {
+    my $view = viewparse();
+    create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose, $view);
+  } else {
+    my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+    create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
-  unless ($noreverse) {
-    my $reverse_zones = get_reverse_zones($ldap,$ldap_base,$dn);
+    unless ($noreverse) {
+      my $reverse_zones = get_reverse_zones($ldap,$ldap_base,$dn);
 
-    foreach my $reverse_zone (@$reverse_zones) {
-      print "Parsing reverse zone '$reverse_zone'\n" if $verbose;
-      zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
-      create_namedconf($reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+      foreach my $reverse_zone (@$reverse_zones) {
+        print "Parsing reverse zone '$reverse_zone'\n" if $verbose;
+        zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+        create_namedconf($reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+      }
     }
   }
 
@@ -217,6 +222,30 @@ sub zoneparse
   return $dn;
 }
 
+=item viewparse
+=cut
+sub viewparse
+{
+  my ($ldap,$ldap_base,$view,$verbose) = @_;
+  my $mesg = $ldap->search(
+    base   => $ldap_base,
+    filter => "(&(objectClass=fdDNSView)(cn=$view))",
+  );
+
+  $mesg->code && die "Error while searching DNS View '$view' :".$mesg->error;
+  g
+  print "Found ".scalar($mesg->entries())." results\n" if $verbose;
+
+  my %view = (
+    'name'    => ($mesg->entries)[0]->get_value('cn'),
+    'aclname' => ($mesg->entries)[0]->get_value('fdDNSViewAclName'),
+    'acl'     => ($mesg->entries)[0]->get_value('fdDNSViewAcl'),
+    'zones'   => ($mesg->entries)[0]->get_value('fdDNSZoneDn', asref => 1),
+  );
+
+  return \%view;
+}
+
 =item get_reverse_zones
 Params : ldap handle, ldap base, zone dn
 Returns : reverse zones names
@@ -248,7 +277,7 @@ Returns :
 =cut
 sub create_namedconf
 {
-  my($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
+  my($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose,$view) = @_;
 
   if($ALLOW_NOTIFY eq "TRUE") {
     $ALLOW_NOTIFY = "notify yes;";
@@ -271,15 +300,39 @@ sub create_namedconf
   print "Writing named.conf file in $output_BIND_DIR/named.conf.ldap2zone.$zone\n" if $verbose;
   my $namedfile;
   open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone.$zone";
-  print $namedfile <<EOF;
-zone "$zone" {
+  my $zones;
+  if (defined $view) {
+    my $aclname   = $view->{'aclname'};
+    my $aclvalues = $view->{'acl'};
+    my $viewname  = $view->{'name'};
+    $zones        = $view->{'zones'};
+    print $namedfile <<EOF;
+acl $aclname {
+  $aclvalues
+};
+
+view "$viewname" {
+  match-clients {$aclname; };
+EOF
+  } else {
+    $zones = ($zone);
+  }
+  foreach my $zone_ (@$zones) {
+    print $namedfile <<EOF;
+zone "$zone_" {
   type master;
   $ALLOW_NOTIFY
-  file "$BIND_CACHE_DIR/db.$zone";
+  file "$BIND_CACHE_DIR/db.$zone_";
   $ALLOW_UPDATE
   $ALLOW_TRANSFER
 };
 EOF
+  }
+  if (defined $view) {
+    print $namedfile <<EOF;
+};
+EOF
+  }
   close $namedfile;
 }
 

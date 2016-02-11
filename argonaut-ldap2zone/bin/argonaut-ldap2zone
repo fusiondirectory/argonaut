@@ -32,6 +32,7 @@ use 5.008;
 use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 
 my $zone_arg = undef;
+my $ldap2view = 0;
 my $verbose_arg = 0;
 my $norefresh = 0;
 my $noreverse;
@@ -56,6 +57,8 @@ foreach my $arg ( @ARGV ) {
     $norefresh = 1;
   } elsif (lc($arg) eq "--dumpdir") {
     undef $dumpdir;
+  } elsif (lc($arg) eq "--ldap2view") {
+    $ldap2view = 1;
   } elsif ($i_arg==0) {
     $zone_arg = $arg;
     $i_arg++;
@@ -73,7 +76,7 @@ if (!$zone_arg) {
   print_usage();
 }
 
-argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir,$noreverse);
+argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir,$noreverse,$ldap2view);
 
 __END__
 
