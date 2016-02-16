@@ -233,7 +233,6 @@ sub viewparse
   );
 
   $mesg->code && die "Error while searching DNS View '$view' :".$mesg->error;
-  g
   print "Found ".scalar($mesg->entries())." results\n" if $verbose;
 
   my %view = (
