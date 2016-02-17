@@ -314,7 +314,7 @@ view "$viewname" {
   match-clients {$aclname; };
 EOF
   } else {
-    $zones = ($zone);
+    $zones = [$zone];
   }
   foreach my $zone_ (@$zones) {
     print $namedfile <<EOF;
