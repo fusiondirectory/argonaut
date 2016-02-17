@@ -237,7 +237,7 @@ sub viewparse
     filter => "(&(objectClass=fdDNSView)(cn=$view))",
   );
 
-  $mesg->code && die "Error while searching DNS View '$view' :".$mesg->error;
+  $mesg->code && die "Error while searching DNS View '$view' :".$mesg->error."\n";
   print "Found ".scalar($mesg->entries())." results\n" if $verbose;
 
   if (scalar($mesg->entries()) == 0) {
@@ -248,8 +248,19 @@ sub viewparse
     'name'    => ($mesg->entries)[0]->get_value('cn'),
     'aclname' => ($mesg->entries)[0]->get_value('fdDNSViewAclName'),
     'acl'     => ($mesg->entries)[0]->get_value('fdDNSViewAcl'),
-    'zones'   => ($mesg->entries)[0]->get_value('fdDNSZoneDn', asref => 1),
+    'zones'   => [],
   );
+
+  my $zonesDN = ($mesg->entries)[0]->get_value('fdDNSZoneDn', asref => 1);
+
+  foreach my $zoneDN (@$zonesDN) {
+    my $mesg = $ldap->search (base => $zoneDN, filter => '(objectClass=*)', scope => 'base');
+    $mesg->code && die "Error while loading zone $zoneDN for DNS View '$view' :".$mesg->error."\n";
+    if (scalar($mesg->entries()) == 0) {
+      die "Could not find zone $zoneDN for DNS View '$view'\n";
+    }
+    push @{$view{zones}}, ($mesg->entries)[0]->get_value('zoneName');
+  }
 
   return \%view;
 }
