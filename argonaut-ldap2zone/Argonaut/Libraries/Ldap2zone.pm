@@ -92,7 +92,7 @@ sub argonaut_ldap2zone
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
   if ($ldap2view) {
-    my $view = viewparse();
+    my $view = viewparse($ldap,$ldap_base,$zone,$verbose);
     create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose, $view);
   } else {
     my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
