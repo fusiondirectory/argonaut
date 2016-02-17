@@ -83,18 +83,23 @@ sub argonaut_ldap2zone
     die "Rndc path '$RNDC' doesn't seem to exists\n";
   }
 
-  if (substr($zone,-1) ne ".") { # If the end point is not there, add it
-    $zone = $zone.".";
-  }
-
-  print "Searching DNS Zone '$zone'\n" if $verbose;
-
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
   if ($ldap2view) {
+    print "Searching DNS View '$zone'\n" if $verbose;
+
     my $view = viewparse($ldap,$ldap_base,$zone,$verbose);
+    if (not defined($view)) {
+      die "Could not find the view $zone\n";
+    }
     create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose, $view);
   } else {
+    if (substr($zone,-1) ne ".") { # If the end point is not there, add it
+      $zone = $zone.".";
+    }
+
+    print "Searching DNS Zone '$zone'\n" if $verbose;
+
     my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
     create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
 
@@ -234,6 +239,10 @@ sub viewparse
 
   $mesg->code && die "Error while searching DNS View '$view' :".$mesg->error;
   print "Found ".scalar($mesg->entries())." results\n" if $verbose;
+
+  if (scalar($mesg->entries()) == 0) {
+    return;
+  }
 
   my %view = (
     'name'    => ($mesg->entries)[0]->get_value('cn'),
