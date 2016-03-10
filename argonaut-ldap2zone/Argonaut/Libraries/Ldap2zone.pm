@@ -244,11 +244,16 @@ sub viewparse
     return;
   }
 
+  my @matchclients      = ($mesg->entries)[0]->get_value('fdDNSViewMatchClients');
+  my @matchdestinations = ($mesg->entries)[0]->get_value('fdDNSViewMatchDestinations');
   my %view = (
-    'name'    => ($mesg->entries)[0]->get_value('cn'),
-    'aclname' => ($mesg->entries)[0]->get_value('fdDNSViewAclName'),
-    'acl'     => ($mesg->entries)[0]->get_value('fdDNSViewAcl'),
-    'zones'   => [],
+    'name'            => ($mesg->entries)[0]->get_value('cn'),
+    'clientsacl'      => ($mesg->entries)[0]->get_value('fdDNSViewMatchClientsAclName'),
+    'clients'         => \@matchclients,
+    'destinationsacl' => ($mesg->entries)[0]->get_value('fdDNSViewMatchDestinationsAclName'),
+    'destinations'    => \@matchdestinations,
+    'recursiveonly'   => ($mesg->entries)[0]->get_value('fdDNSViewMatchRecursiveOnly'),
+    'zones'           => [],
   );
 
   my $zonesDN = ($mesg->entries)[0]->get_value('fdDNSZoneDn', asref => 1);
@@ -321,17 +326,44 @@ sub create_namedconf
   open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone.$zone";
   my $zones;
   if (defined $view) {
-    my $aclname   = $view->{'aclname'};
-    my $aclvalues = $view->{'acl'};
-    my $viewname  = $view->{'name'};
-    $zones        = $view->{'zones'};
-    print $namedfile <<EOF;
-acl $aclname {
-  $aclvalues
+    $zones = $view->{'zones'};
+    my $matchclients      = join(";\n", @{$view->{'clients'}});
+    my $matchdestinations = join(";\n", @{$view->{'destinations'}});
+    if ($view->{'clientsacl'} ne '') {
+      print $namedfile <<EOF;
+acl $view->{'clientsacl'} {
+  $matchclients
 };
+EOF
+      $matchclients = $view->{'clientsacl'};
+    }
 
-view "$viewname" {
-  match-clients {$aclname; };
+    if ($view->{'destinationsacl'} ne '') {
+      print $namedfile <<EOF;
+acl $view->{'destinationsacl'} {
+  $matchdestinations
+};
+EOF
+      $matchdestinations = $view->{'destinationsacl'};
+    }
+
+    print $namedfile <<EOF;
+view "$view->{'name'}" {
+EOF
+
+    if ($matchclients ne '') {
+      print $namedfile <<EOF;
+  match-clients {$matchclients; };
+EOF
+    }
+    if ($matchdestinations ne '') {
+      print $namedfile <<EOF;
+  match-destinations {$matchdestinations; };
+EOF
+    }
+    my $recursiveonly = ($view->{'recursiveonly'} eq "TRUE" ? "yes" : "no");
+    print $namedfile <<EOF;
+  match-recursive-only $recursiveonly;
 EOF
   } else {
     $zones = [$zone];
