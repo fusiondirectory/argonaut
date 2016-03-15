@@ -88,11 +88,15 @@ sub argonaut_ldap2zone
   if ($ldap2view) {
     print "Searching DNS View '$zone'\n" if $verbose;
 
-    my $view = viewparse($ldap,$ldap_base,$zone,$verbose);
-    if (not defined($view)) {
-      die "Could not find the view $zone\n";
+    my $acls = aclsparse($ldap,$ldap_base,$verbose);
+    create_acl_namedconf($BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
+    if ($ldap2view eq 'view') {
+      my $view = viewparse($ldap,$ldap_base,$zone,$verbose);
+      if (not defined($view)) {
+        die "Could not find the view $zone\n";
+      }
+      create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose, $view);
     }
-    create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose, $view);
   } else {
     if (substr($zone,-1) ne ".") { # If the end point is not there, add it
       $zone = $zone.".";
@@ -244,14 +248,10 @@ sub viewparse
     return;
   }
 
-  my @matchclients      = ($mesg->entries)[0]->get_value('fdDNSViewMatchClients');
-  my @matchdestinations = ($mesg->entries)[0]->get_value('fdDNSViewMatchDestinations');
   my %view = (
     'name'            => ($mesg->entries)[0]->get_value('cn'),
-    'clientsacl'      => ($mesg->entries)[0]->get_value('fdDNSViewMatchClientsAclName'),
-    'clients'         => \@matchclients,
-    'destinationsacl' => ($mesg->entries)[0]->get_value('fdDNSViewMatchDestinationsAclName'),
-    'destinations'    => \@matchdestinations,
+    'clientsacl'      => ($mesg->entries)[0]->get_value('fdDNSViewMatchClientsAcl'),
+    'destinationsacl' => ($mesg->entries)[0]->get_value('fdDNSViewMatchDestinationsAcl'),
     'recursiveonly'   => ($mesg->entries)[0]->get_value('fdDNSViewMatchRecursiveOnly'),
     'zones'           => [],
   );
@@ -268,6 +268,34 @@ sub viewparse
   }
 
   return \%view;
+}
+
+=item aclsparse
+=cut
+sub aclsparse
+{
+  my ($ldap,$ldap_base,$verbose) = @_;
+  my $mesg = $ldap->search(
+    base   => $ldap_base,
+    filter => "(objectClass=fdDNSAcl)",
+    ajouter la liste des attributs => ('cn','fdDNSAclMatchList')
+  );
+
+  $mesg->code && die "Error while searching DNS acls:".$mesg->error."\n";
+  print "Found ".scalar($mesg->entries())." results\n" if $verbose;
+
+  my @entries = $mesg->entries();
+  my @acls    = ();
+
+  foreach my $entry (@entries) {
+    my @matchlist = $entry->get_value('fdDNSAclMatchList');
+    push @acls, {
+      'name'      => $entry->get_value('cn'),
+      'matchlist' => \@matchlist,
+    }
+  }
+
+  return \@acls;
 }
 
 =item get_reverse_zones
@@ -327,38 +355,19 @@ sub create_namedconf
   my $zones;
   if (defined $view) {
     $zones = $view->{'zones'};
-    my $matchclients      = join(";\n", @{$view->{'clients'}});
-    my $matchdestinations = join(";\n", @{$view->{'destinations'}});
-    if ($view->{'clientsacl'} ne '') {
-      print $namedfile <<EOF;
-acl $view->{'clientsacl'} {
-  $matchclients
-};
-EOF
-      $matchclients = $view->{'clientsacl'};
-    }
-
-    if ($view->{'destinationsacl'} ne '') {
-      print $namedfile <<EOF;
-acl $view->{'destinationsacl'} {
-  $matchdestinations
-};
-EOF
-      $matchdestinations = $view->{'destinationsacl'};
-    }
 
     print $namedfile <<EOF;
 view "$view->{'name'}" {
 EOF
 
-    if ($matchclients ne '') {
+    if ($view->{'clients'} ne '') {
       print $namedfile <<EOF;
-  match-clients {$matchclients; };
+  match-clients {$view->{'clientsacl'}; };
 EOF
     }
-    if ($matchdestinations ne '') {
+    if ($view->{'destinations'} ne '') {
       print $namedfile <<EOF;
-  match-destinations {$matchdestinations; };
+  match-destinations {$view->{'destinations'}; };
 EOF
     }
     my $recursiveonly = ($view->{'recursiveonly'} eq "TRUE" ? "yes" : "no");
@@ -385,6 +394,23 @@ EOF
 EOF
   }
   close $namedfile;
+}
+
+=item create_acl_namedconf
+Create file $output_BIND_DIR/named.conf.acls
+=cut
+sub create_acl_namedconf
+{
+  my($acls,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose) = @_;
+
+  print "Writing named.conf file in $output_BIND_DIR/named.conf.acls\n" if $verbose;
+  my $namedfile;
+  open($namedfile, '>', "$output_BIND_DIR/named.conf.acls") or die "error while trying to open $output_BIND_DIR/named.conf.acls";
+  foreach my $acl (@$acls) {
+    print $namedfile <<EOF;
+  acl $acl->{'name'} {$acl->{'matchlist'}; };
+EOF
+  }
 }
 
 sub refresh_main_namedconf

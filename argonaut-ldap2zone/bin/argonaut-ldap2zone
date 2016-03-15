@@ -57,8 +57,10 @@ foreach my $arg ( @ARGV ) {
     $norefresh = 1;
   } elsif (lc($arg) eq "--dumpdir") {
     undef $dumpdir;
+  } elsif (lc($arg) eq "--ldap2acls") {
+    $ldap2view = 'acls';
   } elsif (lc($arg) eq "--ldap2view") {
-    $ldap2view = 1;
+    $ldap2view = 'view';
   } elsif ($i_arg==0) {
     $zone_arg = $arg;
     $i_arg++;
@@ -73,7 +75,11 @@ if (not defined $dumpdir) {
 }
 
 if (!$zone_arg) {
-  print_usage();
+  if ($ldap2view eq 'acls') {
+    $zone_arg = '';
+  } else {
+    print_usage();
+  }
 }
 
 argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir,$noreverse,$ldap2view);
@@ -129,7 +135,7 @@ B<argonaut-ldap2zone --verbose --norestart --dumpdir dnszone/ fusiondirectory.or
  Write the updated zones from ldap to another directory and don't refresh bind
 
 B<argonaut-ldap2zone --verbose --ldap2view internal fusiondirectory.org>
- 
+
  Write the updated zones from ldap in a bind view named internal and refresh bind
 
 =head1 BUGS
