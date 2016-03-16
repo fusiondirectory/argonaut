@@ -89,7 +89,7 @@ sub argonaut_ldap2zone
     print "Searching DNS View '$zone'\n" if $verbose;
 
     my $acls = aclsparse($ldap,$ldap_base,$verbose);
-    create_acl_namedconf($BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
+    create_acl_namedconf($acls,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
     if ($ldap2view eq 'view') {
       my $view = viewparse($ldap,$ldap_base,$zone,$verbose);
       if (not defined($view)) {
@@ -250,9 +250,9 @@ sub viewparse
 
   my %view = (
     'name'            => ($mesg->entries)[0]->get_value('cn'),
-    'clientsacl'      => ($mesg->entries)[0]->get_value('fdDNSViewMatchClientsAcl'),
-    'destinationsacl' => ($mesg->entries)[0]->get_value('fdDNSViewMatchDestinationsAcl'),
-    'recursiveonly'   => ($mesg->entries)[0]->get_value('fdDNSViewMatchRecursiveOnly'),
+    'clientsacl'      => (($mesg->entries)[0]->get_value('fdDNSViewMatchClientsAcl') or ''),
+    'destinationsacl' => (($mesg->entries)[0]->get_value('fdDNSViewMatchDestinationsAcl') or ''),
+    'recursiveonly'   => (($mesg->entries)[0]->get_value('fdDNSViewMatchRecursiveOnly') or 'FALSE'),
     'zones'           => [],
   );
 
@@ -276,9 +276,9 @@ sub aclsparse
 {
   my ($ldap,$ldap_base,$verbose) = @_;
   my $mesg = $ldap->search(
-    base   => $ldap_base,
-    filter => "(objectClass=fdDNSAcl)",
-    ajouter la liste des attributs => ('cn','fdDNSAclMatchList')
+    base    => $ldap_base,
+    filter  => "(objectClass=fdDNSAcl)",
+    attrs   => ['cn','fdDNSAclMatchList']
   );
 
   $mesg->code && die "Error while searching DNS acls:".$mesg->error."\n";
@@ -291,7 +291,7 @@ sub aclsparse
     my @matchlist = $entry->get_value('fdDNSAclMatchList');
     push @acls, {
       'name'      => $entry->get_value('cn'),
-      'matchlist' => \@matchlist,
+      'matchlist' => join(';', @matchlist),
     }
   }
 
@@ -360,14 +360,14 @@ sub create_namedconf
 view "$view->{'name'}" {
 EOF
 
-    if ($view->{'clients'} ne '') {
+    if ($view->{'clientsacl'} ne '') {
       print $namedfile <<EOF;
   match-clients {$view->{'clientsacl'}; };
 EOF
     }
-    if ($view->{'destinations'} ne '') {
+    if ($view->{'destinationsacl'} ne '') {
       print $namedfile <<EOF;
-  match-destinations {$view->{'destinations'}; };
+  match-destinations {$view->{'destinationsacl'}; };
 EOF
     }
     my $recursiveonly = ($view->{'recursiveonly'} eq "TRUE" ? "yes" : "no");
