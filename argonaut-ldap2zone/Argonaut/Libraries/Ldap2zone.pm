@@ -36,7 +36,7 @@ use DNS::ZoneParse;
 
 use Argonaut::Libraries::Common qw(:ldap :config);
 
-my @record_types = ('a','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
+my @record_types = ('a','aaaa','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
 
 my $NAMEDCHECKCONF = 'named-checkconf';
 
@@ -46,7 +46,7 @@ Params : zone name, verbose flag
 =cut
 sub argonaut_ldap2zone
 {
-  my($zone,$verbose,$norefresh,$dumpdir,$noreverse) = @_;
+  my($zone,$verbose,$norefresh,$dumpdir,$noreverse,$ldap2view) = @_;
 
   my $config = argonaut_read_config;
 
@@ -83,25 +83,42 @@ sub argonaut_ldap2zone
     die "Rndc path '$RNDC' doesn't seem to exists\n";
   }
 
-  if (substr($zone,-1) ne ".") { # If the end point is not there, add it
-    $zone = $zone.".";
-  }
-
-  print "Searching DNS Zone '$zone'\n" if $verbose;
-
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
-  my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+  if ($ldap2view) {
+    print "Searching DNS View '$zone'\n" if $verbose;
 
-  my $reverse_zone = 0;
-  unless ($noreverse) {
-    $reverse_zone = get_reverse_zone($ldap,$ldap_base,$dn);
-    print "Reverse zone is $reverse_zone\n" if $verbose;
+    my $acls = aclsparse($ldap,$ldap_base,$verbose);
+    create_acl_namedconf($acls,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
+    if ($ldap2view eq 'view') {
+      my $view = viewparse($ldap,$ldap_base,$zone,$verbose);
+      if (not defined($view)) {
+        die "Could not find the view $zone\n";
+      }
+      create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose, $view);
+    }
+  } else {
+    if (substr($zone,-1) ne ".") { # If the end point is not there, add it
+      $zone = $zone.".";
+    }
 
-    zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+    print "Searching DNS Zone '$zone'\n" if $verbose;
+
+    my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+    create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+
+    unless ($noreverse) {
+      my $reverse_zones = get_reverse_zones($ldap,$ldap_base,$dn);
+
+      foreach my $reverse_zone (@$reverse_zones) {
+        print "Parsing reverse zone '$reverse_zone'\n" if $verbose;
+        zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
+        create_namedconf($reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+      }
+    }
   }
 
-  create_namedconf($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose);
+  refresh_main_namedconf($BIND_DIR,$output_BIND_DIR,$verbose);
 
   unless ($norefresh) {
     my $output = `$NAMEDCHECKCONF -z`;
@@ -145,6 +162,8 @@ sub zoneparse
 
   my $dn; # Dn of zone entry;
 
+  my %unicityTest = ();
+
   foreach my $entry ($mesg->entries()) {
     my $name = $entry->get_value("relativeDomainName");
     if(!$name) { print "no name\n"; next; }
@@ -156,6 +175,12 @@ sub zoneparse
     }
     while(my ($type,$list) = each %{$records}){
       foreach my $value ($entry->get_value($type."Record")) {
+        if (defined $unicityTest{$type.$name.$value.$class.$ttl}) {
+          # Avoid putting twice the same record
+          next;
+        } else {
+          $unicityTest{$type.$name.$value.$class.$ttl} = 1;
+        }
         if($type eq "txt") {
           push @{$list},{ name => $name, class => $class,
                           text => $value, ttl => $ttl, ORIGIN => $zone };
@@ -206,35 +231,105 @@ sub zoneparse
   return $dn;
 }
 
-=item get_reverse_zone
-Params : ldap handle, ldap base, zone dn
-Returns : reverse zone name
+=item viewparse
 =cut
-sub get_reverse_zone
+sub viewparse
+{
+  my ($ldap,$ldap_base,$view,$verbose) = @_;
+  my $mesg = $ldap->search(
+    base   => $ldap_base,
+    filter => "(&(objectClass=fdDNSView)(cn=$view))",
+  );
+
+  $mesg->code && die "Error while searching DNS View '$view' :".$mesg->error."\n";
+  print "Found ".scalar($mesg->entries())." results\n" if $verbose;
+
+  if (scalar($mesg->entries()) == 0) {
+    return;
+  }
+
+  my %view = (
+    'name'            => ($mesg->entries)[0]->get_value('cn'),
+    'clientsacl'      => (($mesg->entries)[0]->get_value('fdDNSViewMatchClientsAcl') or ''),
+    'destinationsacl' => (($mesg->entries)[0]->get_value('fdDNSViewMatchDestinationsAcl') or ''),
+    'recursiveonly'   => (($mesg->entries)[0]->get_value('fdDNSViewMatchRecursiveOnly') or 'FALSE'),
+    'zones'           => [],
+  );
+
+  my $zonesDN = ($mesg->entries)[0]->get_value('fdDNSZoneDn', asref => 1);
+
+  foreach my $zoneDN (@$zonesDN) {
+    my $mesg = $ldap->search (base => $zoneDN, filter => '(objectClass=*)', scope => 'base');
+    $mesg->code && die "Error while loading zone $zoneDN for DNS View '$view' :".$mesg->error."\n";
+    if (scalar($mesg->entries()) == 0) {
+      die "Could not find zone $zoneDN for DNS View '$view'\n";
+    }
+    push @{$view{zones}}, ($mesg->entries)[0]->get_value('zoneName');
+  }
+
+  return \%view;
+}
+
+=item aclsparse
+=cut
+sub aclsparse
+{
+  my ($ldap,$ldap_base,$verbose) = @_;
+  my $mesg = $ldap->search(
+    base    => $ldap_base,
+    filter  => "(objectClass=fdDNSAcl)",
+    attrs   => ['cn','fdDNSAclMatchList']
+  );
+
+  $mesg->code && die "Error while searching DNS acls:".$mesg->error."\n";
+  print "Found ".scalar($mesg->entries())." results\n" if $verbose;
+
+  my @entries = $mesg->entries();
+  my @acls    = ();
+
+  foreach my $entry (@entries) {
+    my @matchlist = $entry->get_value('fdDNSAclMatchList');
+    push @acls, {
+      'name'      => $entry->get_value('cn'),
+      'matchlist' => join(';', @matchlist),
+    }
+  }
+
+  return \@acls;
+}
+
+=item get_reverse_zones
+Params : ldap handle, ldap base, zone dn
+Returns : reverse zones names
+=cut
+sub get_reverse_zones
 {
   my($ldap,$ldap_base,$zone_dn) = @_;
   my $mesg = $ldap->search( # Searching reverse zone name
           base   => $zone_dn,
-          filter => "(&(zoneName=*)(relativeDomainName=@))",
+          filter => "(&(zoneName=*arpa*)(relativeDomainName=@))",
           scope => 'one',
           attrs => [ 'zoneName' ]
           );
 
   $mesg->code && die "Error while searching DNS reverse zone :".$mesg->error;
 
-  die "Error : found ".scalar($mesg->entries())." results  (1 expected) for reverse DNS zone of dn $zone_dn\n" if (scalar($mesg->entries()) != 1);
+  my @reverse_zones = ();
+  foreach my $entry ($mesg->entries()) {
+    push @reverse_zones, $entry->get_value("zoneName");
+  }
 
-  return ($mesg->entries)[0]->get_value("zoneName");
+  return \@reverse_zones;
 }
 
 =item create_namedconf
 Create file $output_BIND_DIR/named.conf.ldap2zone
-Params : zone name, reverse zone name
+Params : zone name, reverse zone names
 Returns :
 =cut
 sub create_namedconf
 {
-  my($zone,$reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose) = @_;
+  my($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$verbose,$view) = @_;
 
   if($ALLOW_NOTIFY eq "TRUE") {
     $ALLOW_NOTIFY = "notify yes;";
@@ -257,29 +352,73 @@ sub create_namedconf
   print "Writing named.conf file in $output_BIND_DIR/named.conf.ldap2zone.$zone\n" if $verbose;
   my $namedfile;
   open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone.$zone";
-  print $namedfile <<EOF;
-zone "$zone" {
-  type master;
-  $ALLOW_NOTIFY
-  file "$BIND_CACHE_DIR/db.$zone";
-  $ALLOW_UPDATE
-  $ALLOW_TRANSFER
-};
-EOF
-  if ($reverse_zone) {
+  my $zones;
+  if (defined $view) {
+    $zones = $view->{'zones'};
+
     print $namedfile <<EOF;
-zone "$reverse_zone" {
+view "$view->{'name'}" {
+EOF
+
+    if ($view->{'clientsacl'} ne '') {
+      print $namedfile <<EOF;
+  match-clients {$view->{'clientsacl'}; };
+EOF
+    }
+    if ($view->{'destinationsacl'} ne '') {
+      print $namedfile <<EOF;
+  match-destinations {$view->{'destinationsacl'}; };
+EOF
+    }
+    my $recursiveonly = ($view->{'recursiveonly'} eq "TRUE" ? "yes" : "no");
+    print $namedfile <<EOF;
+  match-recursive-only $recursiveonly;
+EOF
+  } else {
+    $zones = [$zone];
+  }
+  foreach my $zone_ (@$zones) {
+    print $namedfile <<EOF;
+zone "$zone_" {
   type master;
   $ALLOW_NOTIFY
-  file "$BIND_CACHE_DIR/db.$reverse_zone";
+  file "$BIND_CACHE_DIR/db.$zone_";
   $ALLOW_UPDATE
   $ALLOW_TRANSFER
 };
 EOF
   }
+  if (defined $view) {
+    print $namedfile <<EOF;
+};
+EOF
+  }
   close $namedfile;
+}
+
+=item create_acl_namedconf
+Create file $output_BIND_DIR/named.conf.acls
+=cut
+sub create_acl_namedconf
+{
+  my($acls,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose) = @_;
+
+  print "Writing named.conf file in $output_BIND_DIR/named.conf.acls\n" if $verbose;
+  my $namedfile;
+  open($namedfile, '>', "$output_BIND_DIR/named.conf.acls") or die "error while trying to open $output_BIND_DIR/named.conf.acls";
+  foreach my $acl (@$acls) {
+    print $namedfile <<EOF;
+  acl $acl->{'name'} {$acl->{'matchlist'}; };
+EOF
+  }
+}
+
+sub refresh_main_namedconf
+{
+  my($BIND_DIR,$output_BIND_DIR,$verbose) = @_;
 
   print "Writing file $output_BIND_DIR/named.conf.ldap2zone\n" if $verbose;
+  my $namedfile;
   open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone";
   opendir DIR, $output_BIND_DIR or die "Error while openning $output_BIND_DIR!";
   my @files = readdir DIR;

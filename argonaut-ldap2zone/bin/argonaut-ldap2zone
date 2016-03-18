@@ -32,6 +32,7 @@ use 5.008;
 use Argonaut::Libraries::Ldap2zone qw(argonaut_ldap2zone);
 
 my $zone_arg = undef;
+my $ldap2view = 0;
 my $verbose_arg = 0;
 my $norefresh = 0;
 my $noreverse;
@@ -39,7 +40,7 @@ my $dumpdir = '';
 
 sub print_usage
 {
-  print "Usage : argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] ZONE\n";
+  print "Usage : argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] [--ldap2acls] [--ldap2view view] ZONE\n";
   exit(0);
 }
 
@@ -56,6 +57,10 @@ foreach my $arg ( @ARGV ) {
     $norefresh = 1;
   } elsif (lc($arg) eq "--dumpdir") {
     undef $dumpdir;
+  } elsif (lc($arg) eq "--ldap2acls") {
+    $ldap2view = 'acls';
+  } elsif (lc($arg) eq "--ldap2view") {
+    $ldap2view = 'view';
   } elsif ($i_arg==0) {
     $zone_arg = $arg;
     $i_arg++;
@@ -70,10 +75,14 @@ if (not defined $dumpdir) {
 }
 
 if (!$zone_arg) {
-  print_usage();
+  if ($ldap2view eq 'acls') {
+    $zone_arg = '';
+  } else {
+    print_usage();
+  }
 }
 
-argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir,$noreverse);
+argonaut_ldap2zone($zone_arg,$verbose_arg,$norefresh,$dumpdir,$noreverse,$ldap2view);
 
 __END__
 
@@ -83,7 +92,7 @@ argonaut-ldap2zone - creating bind zone files and refreshing the server
 
 =head1 SYNOPSIS
 
-argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] ZONE
+argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] [--ldap2acls] [--ldap2view view] ZONE
 
 =head1 DESCRIPTION
 
@@ -109,6 +118,14 @@ Do not refresh bind zone with rndc
 
 Dump the zones and bind configuration to another dir for testing purposes
 
+=item B<--ldap2acls>
+
+Write the the acls needed for bind in named.conf.acls
+
+=item B<--ldap2view>
+
+Write the zones in view format when you want to do split horizon dns
+
 =back
 
 =head1 EXAMPLE
@@ -117,10 +134,18 @@ B<argonaut-ldap2zone --verbose fusiondirectory.org.>
 
  Write the updated zones from ldap and refresh bind
 
-B<argonaut-ldap2zone --verbose --norestart --dumpdir dnszone/ master.fdi>
+B<argonaut-ldap2zone --verbose --norestart --dumpdir dnszone/ fusiondirectory.org>
 
  Write the updated zones from ldap to another directory and don't refresh bind
 
+B<argonaut-ldap2zone --verbose --ldap2view internal fusiondirectory.org>
+
+ Write the updated zones from ldap in a bind view named internal and refresh bind
+
+B<argonaut-ldap2zone --verbose --ldap2acls>
+
+ Write the acls from ldap into named.conf.acls
+ 
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
