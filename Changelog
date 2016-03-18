@@ -3,12 +3,12 @@ Argonaut changelog
 
 * Argonaut 0.9.6
 
-Bugs #4493: It would be nice to accept more than one reverse zone with argonaut-ldap2zone
-Bugs #4494: Add aaaa record in argonaut-ldap2zone
-Bugs #4503: Merge reverse zone with argonaut-ldap2zone
-Bugs #4506: Support for split horizon should be added
-Bugs #4513: Argonaut-ldap2zone have an perl error when we not have a reverse zone in the LDAP
-Bugs #4607: add a --ldap2acl option in ldap2zone
+[Feature] Bugs #4493: It would be nice to accept more than one reverse zone with argonaut-ldap2zone
+[Feature] Bugs #4494: Add aaaa record in argonaut-ldap2zone
+[Feature] Bugs #4503: Merge reverse zone with argonaut-ldap2zone
+[Feature] Bugs #4506: Support for split horizon should be added
+[Fix] Bugs #4513: Argonaut-ldap2zone have an perl error when we not have a reverse zone in the LDAP
+[Feature] Bugs #4607: add a --ldap2acl option in ldap2zone
 
 * Argonaut 0.9.5
 
