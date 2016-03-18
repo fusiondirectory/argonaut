@@ -40,7 +40,7 @@ my $dumpdir = '';
 
 sub print_usage
 {
-  print "Usage : argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] [--ldap2view view] ZONE\n";
+  print "Usage : argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] [--ldap2acls] [--ldap2view view] ZONE\n";
   exit(0);
 }
 
@@ -92,7 +92,7 @@ argonaut-ldap2zone - creating bind zone files and refreshing the server
 
 =head1 SYNOPSIS
 
-argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] [--ldap2view view] ZONE
+argonaut-ldap2zone [--verbose] [--noreverse] [--norestart] [--dumpdir dir] [--ldap2acls] [--ldap2view view] ZONE
 
 =head1 DESCRIPTION
 
@@ -118,6 +118,10 @@ Do not refresh bind zone with rndc
 
 Dump the zones and bind configuration to another dir for testing purposes
 
+=item B<--ldap2acls>
+
+Write the the acls needed for bind in named.conf.acls
+
 =item B<--ldap2view>
 
 Write the zones in view format when you want to do split horizon dns
@@ -138,6 +142,10 @@ B<argonaut-ldap2zone --verbose --ldap2view internal fusiondirectory.org>
 
  Write the updated zones from ldap in a bind view named internal and refresh bind
 
+B<argonaut-ldap2zone --verbose --ldap2acls>
+
+ Write the acls from ldap into named.conf.acls
+ 
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
