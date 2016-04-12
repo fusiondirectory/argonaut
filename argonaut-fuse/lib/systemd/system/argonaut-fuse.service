@@ -10,5 +10,5 @@ ExecStop=/bin/sh -c "/bin/fusermount -u $(cat /var/log/argonaut/argonaut-fuse.lo
 PIDFile=/var/run/argonaut/argonaut-fuse.pid
 
 [Install]
-WantedBy=muli-user.target
+WantedBy=multi-user.target
 

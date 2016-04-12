@@ -8,5 +8,5 @@ ExecStart=/usr/sbin/argonaut-client
 PIDFile=/var/run/argonaut/argonaut-client.pid
 
 [Install]
-WantedBy=muli-user.target
+WantedBy=multi-user.target
 
