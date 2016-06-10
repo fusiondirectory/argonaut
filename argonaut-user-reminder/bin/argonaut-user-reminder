@@ -34,9 +34,6 @@ use Net::LDAP;
 
 use Digest::SHA qw(sha256_base64);
 
-# To hide password input
-use Term::ReadKey;
-
 use Argonaut::Libraries::Common qw(:ldap :config);
 
 #~ use Data::Dumper;
@@ -47,65 +44,11 @@ use Email::MIME;
 # send the message
 use Email::Sender::Simple qw(sendmail);
 
-my $yes_flag = 0;
-
 my $die_endl = "\n"; # Change to "" to have verbose dies
 
 my $config;
 
 ##########################################################################################
-
-# ask a question send as parameter, and return true if the answer is "yes"
-sub ask_yn_question {
-  return 1 if ($yes_flag);
-  my ($question) = @_;
-  print ( "$question [Yes/No]?\n" );
-
-  while ( my $input = <STDIN> ) {
-    # remove the \n at the end of $input
-    chomp $input;
-
-    # if user's answer is "yes"
-    if ( lc($input) eq "yes" || lc($input) eq "y") {
-      return 1;
-    # else if he answer "no"
-    } elsif ( lc($input) eq "no" || lc($input) eq "n") {
-      return 0;
-    }
-  }
-}
-
-# function that ask for an user input and do some checks
-sub ask_user_input {
- my ($thing_to_ask, $default_answer, $hide_input) = @_;
- my $answer;
-
- if (defined $default_answer) {
-   $thing_to_ask .= " [$default_answer]";
- }
- print $thing_to_ask.":\n";
-
- if (defined $hide_input && $hide_input) {
-   ReadMode('noecho');
- }
-
- do
- {
-   if ($answer = <STDIN>) {
-     chomp $answer;
-     $answer =~ s/^\s+|\s+$//g;
-   } else {
-     $answer = "";
-   }
- } while (($answer eq "") && (not defined $default_answer));
-
- ReadMode('restore');
-
- if ($answer eq "") {
-   return $default_answer;
- }
- return $answer;
-}
 
 # Die on all LDAP error except for «No such object»
 sub die_on_ldap_errors
@@ -381,11 +324,8 @@ foreach my $arg ( @ARGV ) {
     while ( my ( $key,$value ) = each %commands ) {
       print ( "$key\t".$value->[0]."\n" );
     }
-    print ("--yes\t\t\tAlways answer yes to yes/no questions\n");
     print ("--help\t\t\tShows this help\n\n");
     exit 0;
-  } elsif (( lc($arg) eq "--yes" ) || ( lc($arg) eq "-y" )) {
-    $yes_flag = 1;
   } else {
     print ("\nInvalid argument\n\n");
     $usage = 1;
@@ -393,7 +333,7 @@ foreach my $arg ( @ARGV ) {
 }
 
 if( $usage ) {
-  print ( "Usage : $0 [--yes]" );
+  print ( "Usage : $0" );
   foreach my $command ( keys ( %commands )) {
     print ( " [$command]" );
   }
