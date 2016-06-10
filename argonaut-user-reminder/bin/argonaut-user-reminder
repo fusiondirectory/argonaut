@@ -320,3 +320,53 @@ if( $usage ) {
 exit 0;
 
 __END__
+
+=head1 NAME
+
+argonaut-user-reminder - read account expiration date from ldap and send emails reminders
+
+=head1 SYNOPSIS
+
+argonaut-user-reminder [--verbose]
+
+=head1 DESCRIPTION
+
+argonaut-user-reminder is a program used to read account expiration dates from the LDAP.
+It reads the delay before expiration from the LDAP and send emails for user to postpone
+expiration date.
+
+=head1 OPTIONS
+
+=over 3
+
+=item B<--verbose>
+
+be verbose
+
+=back
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 AUTHORS
+
+Come Bernigaud
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of Argonaut Project <https://www.argonaut-project.org/>
+
+=over 1
+
+=item Copyright (C) 2015-2016 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
