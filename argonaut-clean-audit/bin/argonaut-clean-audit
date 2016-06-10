@@ -1,0 +1,135 @@
+#!/usr/bin/perl
+
+#######################################################################
+#
+# Cleaning old audit entries
+#
+# Copyright (C) 2015-2016 FusionDirectory project
+#
+# Author: Côme BERNIGAUD
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+#######################################################################
+
+use strict;
+use warnings;
+
+use 5.008;
+
+use Argonaut::Libraries::Common qw(:ldap :config);
+
+my $verbose = 0;
+
+sub print_usage
+{
+  print "Usage : argonaut-clean-audit [--verbose]\n";
+  exit(0);
+}
+
+foreach my $arg ( @ARGV ) {
+  if (lc($arg) eq "--verbose") {
+    $verbose = 1;
+  } else {
+    print_usage();
+  }
+}
+
+my $config = argonaut_read_config;
+my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
+
+my $mesg = $ldap->search( # Search for plugin configuration
+  base   => $ldap_base,
+  filter => "(&(objectClass=fdAuditPluginConf)(fdAuditRotationDelay=*))",
+  attrs => [ 'fdAuditRotationDelay' ]
+);
+if ($mesg->code != 0) {
+  die "LDAP error: " . $mesg->error . "(" . $mesg->code . ")\n";
+}
+
+my $delay = ($mesg->entries)[0]->get_value("fdAuditRotationDelay");
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time() - $delay * 24 * 60 * 60);
+my $date = sprintf("%04d%02d%02d%02d%02d%02dZ", 1900 + $year, 1 + $mon, $mday, $hour, $min, $sec);
+
+$mesg = $ldap->search( # list obsolete audit events
+  base   => $ldap_base,
+  filter => "(&(objectClass=fdAuditEvent)(fdAuditDateTime<=$date))",
+  attrs => [ 'dn' ]
+);
+if ($mesg->code != 0) {
+  die "LDAP error: " . $mesg->error . "(" . $mesg->code . ")\n";
+}
+
+my $count = 0;
+foreach my $entry ($mesg->entries()) {
+  $mesg = $ldap->delete($entry);
+  if ($mesg->is_error()) {
+    print "Error: " . $mesg->error . "(" . $mesg->code . ")\n";
+  } else {
+    $count++;
+  }
+}
+print "Deleted $count audit event entries\n";
+
+__END__
+
+=head1 NAME
+
+argonaut-clean-audit - delete old audit entries from the LDAP
+
+=head1 SYNOPSIS
+
+argonaut-clean-audit [--verbose]
+
+=head1 DESCRIPTION
+
+argonaut-clean-audit is a program used to delete old audit entries from the LDAP.
+It reads the delay before deletion from LDAP in fdAuditRotationDelay.
+
+=head1 OPTIONS
+
+=over 3
+
+=item B<--verbose>
+
+be verbose
+
+=back
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 AUTHORS
+
+Come Bernigaud
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of Argonaut Project <https://www.argonaut-project.org/>
+
+=over 1
+
+=item Copyright (C) 2015-2016 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
