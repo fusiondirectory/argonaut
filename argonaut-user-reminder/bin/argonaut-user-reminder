@@ -143,14 +143,6 @@ sub read_ldap_config {
   return ($mesg->entries)[0];
 }
 
-# function that list variables that can be modified by the user
-sub list_vars {
-  while ( my ($key, $value) = each(%$config) ) {
-    print "$key\t[$value]"."\n";
-  }
-  exit 0;
-}
-
 sub check_expired_users {
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
   $config->{'ldap_base'} = $ldap_base;
@@ -306,16 +298,11 @@ $config->{'fd_rdn'}      = 'ou=fusiondirectory,';
 my @vars_keys = keys %$config;
 
 my %commands = ();
-$commands{"--list-vars"}            = ["List possible vars to give --set",              \&list_vars];
-$commands{"--set-VAR=value"}        = ["Set the variable VAR to value see --list-vars", \&die]; # Won't be called because it contains uppercase
 
 my $usage = 0;
 
 foreach my $arg ( @ARGV ) {
-  if (( lc($arg) =~ m/^--set-(.*)=(.*)$/ ) && (grep {$_ eq lc($1)} @vars_keys)) {
-    $config->{lc($1)} = $2;
-    print "Setting $1 to $2\n";
-  } elsif ( defined $commands { lc ( $arg ) } ) {
+  if ( defined $commands { lc ( $arg ) } ) {
     my @command = @{ $commands{ $arg } };
     print( $command[0]."\n" );
     $command[1]();
