@@ -2,7 +2,7 @@
 
 ########################################################################
 #
-#  fusiondirectory-user-reminder
+#  argonaut-user-reminder
 #
 #  Check for expired users and send them a mail allowing to postpone expiration
 #
@@ -37,8 +37,9 @@ use Digest::SHA qw(sha256_base64);
 # To hide password input
 use Term::ReadKey;
 
+use Argonaut::Libraries::Common qw(:ldap :config);
+
 #~ use Data::Dumper;
-use Config::IniFiles;
 
 # first, create your message
 use Email::MIME;
@@ -47,8 +48,6 @@ use Email::MIME;
 use Email::Sender::Simple qw(sendmail);
 
 my $yes_flag = 0;
-
-my $configfile = "/etc/fusiondirectory/fusiondirectory-user-reminder.conf";
 
 my $die_endl = "\n"; # Change to "" to have verbose dies
 
@@ -130,121 +129,6 @@ sub get_random_string {
 
 #############################################################
 
-# function that initiate the ldap connexion and bind
-sub get_ldap_connection {
-  my ($config)  = @_;
-
-  # Parse ldap config
-  open (LDAPCONF, $config->{'ldap_configfile'}) or die "Could not open ".$config->{'ldap_configfile'}."\n";
-
-  my @content = <LDAPCONF>;
-  close(LDAPCONF);
-
-  my ($ldap_base, @ldap_uris, %tls_options);
-  # Scan LDAP config
-  foreach my $line (@content) {
-    $line =~ /^\s*(#|$)/ && next;
-    chomp($line);
-
-    if ($line =~ /^BASE\s+(.*)$/i) {
-      $ldap_base = $1;
-      next;
-    }
-    if ($line =~ /^URI\s+(.*)\s*$/i) {
-      my (@ldap_servers) = split( ' ', $1 );
-      foreach my $server (@ldap_servers) {
-        if ( $server =~ /^((ldap[si]?:\/\/)([^\/:\s]+)?(:([0-9]+))?\/?)$/ ) {
-          my $ldap_server = $3 ? $1 : $2.'localhost';
-          $ldap_server =~ s/\/\/127\.0\.0\.1/\/\/localhost/;
-          push @ldap_uris, $ldap_server
-          if ( ! grep { $_ =~ /^$ldap_server$/ } @ldap_uris );
-        }
-      }
-      next;
-    }
-    if ($line =~ m/^TLS_(REQCERT|CERT|KEY|CACERTDIR)\s+(.*)\s*$/) {
-      $tls_options{$1} = $2;
-      next;
-    }
-  }
-
-  if ( ! defined $ldap_base ) {
-    die "Couldn't find LDAP base in config!$die_endl";
-  }
-
-  $config->{'ldap_base'} = $ldap_base;
-
-  if ( scalar(@ldap_uris) == 0 ) {
-    die "Couldn't find LDAP URI in config!$die_endl";
-  }
-
-  my $ldap = Net::LDAP->new( \@ldap_uris );
-
-  if ( ! defined $ldap ) {
-    die "LDAP 'new' error: '$@' with parameters '".join(",",@ldap_uris)."'$die_endl";
-  }
-
-  if ($config->{'ldap_tls'}) {
-    $ldap->start_tls(
-      verify      => $tls_options{'REQCERT'},
-      clientcert  => $tls_options{'CERT'},
-      clientkey   => $tls_options{'KEY'},
-      capath      => $tls_options{'CACERTDIR'}
-    );
-  }
-
-  my $mesg;
-  if( defined $config->{'ldap_dn'} ) {
-    if( defined $config->{'ldap_password'} ) {
-      $mesg = $ldap->bind( $config->{'ldap_dn'}, password => $config->{'ldap_password'} );
-    } else {
-      $mesg = $ldap->bind( $config->{'ldap_dn'} );
-    }
-  } else {
-    $mesg = $ldap->bind(); # Anonymous bind
-  }
-
-  if ( $mesg->code != 0 ) {
-    die "LDAP bind error: " . $mesg->error . "(" . $mesg->code . ")$die_endl";
-  }
-
-  return $ldap;
-}
-
-sub read_config_file {
-  my %res = ();
-  my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
-  if (not defined $config) {
-    die "Could not read configuration file $configfile".$die_endl;
-  }
-
-  $res{'ldap_configfile'} = $config->val( ldap  => "config",    "/etc/ldap/ldap.conf");
-  $res{'ldap_dn'}         = $config->val( ldap  => "dn",        "");
-  $res{'ldap_password'}   = $config->val( ldap  => "password",  "");
-  $res{'ldap_tls'}        = $config->val( ldap  => "tls",       "off");
-  #~ $res{'base_url'}        = $config->val( fd    => "url",       "https://localhost/fusiondirectory/");
-
-  if ($res{'ldap_tls'} !~ m/^off|on$/i) {
-    warn "Unknown value for option ldap/tls: ".$res{'ldap_tls'}." (valid values are on/off)\n";
-  }
-  $res{'ldap_tls'} = ($res{'ldap_tls'} =~ m/^on$/i);
-
-  if (!defined $res{'ldap_configfile'}) {
-    if (exists $ENV{'LDAPCONF'}) {
-      $res{'ldap_configfile'} = $ENV{'LDAPCONF'};
-    } else {
-      $res{'ldap_configfile'} = "/etc/ldap/ldap.conf";
-    }
-  }
-
-  undef $res{'ldap_dn'} if ($res{'ldap_dn'} eq '');
-
-  $res{'config_rdn'}  = 'cn=config,ou=fusiondirectory';
-  $res{'fd_rdn'}      = 'ou=fusiondirectory,';
-
-  return \%res;
-}
-
 sub create_branch {
   my ($ldap, $base, $ou) = @_;
   $ou =~ m/^ou=([^,]*),?$/ or die "Can’t create branch of unknown type $ou\n";
@@ -325,7 +209,8 @@ sub list_vars {
 }
 
 sub check_expired_users {
-  my $ldap = get_ldap_connection($config);
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
+  $config->{'ldap_base'} = $ldap_base;
   read_ldap_config($ldap);
 
   my $today = int(time() / 86400); # 24 * 60 * 60
@@ -471,7 +356,9 @@ sub store_ldap_token
 
 #################### main function #####################
 
-$config = read_config_file();
+$config = argonaut_read_config;
+$config->{'config_rdn'}  = 'cn=config,ou=fusiondirectory';
+$config->{'fd_rdn'}      = 'ou=fusiondirectory,';
 
 my @vars_keys = keys %$config;
 
