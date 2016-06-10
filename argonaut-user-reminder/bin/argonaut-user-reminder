@@ -34,7 +34,7 @@ use Net::LDAP;
 
 use Digest::SHA qw(sha256_base64);
 
-use Argonaut::Libraries::Common qw(:ldap :config);
+use Argonaut::Libraries::Common qw(:ldap :string :config);
 
 #~ use Data::Dumper;
 
@@ -57,17 +57,6 @@ sub die_on_ldap_errors
   if (($mesg->code != 0) && ($mesg->code != 32)) {
     die $mesg->error;
   }
-}
-
-######################################################
-
-sub get_random_string {
-  my ($size) = @_;
-  $size = 32 if !$size;
-  my @chars = ("A".."Z", "a".."z", '.', '/', 0..9);
-  my $string;
-  $string .= $chars[rand @chars] for 1..$size;
-  return $string;
 }
 
 #############################################################
@@ -261,7 +250,7 @@ sub store_ldap_token
 {
   my ($ldap, $uid, $date) = @_;
 
-  my $token_password  = get_random_string(48);
+  my $token_password  = argonaut_gen_random_str(48);
   my $token_hash      = sha256_base64('expired'.$token_password);
   while (length($token_hash) % 4) {
     $token_hash .= '=';
