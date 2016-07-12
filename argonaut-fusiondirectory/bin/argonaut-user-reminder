@@ -29,14 +29,9 @@ use strict;
 use warnings;
 use 5.008;
 
-# used to handle ldap connections
-use Net::LDAP;
-
 use Digest::SHA qw(sha256_base64);
 
 use Argonaut::Libraries::Common qw(:ldap :string :config);
-
-#~ use Data::Dumper;
 
 # first, create your message
 use Email::MIME;
@@ -47,6 +42,30 @@ use Email::Sender::Simple qw(sendmail);
 my $die_endl = "\n"; # Change to "" to have verbose dies
 
 my $config;
+
+$config = argonaut_read_config;
+$config->{'config_rdn'}  = 'cn=config,ou=fusiondirectory';
+$config->{'fd_rdn'}      = 'ou=fusiondirectory,';
+
+my $verbose = 0;
+
+sub print_usage
+{
+  print "Usage : argonaut-user-reminder [--verbose]\n";
+  exit(0);
+}
+
+foreach my $arg ( @ARGV ) {
+  if (lc($arg) eq "--verbose") {
+    $verbose = 1;
+  } else {
+    print_usage();
+  }
+}
+
+check_expired_users();
+
+exit 0;
 
 ##########################################################################################
 
@@ -278,45 +297,54 @@ sub store_ldap_token
   return $token_password;
 }
 
-#################### main function #####################
-
-$config = argonaut_read_config;
-$config->{'config_rdn'}  = 'cn=config,ou=fusiondirectory';
-$config->{'fd_rdn'}      = 'ou=fusiondirectory,';
-
-my @vars_keys = keys %$config;
-
-my %commands = ();
-
-my $usage = 0;
-
-foreach my $arg ( @ARGV ) {
-  if ( defined $commands { lc ( $arg ) } ) {
-    my @command = @{ $commands{ $arg } };
-    print( $command[0]."\n" );
-    $command[1]();
-  } elsif ( ( lc($arg) eq "--help" ) || ( lc($arg) eq "-h" ) ) {
-    print ( "\nCommands:\n" );
-    while ( my ( $key,$value ) = each %commands ) {
-      print ( "$key\t".$value->[0]."\n" );
-    }
-    print ("--help\t\t\tShows this help\n\n");
-    exit 0;
-  } else {
-    print ("\nInvalid argument\n\n");
-    $usage = 1;
-  }
-}
-
-if( $usage ) {
-  print ( "Usage : $0" );
-  foreach my $command ( keys ( %commands )) {
-    print ( " [$command]" );
-  }
-  print "\n\n";
-} else {
-  check_expired_users();
-}
-exit 0;
-
 __END__
+
+=head1 NAME
+
+argonaut-user-reminder - read account expiration date from ldap and send emails reminders
+
+=head1 SYNOPSIS
+
+argonaut-user-reminder [--verbose]
+
+=head1 DESCRIPTION
+
+argonaut-user-reminder is a program used to read account expiration dates from the LDAP.
+It reads the delay before expiration from the LDAP and send emails for user to postpone
+expiration date.
+
+=head1 OPTIONS
+
+=over 3
+
+=item B<--verbose>
+
+be verbose
+
+=back
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 AUTHORS
+
+Come Bernigaud
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of Argonaut Project <https://www.argonaut-project.org/>
+
+=over 1
+
+=item Copyright (C) 2015-2016 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut
