@@ -8,5 +8,5 @@ ExecStart=/usr/sbin/argonaut-fai-monitor
 PIDFile=/var/run/argonaut/argonaut-fai-monitor.pid
 
 [Install]
-WantedBy=muli-user.target
+WantedBy=multi-user.target
 

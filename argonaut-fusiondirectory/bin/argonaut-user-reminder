@@ -1,0 +1,350 @@
+#!/usr/bin/perl
+
+########################################################################
+#
+#  argonaut-user-reminder
+#
+#  Check for expired users and send them a mail allowing to postpone expiration
+#
+#  This code is part of FusionDirectory (http://www.fusiondirectory.org/)
+#  Copyright (C) 2016  FusionDirectory
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+########################################################################
+
+use strict;
+use warnings;
+use 5.008;
+
+use Digest::SHA qw(sha256_base64);
+
+use Argonaut::Libraries::Common qw(:ldap :string :config);
+
+# first, create your message
+use Email::MIME;
+
+# send the message
+use Email::Sender::Simple qw(sendmail);
+
+my $die_endl = "\n"; # Change to "" to have verbose dies
+
+my $config;
+
+$config = argonaut_read_config;
+$config->{'config_rdn'}  = 'cn=config,ou=fusiondirectory';
+$config->{'fd_rdn'}      = 'ou=fusiondirectory,';
+
+my $verbose = 0;
+
+sub print_usage
+{
+  print "Usage : argonaut-user-reminder [--verbose]\n";
+  exit(0);
+}
+
+foreach my $arg ( @ARGV ) {
+  if (lc($arg) eq "--verbose") {
+    $verbose = 1;
+  } else {
+    print_usage();
+  }
+}
+
+check_expired_users();
+
+exit 0;
+
+##########################################################################################
+
+# Die on all LDAP error except for «No such object»
+sub die_on_ldap_errors
+{
+  my ($mesg) = @_;
+  if (($mesg->code != 0) && ($mesg->code != 32)) {
+    die $mesg->error;
+  }
+}
+
+#############################################################
+
+sub create_branch {
+  my ($ldap, $base, $ou) = @_;
+  $ou =~ m/^ou=([^,]*),?$/ or die "Can’t create branch of unknown type $ou\n";
+  my $branch_add = $ldap->add( "$ou,$base",
+    attr => [
+      'ou'  => $1,
+      'objectClass' =>  'organizationalUnit'
+      ]
+  );
+
+  $branch_add->code && die "! failed to add LDAP's $ou,$base branch: ".$branch_add->error."\n";
+}
+
+sub branch_exists {
+  my ($ldap, $branch) = @_;
+
+  # search for branch
+  my $branch_mesg = $ldap->search (base => $branch, filter => '(objectClass=*)', scope => 'base');
+  if ($branch_mesg->code == 32) {
+    return 0;
+  }
+  $branch_mesg->code && die $branch_mesg->error;
+
+  my @entries = $branch_mesg->entries;
+  return (defined ($entries[0]));
+}
+
+# Read FD config in the LDAP
+sub read_ldap_config {
+  my ($ldap) = @_;
+
+  my $mesg = $ldap->search (base => $config->{'config_rdn'}.','.$config->{'ldap_base'}, filter => '(objectClass=fusionDirectoryConf)', scope => 'base');
+  die_on_ldap_errors($mesg);
+
+
+  # Days before expiration to send the first mail
+  $config->{'alert_delay'}       = 15;
+  # Days after first mail to send a new one
+  $config->{'resend_delay'}      = 7;
+  # Should alert mails be forwarded to the manager
+  $config->{'forward_alert'}     = 1;
+
+  $config->{'user_rdn'}  = 'ou=people,';
+  $config->{'token_rdn'} = 'ou=tokens,';
+
+  if ($mesg->count > 0) {
+    if (($mesg->entries)[0]->exists('fdUserRDN')) {
+      $config->{'user_rdn'} = ($mesg->entries)[0]->get_value('fdUserRDN');
+    }
+    if (($mesg->entries)[0]->exists('fdTokenRDN')) {
+      $config->{'token_rdn'} = ($mesg->entries)[0]->get_value('fdTokenRDN');
+    }
+    if (($mesg->entries)[0]->exists('fdUserReminderAlertDelay')) {
+      $config->{'alert_delay'} = ($mesg->entries)[0]->get_value('fdUserReminderAlertDelay');
+    }
+    if (($mesg->entries)[0]->exists('fdUserReminderResendDelay')) {
+      $config->{'resend_delay'} = ($mesg->entries)[0]->get_value('fdUserReminderResendDelay');
+    }
+    if (($mesg->entries)[0]->exists('fdUserReminderForwardAlert')) {
+      $config->{'forward_alert'} = (($mesg->entries)[0]->get_value('fdUserReminderForwardAlert') eq "TRUE");
+    }
+    $config->{'alert_mailsubject'}  = ($mesg->entries)[0]->get_value('fdUserReminderAlertSubject');
+    $config->{'alert_mailbody'}     = ($mesg->entries)[0]->get_value('fdUserReminderAlertBody');
+    $config->{'alert_mailaddress'}  = ($mesg->entries)[0]->get_value('fdUserReminderEmail');
+  } else {
+    die "Could not find configuration node in the LDAP".$die_endl;
+  }
+
+  return ($mesg->entries)[0];
+}
+
+sub check_expired_users {
+  my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
+  $config->{'ldap_base'} = $ldap_base;
+  read_ldap_config($ldap);
+
+  my $today = int(time() / 86400); # 24 * 60 * 60
+
+  my $next_expired_date = ($today + $config->{'alert_delay'});
+
+  my $filter = '(&(objectClass=person)(shadowExpire=*))';
+  my $mesg = $ldap->search(
+    base    => $config->{'ldap_base'},
+    filter  => $filter,
+    scope   => 'subtree'
+  );
+  die_on_ldap_errors($mesg);
+
+  foreach my $entry ($mesg->entries()) {
+    my $cn = $entry->get_value('cn');
+    if ($entry->get_value('shadowExpire') <= $today) {
+      print "$cn is Expired\n";
+    } elsif ($entry->get_value('shadowExpire') <= $next_expired_date) {
+      #~ Check if we have a mail address for this user.
+      my $mail_address = $entry->get_value('mail');
+      if (not defined $mail_address) {
+        print "User $cn has no mail address, skipping…\n";
+        next;
+      }
+      my ($token_hash, $token_date) = get_ldap_token($ldap, $entry->get_value('uid'));
+      #~ Check if we already sent an email.
+      if ((defined $token_date) && ($token_date + $config->{'resend_delay'} > $today)) {
+        print "User $cn was already sent a mail, not resending yet.\n";
+        next;
+      }
+      my ($manager_cn, $manager_mail);
+      if ($config->{'forward_alert'}) {
+        #~ Find the manager
+        my $manager_dn = $entry->get_value('manager');
+        if (not defined $manager_dn) {
+          my $ou = $entry->dn;
+          $ou =~ s/^[^,]+,$config->{'user_rdn'}//;
+          my $manager_mesg = $ldap->search(
+            base    => $ou,
+            filter  => '(objectClass=*)',
+            scope   => 'base'
+          );
+          if ($manager_mesg->count() > 0) {
+            $manager_dn = ($manager_mesg->entries)[0]->get_value('manager');
+          }
+        }
+        if (not defined $manager_dn) {
+          print "No manager found for $cn\n";
+        }
+        my $manager_mesg = $ldap->search(
+          base    => $manager_dn,
+          filter  => '(objectClass=*)',
+          scope   => 'base'
+        );
+        if ($manager_mesg->count() > 0) {
+          $manager_cn   = ($manager_mesg->entries)[0]->get_value('cn');
+          $manager_mail = ($manager_mesg->entries)[0]->get_value('mail');
+        }
+      }
+      send_alert_mail($ldap, $entry->get_value('uid'), $today, $cn, $mail_address, $manager_cn, $manager_mail);
+    }
+  }
+}
+
+sub send_alert_mail
+{
+  my ($ldap, $uid, $date, $user_cn, $user_mail, $manager_cn, $manager_mail) = @_;
+  my $token = store_ldap_token($ldap, $uid, $date);
+  print "Sending mail to $user_cn<$user_mail>";
+  my $cc = "";
+  if (defined $manager_mail) {
+    print ", copy to $manager_cn<$manager_mail>";
+    $cc = "$manager_cn<$manager_mail>";
+  }
+  print " with token $token\n";
+  my $message = Email::MIME->create(
+    header_str => [
+      From    => $config->{'alert_mailaddress'},
+      To      => "$user_cn<$user_mail>",
+      Cc      => $cc,
+      Subject => $config->{'alert_mailsubject'},
+    ],
+    attributes => {
+      encoding => 'quoted-printable',
+      charset  => 'UTF-8',
+    },
+    body_str => sprintf($config->{'alert_mailbody'},$user_cn,$uid,$token),
+  );
+  sendmail($message);
+}
+
+sub get_ldap_token
+{
+  my ($ldap, $uid) = @_;
+
+  my $dn = "ou=$uid,".$config->{'token_rdn'}.$config->{'fd_rdn'}.$config->{'ldap_base'};
+
+  my $mesg = $ldap->search(
+    base    => $dn,
+    filter  => "(ou=$uid)",
+    scope   => 'base'
+  );
+
+  if ($mesg->count()) {
+    return (($mesg->entries)[0]->get_value('userPassword'), ($mesg->entries)[0]->get_value('description'));
+  } else {
+    return ();
+  }
+}
+
+sub store_ldap_token
+{
+  my ($ldap, $uid, $date) = @_;
+
+  my $token_password  = argonaut_gen_random_str(48);
+  my $token_hash      = sha256_base64('expired'.$token_password);
+  while (length($token_hash) % 4) {
+    $token_hash .= '=';
+  }
+  $token_hash = "{SHA}".$token_hash;
+
+  my $dn = "ou=$uid,".$config->{'token_rdn'}.$config->{'fd_rdn'}.$config->{'ldap_base'};
+
+  if (!branch_exists($ldap, $config->{'token_rdn'}.$config->{'fd_rdn'}.$config->{'ldap_base'})) {
+    create_branch($ldap, $config->{'fd_rdn'}.$config->{'ldap_base'}, $config->{'token_rdn'});
+  }
+
+  my $mesg = $ldap->add(
+    $dn,
+    attr => [
+      'ou'            => $uid,
+      'objectClass'   => 'organizationalUnit',
+      'userPassword'  => $token_hash,
+      'description'   => $date
+    ]
+  );
+
+  $mesg->code && die "! failed to add LDAP's $dn token: ".$mesg->error."\n";
+
+  return $token_password;
+}
+
+__END__
+
+=head1 NAME
+
+argonaut-user-reminder - read account expiration date from ldap and send emails reminders
+
+=head1 SYNOPSIS
+
+argonaut-user-reminder [--verbose]
+
+=head1 DESCRIPTION
+
+argonaut-user-reminder is a program used to read account expiration dates from the LDAP.
+It reads the delay before expiration from the LDAP and send emails for user to postpone
+expiration date.
+
+=head1 OPTIONS
+
+=over 3
+
+=item B<--verbose>
+
+be verbose
+
+=back
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
+<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+
+=head1 AUTHORS
+
+Come Bernigaud
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of Argonaut Project <https://www.argonaut-project.org/>
+
+=over 1
+
+=item Copyright (C) 2015-2016 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+=cut

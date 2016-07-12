@@ -19,3 +19,6 @@ documentation and additional help.
   
 * Jonathan Swaelens <jonathan@opensides.be>
   QA, Testing, Systemd units  
+
+* Sean Thatcher papertray3@gmail.com
+  Corrected Argonaut systemd units

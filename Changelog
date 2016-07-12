@@ -1,6 +1,12 @@
 Argonaut changelog
 ==================
 
+* Argonaut 0.9.7
+
+[Fix] Bugs #4691: the systemd unit files have a syntax error
+[Feature] Bugs #4864: migrate the script for user-reminder to the argonaut-framework
+[Feature] Bugs #4865: create argonaut-clean-audit to remove old audit entries from ldap
+
 * Argonaut 0.9.6
 
 [Feature] Bugs #4493: It would be nice to accept more than one reverse zone with argonaut-ldap2zone
