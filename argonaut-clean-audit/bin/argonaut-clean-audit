@@ -58,6 +58,9 @@ my $mesg = $ldap->search( # Search for plugin configuration
 if ($mesg->code != 0) {
   die "LDAP error: " . $mesg->error . "(" . $mesg->code . ")\n";
 }
+if ($mesg->count == 0) {
+  die "Could not find fdAuditRotationDelay setting in the LDAP\n";
+}
 
 my $delay = ($mesg->entries)[0]->get_value("fdAuditRotationDelay");
 my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time() - $delay * 24 * 60 * 60);
