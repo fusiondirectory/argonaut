@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Argonaut::ClientDaemon::Modules::SambaShares -- Creating Samba-Sahre Definitions from FusionDirectory
+# Argonaut::ClientDaemon::Modules::SambaShares -- Creating Samba-Share Definitions from FusionDirectory
 #
 # Author : Thomas Niercke
 # Version: 0.0.1
