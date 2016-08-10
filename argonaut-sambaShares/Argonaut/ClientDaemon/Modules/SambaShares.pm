@@ -1,6 +1,6 @@
 #######################################################################
 #
-# Argonaut::ClientDaemon::Modules::SambaShares -- System management systemd version
+# Argonaut::ClientDaemon::Modules::SambaShares -- Creating Samba-Sahre Definitions from FusionDirectory
 #
 # Author : Thomas Niercke
 # Version: 0.0.1
@@ -46,73 +46,30 @@
 #                    otherwise the share can be seen by anyone, regardless access to it.
 #######################################################################
 
-package Argonaut::ClientDaemon::Modules::SambaShares; 
-use strict; 
-use warnings; 
-use 5.008; 
-use Argonaut::Libraries::Common qw(:ldap :config); 
-use Net::Address::IP::Local; 
+package Argonaut::ClientDaemon::Modules::SambaShares;
+use strict;
+use warnings;
+use 5.008;
+use Argonaut::Libraries::Common qw(:ldap :config);
 use Digest::MD5 qw(md5_hex);
 use File::Slurp;
 
-
-my $base; 
+my $base;
 BEGIN {
   $base = (USE_LEGACY_JSON_RPC ? "JSON::RPC::Legacy::Procedure" : "JSON::RPC::Procedure");
 }
-use base $base; 
+use base $base;
 
 =item trim
 trims whitespaces from a given string
 =cut
 
-sub trim($)
+sub trim($) : Private
 {
-	my $string = shift;
-	$string =~ s/^\s+//;
-	$string =~ s/\s+$//;
-	return $string;
-}
-
-=item getShares 
-get the shares for this machine from the ldap 
-=cut 
-
-sub getShares : Private {
-	my $config = argonaut_read_config;
-	my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
-	my $clientIP = Net::Address::IP::Local->public;
-	
-	$main::log->notice("SambaShares -> Searching for shared for host with ip " . $clientIP . " ...\n");
-	
-	my $mesg = $ldap->search(
-		base => $ldap_base,
-		filter => "(&(objectClass=goShareServer)(ipHostNumber=".$clientIP."))",
-		attrs => ['cn','goExportEntry','description','ipHostNumber']
-        );
-
-   
-	$mesg->code && $main::log->error( "Error while searching Share-Server with IP '$clientIP' :".$mesg->error."\n");
-	$mesg->code && die "Error while searching Share-Server with IP '$clientIP' :".$mesg->error."\n";
- 
-	if (scalar($mesg->entries()) == 0) {
-		return;
-	}
-  
-	my %samba = (
-		'serverName' => ($mesg->entries)[0]->get_value('cn'),
-		'serverIP' => (($mesg->entries)[0]->get_value('ipHostNumber') or ''),
-		'description' => (($mesg->entries)[0]->get_value('description') or ''),
-		'shares' => [],
-	);
-
-	my $arShares = ($mesg->entries)[0]->get_value('goExportEntry', asref => 1);
-        my $shareList;
-	foreach my $share (@$arShares) {
-		push @{$samba{shares}}, $share;
-	}
- 
-	return \%samba;
+        my $string = shift;
+        $string =~ s/^\s+//;
+        $string =~ s/\s+$//;
+        return $string;
 }
 
 =item writeShareConfig
@@ -123,11 +80,10 @@ which then must be included in /etc/samba/smb.conf
 
 sub writeShareConfig : Private {
     my ($SambaShares, $fname) = @_;
-
-    my $serverName = %$SambaShares{'serverName'};
-    my $serverIP   = %$SambaShares{'serverIP'};
-    my $serverDesc = %$SambaShares{'description'};
-    my $shares     = %$SambaShares{'shares'};
+    my $serverName = $SambaShares->{'serverName'};
+    my $serverIP   = $SambaShares->{'serverIP'};
+    my $serverDesc = $SambaShares->{'description'};
+    my $shares     = $SambaShares->{'shares'};
 
     $main::log->notice("SambaShares -> writing to file: $fname \n" );
     my $fd;
@@ -138,45 +94,45 @@ sub writeShareConfig : Private {
 ; using fusion-directory and argonaut-module 'SambaShares'
 ; see https://www.fusiondirectory.org for more information.
 ;
-; DO NOT MODIFY MANUALLY. This file WILL be overwritten.
 ;===============================================================
 END_SHARE
 
     foreach my $share ( @{$shares}) {
-      
-      # remove the following 2 lines if the extension of the configuration
-      # for the shares (ticket #5054) has been implenented.
-      my ( $name, $desc, $fstype, $encoding, $path, $opt) = split(/\|/, $share);
-      my ( $options, $write, $read, $hide)  = split(/\\/, $opt);
 
-      # uncomment the following line, if ticket #5054 has been implemented
-      #my ( $name, $desc, $fstype, $encoding, $path, $options, $write, $read, $hide) = split(/\|/, $share);
+        # remove the following 2 lines if the extension of the configuration
+        # for the shares (ticket #5054) has been implenented.
+        my ( $name, $desc, $fstype, $encoding, $path, $opt) = split(/\|/, $share);
+        my ( $options, $write, $read, $hide)  = split(/\\/, $opt);
 
-      if ( lc(trim($fstype)) eq "samba" ) {
+        # uncomment the following line, if ticket #5054 has been implemented
+        #my ( $name, $desc, $fstype, $encoding, $path, $options, $write, $read, $hide) = split(/\|/, $share);
+
+        next if ( lc(trim($fstype)) ne "samba" );
+
         my @wl = split(",",$write);
 
-	  my $validusers = "root";
-	  my $writelist = "root";
-      if ( length(trim($write)) > 0) { 
-		$writelist = $writelist . ", @" . join(", @", @wl); 
-		$validusers = $validusers . ", @" . join(", @", @wl); 
-	  }
+        my $validusers = "root";
+        my $writelist = "root";
+        if ( length(trim($write)) > 0) {
+                $writelist = $writelist . ", @" . join(", @", @wl);
+                $validusers = $validusers . ", @" . join(", @", @wl);
+        }
 
-	  my $readlist = "";
-      if ( length(trim($read)) > 0) { 
-		$readlist = "read list = \@" . join(", @", split(",",$read));
-		$validusers = $validusers . ", \@" . join(", @", split(",",$read));
-      }
+        my $readlist = "";
+        if ( length(trim($read)) > 0) {
+                $readlist = "read list = \@" . join(", @", split(",",$read));
+                $validusers = $validusers . ", \@" . join(", @", split(",",$read));
+        }
 
-	  my $browseable = "yes";
-      if ($hide eq "1") { $browseable = "false"; }
+        my $browseable = "yes";
+        if ($hide eq "1") { $browseable = "no"; }
 
-	  my $forcegroup = $wl[0];
+        my $forcegroup = $wl[0];
 
-      print $fd <<"END_SHARE";
+        print $fd <<"END_SHARE";
 
 ;---------------------------------------------------------------
-; Definition fopr Share '$name'
+; Definition for Share '$name'
 ;---------------------------------------------------------------
 [$name]
    comment = $desc
@@ -196,40 +152,50 @@ END_SHARE
 
 END_SHARE
 
-    } # of if cifs or samba
   } # of while
 
-  close($fd);   
+  close($fd);
 }
-  
+
 # start of main
-=item start 
-execute SambaShares complex operation on the computer 
-=cut 
+=item start
+execute SambaShares complex operation on the computer
+=cut
 
 sub start : Public {
     $main::log->notice("SambaShares -> Module has been started");
-    my ($server, $args) = @_; 
+    my ($server, $args) = @_;
 
     my $fname = "/etc/samba/fusiondirectory.shares.conf";
     my $old = md5_hex(read_file($fname));
 
-    writeShareConfig( getShares(), $fname );
+    my $gotSamba = argonaut_get_generic_settings(
+            'goShareServer',
+            {
+                'serverName' => 'cn',
+                'serverIP' => 'ipHostNumber',
+                'description' => 'description',
+                'shares' => ['goExportEntry', asref => 1]
+            },
+            $main::config,$main::config->{'client_ip'}
+        );
+
+    writeShareConfig( $gotSamba, $fname );
 
     my $new = md5_hex(read_file($fname));
 
     if ( $old eq $new ) {
-   	    $main::log->notice("SambaShares -> nothing changes. finished here.");
+        $main::log->notice("SambaShares -> nothing changed. finished here.");
     } else {
-   	    $main::log->notice("SambaShares -> share-configuration changed. Reloading samba's smbd.");
+        $main::log->notice("SambaShares -> share-configuration changed. Reloading samba's smbd.");
         system("service smbd reload");
-    }    
+    }
 
 }
 
-# use this ONLY for debugging if running directly through perl:
-#start;  
 
-1; 
+#start;
+
+1;
 
 __END__
