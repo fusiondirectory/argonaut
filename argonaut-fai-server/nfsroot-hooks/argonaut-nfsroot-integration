@@ -40,7 +40,7 @@ if [ -n "$FAI_ARGONAUT" ]; then
     msg "Using the classical argonaut.conf nothing left to do"
   else
     msg "Using a customized argonaut.conf, removing classical one"
-    ln -s "${NFSROOT}${FAI_ARGONAUT}" "${NFSROOT}"/etc/argonaut/argonaut.conf
+    mv -v "${NFSROOT}${FAI_ARGONAUT}" "${NFSROOT}"/etc/argonaut/argonaut.conf
   fi
 else
   msg "FAI_ARGONAUT not mentionned in /etc/fai/nfsroot.conf"
