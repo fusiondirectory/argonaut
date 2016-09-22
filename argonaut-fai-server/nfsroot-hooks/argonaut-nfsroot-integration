@@ -26,12 +26,18 @@ msg() {
   echo "nfsroot-hooks/argonaut-nfsroot-integration: $1"
 }
 
-msg "Copy argonaut.conf and ldap.conf"
+msg "Integrating argonaut tools inside the FAI nfsroot"
 mkdir -p "${NFSROOT}"/etc/argonaut
-cp /etc/argonaut/argonaut.conf "${NFSROOT}"/etc/argonaut/
+
+if [ -n "$FAI_ARGONAUT" ]; then
+  msg "installing $FAI_ARGONAUT into ${NFSROOT}"
+  cp ${FAI_ARGONAUT} "${NFSROOT}"/etc/argonaut/
+else
+  msg "FAI_ARGONAUT not mentionned in /etc/fai/nfsroot.conf"
+  msg "installation will not work please indicate the file to be copied into FAI_ARGONAUT"
+fi
 
 if [ -n "$FAI_CONF" ]; then
-  msg "installing $FAI_CONF into ${NFSROOT}"
   cp ${FAI_CONF} ${NFSROOT}${FAI_CONF}
 else
   msg "FAI_CONF not mentionned in /etc/fai/nfsroot.conf"
