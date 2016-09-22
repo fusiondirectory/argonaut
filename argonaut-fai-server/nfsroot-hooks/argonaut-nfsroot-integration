@@ -34,12 +34,12 @@ if [ -n "$FAI_ARGONAUT" ]; then
   rm -Rf ${NFSROOT}/etc/argonaut/argonaut.conf
 
   msg "installing $FAI_ARGONAUT into ${NFSROOT}"
-  cp ${FAI_ARGONAUT} "${NFSROOT}"
+  cp ${FAI_ARGONAUT} ${NFSROOT}${FAI_ARGONAUT}
 
   if [ -f "$NFSROOT"/etc/argonaut/argonaut.conf ]; then
     msg "Using the classical argonaut.conf nothing left to do"
   else
-    msg "Using a customized argonaut.conf, removing classical one"
+    msg "Using a customized argonaut.conf, copying over the classical one"
     mv -v "${NFSROOT}${FAI_ARGONAUT}" "${NFSROOT}"/etc/argonaut/argonaut.conf
   fi
 else
