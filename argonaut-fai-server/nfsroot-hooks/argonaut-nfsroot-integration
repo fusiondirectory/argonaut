@@ -30,9 +30,17 @@ msg "Integrating argonaut tools inside the FAI nfsroot"
 mkdir -p "${NFSROOT}"/etc/argonaut
 
 if [ -n "$FAI_ARGONAUT" ]; then
+  msg "removing argonaut.conf installed by the package"
+  rm -Rf ${NFSROOT}/etc/argonaut/argonaut.conf
+
   msg "installing $FAI_ARGONAUT into ${NFSROOT}"
-  cp ${FAI_ARGONAUT} "${NFSROOT}"/etc/argonaut/
-  ln -s "${NFSROOT}${FAI_ARGONAUT}" "${NFSROOT}"/etc/argonaut/argonaut.conf
+  cp ${FAI_ARGONAUT} "${NFSROOT}"
+
+  if [ -f "$NFSROOT"/etc/argonaut/argonaut.conf ]; then
+    msg "Using the classical argonaut.conf nothing left to do"
+  else
+    msg "Using a customized argonaut.conf, removing classical one"
+    ln -s "${NFSROOT}${FAI_ARGONAUT}" "${NFSROOT}"/etc/argonaut/argonaut.conf
 else
   msg "FAI_ARGONAUT not mentionned in /etc/fai/nfsroot.conf"
   msg "installation will not work please indicate the file to be copied into FAI_ARGONAUT"
