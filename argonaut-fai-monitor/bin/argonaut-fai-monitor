@@ -273,12 +273,14 @@ sub big_loop
 
     if (!defined($inp) || $inp eq '') {
       # Client did not send anything, or alarm went off
-      logline("$ip:$port: No data or timeout.\n") or die "log: $!";
+      $log->info("$ip:$port: No data or timeout.\n") or die "log: $!";
       next;
     }
 
     parse_line($inp);
   }
+
+  $log->error("accept returned: $!\n");
 }
 
 sub usage
@@ -302,7 +304,7 @@ $port = $opt_p || $settings->{'port'};
 if (defined $opt_t) {
   $timeout = $opt_t;
 } else {
-  $timeout = $settings-{'timeout'};
+  $timeout = $settings->{'timeout'};
 }
 
 server_init($port);

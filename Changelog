@@ -1,6 +1,16 @@
 Argonaut changelog
 ==================
 
+* Argonaut 0.9.8
+
+[Feature] Bugs #5059: module for creating samba shares
+[Fix] Bugs #5146: argonaut fuse is broken and doesnt add the initrd=initrd.img-install line to pxe configuration for fai
+[Fix] Bugs #5147: removed man file created in pxelinux.cfg and replace it by a default file
+[Fix] Bugs #5148: the default mode stored inside the argonaut-fuse should be used in argonaut-fuse
+[Fix] Bugs #5158: FAI_ARGONAUT variable is not used inside the script
+[Fix] Bugs #5159: we should add some debug to the ldap query in fai.pm
+[Fix] Bugs #5164: argonaut-fai-monitor typo
+
 * Argonaut 0.9.7
 
 [Fix] Bugs #4691: the systemd unit files have a syntax error

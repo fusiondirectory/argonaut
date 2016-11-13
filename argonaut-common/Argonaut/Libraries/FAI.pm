@@ -279,7 +279,7 @@ sub generate_class_cache {
         attrs => [ 'cn', 'FAIclass', 'FAIstate' ]);
 
     next if( 32 == $mesg->code ); # Skip non-existent objects
-    return( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
+    return( "LDAP search error while searching for (objectClass=".@{$class}[0].") on base : ou=${type},@{$rdns}[0],${base}" . $mesg->error . ' (' . $mesg->code . ")\n" )
       if( 0 != $mesg->code );
 
     $cache{ $type } = ();
@@ -375,21 +375,25 @@ sub extend_class_cache {
 
     foreach my $class (keys( %{$faiclasses} )) {
       my $mesg;
+      my $class_base;
 
       # For package lists we have to store the actual data in an extra object
       if( 'debconf' eq $type ) {
+        $class_base = "cn=${class},ou=packages,@{$rdns}[0],${base}";
         $mesg = $ldap->search(
-            base => "cn=${class},ou=packages,@{$rdns}[0],${base}",
-            filter => "(objectClass=$objclass)",
-            scope => 'one' );
+            base    => $class_base,
+            filter  => "(objectClass=$objclass)",
+            scope   => 'one' );
       }
       elsif( 'packages' eq $type ) {
+        $class_base = "cn=${class},ou=${type},@{$rdns}[0],${base}";
         $mesg = $ldap->search(
-            base => "cn=${class},ou=${type},@{$rdns}[0],${base}",
+            base => $class_base,
             filter => "(objectClass=$objclass)",
             scope => 'base' );
-        return( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
-          if( 0 != $mesg->code );
+        if ($mesg->code != 0) {
+          return( sprintf( "LDAP search error at line %i when searching for %s of type %s: %s (%i)\n", __LINE__, $class_base, $type, $mesg->error, $mesg->code ) )
+        }
 
         # Store entries
         $cache_ref->{ ${type} }->{ ${class} } = ($mesg->entries())[0];
@@ -400,14 +404,15 @@ sub extend_class_cache {
 #        print( "Disk config lookup for '${class}'...\n" );
         my $setup_storage = 0;
 
-        my $class_base = "cn=${class},ou=${type},@{$rdns}[0],${base}";
+        $class_base = "cn=${class},ou=${type},@{$rdns}[0],${base}";
         $mesg = $ldap->search(
             base => ${class_base},
             filter =>
               '(|(objectClass=FAIpartitionDisk)(objectClass=FAIpartitionEntry)(objectClass=FAIpartitionTable))',
             scope => 'sub' );
-        return( "LDAP search error: " . $mesg->error . ' (' . $mesg->code . ")\n" )
-          if( 0 != $mesg->code );
+        if ($mesg->code != 0) {
+          return( sprintf( "LDAP search error at line %i when searching for %s of type %s: %s (%i)\n", __LINE__, $class_base, $type, $mesg->error, $mesg->code ) )
+        }
 
         # Decode disks and partition tables
         my @entries = $mesg->entries();
@@ -501,18 +506,19 @@ sub extend_class_cache {
         next;
       }
       else {
+        $class_base = "cn=${class},ou=${type},@{$rdns}[0],${base}";
         my %search = (
-          base => "cn=${class},ou=${type},@{$rdns}[0],${base}",
-          filter => "(objectClass=$objclass)",
-          scope => 'one'
+          base    => $class_base,
+          filter  => "(objectClass=$objclass)",
+          scope   => 'one'
         );
         $search{ 'attrs' } = \@attrs if( scalar @attrs );
         $mesg = $ldap->search( %search );
-
       }
 
-      return( sprintf( "LDAP search error at line %i: %s (%i)\n", __LINE__, $mesg->error, $mesg->code ) )
-        if( 0 != $mesg->code );
+      if ($mesg->code != 0) {
+        return( sprintf( "LDAP search error at line %i when searching for %s of type %s: %s (%i)\n", __LINE__, $class_base, $type, $mesg->error, $mesg->code ) )
+      }
 
       # Store entries
       if( 0 != $mesg->count ) {

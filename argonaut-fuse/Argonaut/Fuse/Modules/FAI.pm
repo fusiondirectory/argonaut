@@ -116,11 +116,7 @@ sub get_pxe_config {
 
   # Get kernel and initrd from TFTP root
   $infos->{'kernel'} = 'vmlinuz-install';
-  $infos->{'cmdline'} = '';
-
-  if ($tftp_parent and -e "$tftp_parent/initrd.img-$1") {
-    $infos->{'cmdline'} .= " initrd=initrd.img-$1";
-  }
+  $infos->{'cmdline'} = ' initrd=initrd.img-install';
 
   my $chboot_cmd;
   my $output;
@@ -136,8 +132,8 @@ sub get_pxe_config {
 
   if ($infos->{'status'} =~ /^(install|install-init)$/) {
     $infos->{'kernel'}  = 'kernel '.$infos->{'kernel'};
-    $infos->{'cmdline'} .= " FAI_ACTION=install FAI_FLAGS=${fai_flags} ip=dhcp"
-      .  " devfs=nomount root=/dev/nfs boot=live union=$union";
+    $infos->{'cmdline'} .= " ip=dhcp  root=/dev/nfs boot=live union=$union"
+      .  " FAI_ACTION=${main::default_mode} FAI_FLAGS=${fai_flags}";
   } elsif ($infos->{'status'} =~ /^(error:|installing:)/) {
     # If we had an error, show an error message
     # The only difference is to install is "faierror" on cmdline
@@ -145,8 +141,8 @@ sub get_pxe_config {
     $faierror .= (split( ':', $infos->{'status'} ))[1];
 
     $infos->{'kernel'} = 'kernel '.$infos->{'kernel'};
-    $infos->{'cmdline'} .= " FAI_ACTION=install FAI_FLAGS=${fai_flags} ip=dhcp"
-      .  " devfs=nomount root=/dev/nfs boot=live union=$union faierror:${faierror}";
+    $infos->{'cmdline'} .= " ip=dhcp  root=/dev/nfs boot=live union=$union"
+      .  " FAI_ACTION=${main::default_mode} FAI_FLAGS=${fai_flags} faierror:${faierror}";
   } elsif ($infos->{'status'} eq 'softupdate') {
     # Softupdate has to be run by the client, so do a localboot
     $infos->{'kernel'} = 'localboot 0';
@@ -164,8 +160,8 @@ sub get_pxe_config {
     }
     my $noreboot = join( ',', @sysflags );
     $infos->{'kernel'} = 'kernel '.$infos->{'kernel'};
-    $infos->{'cmdline'} .= " FAI_ACTION=sysinfo FAI_FLAGS=${noreboot} ip=dhcp"
-    ." devfs=nomount root=/dev/nfs boot=live union=$union";
+    $infos->{'cmdline'} .= " ip=dhcp  root=/dev/nfs boot=live union=$union"
+      .  " FAI_ACTION=${main::default_mode} FAI_FLAGS=${noreboot} ";
 
   } elsif ($infos->{'status'} eq 'localboot') {
     $infos->{'kernel'} = 'localboot 0';
