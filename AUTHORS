@@ -22,3 +22,7 @@ documentation and additional help.
 
 * Sean Thatcher papertray3@gmail.com
   Corrected Argonaut systemd units
+
+* Thomas Niercke <thomas@niercke.de>
+  Code for the samba share argonaut module
+  
