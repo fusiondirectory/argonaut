@@ -87,7 +87,7 @@ sub handle {
   my( $self, $ldap ) = @_;
 
   if( defined $ldap ) {
-    return undef if( ! $ldap->isa( 'Net::LDAP' ) );
+    return if( ! $ldap->isa( 'Net::LDAP' ) );
     $self->{ 'LDAP' } = $ldap;
   }
   else { return $self->{ 'LDAP' }; }
@@ -146,7 +146,7 @@ sub flags {
   elsif( exists $self->{ 'flags' } ) {
     return $self->{ 'flags' };
   }
-  return undef;
+  return;
 }
 
 
@@ -241,7 +241,7 @@ sub get_class_cache {
   if( !$force ) {
     return $self->{ 'FAI_TREES' }{ $release }
       if( exists $self->{ 'FAI_TREES' }{ $release } );
-    return undef if( ! $generate );
+    return if( ! $generate );
   }
 
   return $self->generate_class_cache( $release, $force );
@@ -347,7 +347,7 @@ sub extend_class_cache {
     return $self->{ 'FAI_TREES' }{ $release }
       if( defined $cache_ref &&
           defined $cache_ref->{ 'extended' } );
-    return undef if( ! $generate );
+    return if( ! $generate );
   }
 
   $cache_ref = $self->get_class_cache( $release, $flags )
@@ -662,7 +662,7 @@ sub dump_variables {
     close (FAIVAR);
   }
 
-  return undef;
+  return;
 }
 
 
@@ -773,7 +773,7 @@ sub dump_debconf_info {
     close( DEBCONF );
   }
 
-  return undef;
+  return;
 }
 
 
@@ -981,7 +981,7 @@ sub dump_disk_config {
 
   }
 
-  return undef;
+  return;
 }
 
 
@@ -1101,7 +1101,7 @@ sub dump_scripts {
        if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) );
     }
   }
-  return undef;
+  return;
 }
 
 
@@ -1163,7 +1163,7 @@ sub dump_templates {
         if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) );
     }
   }
-  return undef;
+  return;
 }
 
 
@@ -1210,7 +1210,7 @@ sub dump_hooks {
         if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) );
     }
   }
-  return undef;
+  return;
 }
 
 
@@ -1403,7 +1403,7 @@ sub expand_fai_classlist {
   my( $self, $classref, $hostname ) = @_;
   my( @newclasses );
 
-  return undef if( ! defined $classref );
+  return if( ! defined $classref );
 
   if( 'ARRAY' eq ref( $classref ) ) {
     @newclasses = @$classref;
