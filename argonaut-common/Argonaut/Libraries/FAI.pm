@@ -625,7 +625,7 @@ sub init_dump_function {
 #
 sub dump_variables {
   my( $self, $release, $classref, $flags ) = @_;
-  my( $dumpdir, $cow_cacheref );
+  my( $dumpdir, $cow_cacheref, $faivar );
 
   ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'variables' );
@@ -654,12 +654,12 @@ sub dump_variables {
       return( "Can't create dir '$dumpdir/class': $!\n" ) if( $@ );
     }
 
-    open (FAIVAR,">$dumpdir/class/${class}.var")
+    open ($faivar,">$dumpdir/class/${class}.var")
         || return( "Can't create '$dumpdir/class/${class}.var': $!\n" );
     while( my( $key, $value ) = each( %vars ) ) {
-      print( FAIVAR "${key}='${value}'\n" );
+      print( $faivar "${key}='${value}'\n" );
     }
-    close (FAIVAR);
+    close ($faivar);
   }
 
   return;
@@ -679,7 +679,7 @@ sub dump_variables {
 #
 sub dump_package_list {
   my( $self, $release, $classref, $flags ) = @_;
-  my( $dumpdir, $cow_cacheref );
+  my( $dumpdir, $cow_cacheref, $faipackages );
 
   ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'packages' );
@@ -712,12 +712,12 @@ sub dump_package_list {
 
     next if( $self->{ 'flags' } & FAI_FLAG_DRY_RUN );
 
-    open( PACKAGES, ">$dumpdir/package_config/$class" )
+    open( $faipackages, ">$dumpdir/package_config/$class" )
       ||  do_exit( 4, "Can't create $dumpdir/package_config/$class. $!\n" );
-    print PACKAGES "PACKAGES $method\n";
-    print PACKAGES join( "\n", $entry->get_value('FAIpackage') );
-    print PACKAGES "\n";
-    close( PACKAGES );
+    print $faipackages "PACKAGES $method\n";
+    print $faipackages join( "\n", $entry->get_value('FAIpackage') );
+    print $faipackages "\n";
+    close( $faipackages );
   }
 
   my @sections = keys( %uniq_sections );
@@ -739,7 +739,7 @@ sub dump_package_list {
 #
 sub dump_debconf_info {
   my( $self, $release, $classref, $flags ) = @_;
-  my( $dumpdir, $cow_cacheref );
+  my( $dumpdir, $cow_cacheref, $debconf );
 
   ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'debconf' );
@@ -766,11 +766,11 @@ sub dump_debconf_info {
 
     next if( 0 == scalar @lines );
 
-    open( DEBCONF, ">$dumpdir/debconf/$class" )
+    open( $debconf, q{>}, "$dumpdir/debconf/$class" )
       ||  return( "Can't create $dumpdir/debconf/$class. $!\n" );
-    print DEBCONF join( "\n", sort {$a cmp $b} @lines );
-    print DEBCONF "\n";
-    close( DEBCONF );
+    print $debconf join( "\n", sort {$a cmp $b} @lines );
+    print $debconf "\n";
+    close( $debconf );
   }
 
   return;
@@ -790,7 +790,7 @@ sub dump_debconf_info {
 #
 sub dump_disk_config {
   my( $self, $release, $classref, $flags ) = @_;
-  my( $cow_cacheref, $dumpdir );
+  my( $cow_cacheref, $dumpdir, $faidiskconfig, $faivar );
 
   ( $classref, $dumpdir, $cow_cacheref )
     = $self->init_dump_function( $release, $classref, $flags, 'disk' );
@@ -961,10 +961,10 @@ sub dump_disk_config {
       }
     }
 
-    open( DISK_CONFIG, ">$dumpdir/disk_config/${class}" )
+    open( $faidiskconfig, q{>}, "$dumpdir/disk_config/${class}" )
         || return( "Can't create $dumpdir/disk_config/$class. $!\n" );
-    print DISK_CONFIG join( '', @disk_config_lines );
-    close( DISK_CONFIG );
+    print $faidiskconfig join( '', @disk_config_lines );
+    close( $faidiskconfig );
 
     # Enable setup storage if needed
     if ($setup_storage && ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN)) {
@@ -973,10 +973,10 @@ sub dump_disk_config {
         return( "Can't create dir '$dumpdir/class': $!\n" ) if( $@ );
       }
 
-      open (FAIVAR,">>$dumpdir/class/${class}.var")
+      open ($faivar,">>$dumpdir/class/${class}.var")
           || return( "Can't create/append '$dumpdir/class/${class}.var': $!\n" );
-      print( FAIVAR "USE_SETUP_STORAGE=1\n" );
-      close (FAIVAR);
+      print( $faivar "USE_SETUP_STORAGE=1\n" );
+      close ($faivar);
     }
 
   }
@@ -999,18 +999,19 @@ sub dump_disk_config {
 #
 sub write_fai_file {
 
-  my( $filename, $data, $mode, $owner, $class ) = @_;
+  my ( $filename, $data, $mode, $owner, $class ) = @_;
   my $fclass = '';
+  my ( $faifile, $faifilemodes ) ;
 
   return if( scalar @_ < 2 );
 
   # Append class to filename
   $fclass = '/' . $class if( defined $class );
 
-  open( FILE,">${filename}${fclass}" )
+  open( $faifile,">${filename}${fclass}" )
     || return( "Can't create file '${filename}${fclass}': $!\n" );
-  print( FILE $data ) if( defined $data );
-  close( FILE );
+  print( $faifile $data ) if( defined $data );
+  close( $faifile );
 
   if( defined $class && ('' ne $class) ) {
     # ($owner,$group,$mode,$class) = split
@@ -1023,13 +1024,13 @@ sub write_fai_file {
       close( MODES );
     }
 
-    open( MODES, '>', "${filename}/file-modes" )
+    open( $faifilemodes, '>', "${filename}/file-modes" )
       || return( "Couldn't open modefile '${filename}/file-modes': $!\n" );
 
     # Remove old mode entry from file-modes
     foreach my $line ( @modelines ) {
       chomp( $line );
-      print( MODES "$line\n" ) if( ! ($line =~ /${class}$/) );
+      print( $faifilemodes "$line\n" ) if( ! ($line =~ /${class}$/) );
     }
 
     # Fix empty mode
@@ -1042,8 +1043,8 @@ sub write_fai_file {
       $owner = 'root root';
     }
 
-    print( MODES "$owner $mode $class\n" );
-    close( MODES );
+    print( $faifilemodes "$owner $mode $class\n" );
+    close( $faifilemodes );
   }
   else {
     chmod( oct($mode), ${filename} )
@@ -1230,6 +1231,7 @@ sub dump_hooks {
 sub dump_release {
   my( $self, $release, $classref, $hostname ) = @_;
   my $cls_release;
+  my $faiclasslist;
 
   if( defined $classref ) {
     ($classref, $cls_release) = $self->resolve_classlist( $classref, $release, $hostname );
@@ -1253,10 +1255,10 @@ sub dump_release {
   }
 
   if( defined ${hostname} ) {
-    open( CLASSLIST, ">${dumpdir}/${hostname}" )
+    open( $faiclasslist, ">${dumpdir}/${hostname}" )
       || return( "Can't create ${dumpdir}/${hostname}. $!\n" );
-    print( CLASSLIST join( ' ', @${classref} ) );
-    close( CLASSLIST );
+    print( $faiclasslist join( ' ', @${classref} ) );
+    close( $faiclasslist );
   }
 
   # Add FAI standard classes for dump

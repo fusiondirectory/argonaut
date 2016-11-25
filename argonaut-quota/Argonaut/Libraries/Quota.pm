@@ -50,47 +50,53 @@ Write warnquota and quotatab files
 =cut
 sub write_warnquota_file {
   my ($settings,$warnquota_file) = @_;
-
-  open (WARNQUOTA, ">", $warnquota_file) or die "Could not open file $warnquota_file";
+  my $warnquota;
+  
+  open ($warnquota, ">", $warnquota_file) or die "Could not open file $warnquota_file";
 
   # edition of warnquota.conf
-  print WARNQUOTA "MAIL_CMD               = ".$settings->{'mail_cmd'}."\n";
-  print WARNQUOTA "CC_TO                  = ".$settings->{'cc_to'}."\n";
-  print WARNQUOTA "FROM                   = ".$settings->{'from'}."\n";
-  print WARNQUOTA "SUBJECT                = ".$settings->{'subject'}."\n";
+  print $warnquota "MAIL_CMD               = ".$settings->{'mail_cmd'}."\n";
+  print $warnquota "CC_TO                  = ".$settings->{'cc_to'}."\n";
+  print $warnquota "FROM                   = ".$settings->{'from'}."\n";
+  print $warnquota "SUBJECT                = ".$settings->{'subject'}."\n";
   # Support email for assistance (included in generated mail)
-  print WARNQUOTA "SUPPORT                = ".$settings->{'support'}."\n";
+  print $warnquota "SUPPORT                = ".$settings->{'support'}."\n";
   # Support phone for assistance (included in generated mail)
   # The message to send
-  print WARNQUOTA "MESSAGE                = ".$settings->{'message'}."\n";
+  print $warnquota "MESSAGE                = ".$settings->{'message'}."\n";
   # The signature of the mail
-  print WARNQUOTA "SIGNATURE              = ".$settings->{'signature'}."\n";
+  print $warnquota "SIGNATURE              = ".$settings->{'signature'}."\n";
   # character set the email is to be send in
-  print WARNQUOTA "CHARSET                = ".$settings->{'charset'}."\n";
+  print $warnquota "CHARSET                = ".$settings->{'charset'}."\n";
   # add LDAP support
-  print WARNQUOTA "LDAP_MAIL              = true"."\n";
-  print WARNQUOTA "LDAP_SEARCH_ATTRIBUTE  = ".$settings->{'ldap_searchattribute'}."\n";
-  print WARNQUOTA "LDAP_MAIL_ATTRIBUTE    = mail\n";
-  print WARNQUOTA "LDAP_BASEDN            = ".$settings->{'ldap_basedn'}."\n";
-  print WARNQUOTA "LDAP_URI               = ".$settings->{'ldap_uri'}."\n";
-  print WARNQUOTA "LDAP_USER_DN           = ".$settings->{'ldap_userdn'}."\n";
-  print WARNQUOTA "LDAP_PASSWORD          = ".$settings->{'ldap_userpwd'}."\n";
+  print $warnquota "LDAP_MAIL              = true"."\n";
+  print $warnquota "LDAP_SEARCH_ATTRIBUTE  = ".$settings->{'ldap_searchattribute'}."\n";
+  print $warnquota "LDAP_MAIL_ATTRIBUTE    = mail\n";
+  print $warnquota "LDAP_BASEDN            = ".$settings->{'ldap_basedn'}."\n";
+  print $warnquota "LDAP_URI               = ".$settings->{'ldap_uri'}."\n";
+  print $warnquota "LDAP_USER_DN           = ".$settings->{'ldap_userdn'}."\n";
+  print $warnquota "LDAP_PASSWORD          = ".$settings->{'ldap_userpwd'}."\n";
   # end of warnquota.conf
+
+  close ($warnquota);
 }
 
 sub write_quotatab_file {
   my ($settings,$quotatab_file) = @_;
+  my $quotatab;
 
-  open (QUOTATAB, ">", $quotatab_file) or die "Could not open file $quotatab_file";
+  open ($quotatab, ">", $quotatab_file) or die "Could not open file $quotatab_file";
 
   # Begin of quota tab edition
   my @quotaDeviceParameters = @{$settings->{'device_parameters'}};
   if ($#quotaDeviceParameters >= 0) {
     foreach (@quotaDeviceParameters) {
       my @quotaDeviceParameter = split /:/, $_, -1;
-      print QUOTATAB $quotaDeviceParameter[0].":".$quotaDeviceParameter[2]."\n";
+      print $quotatab $quotaDeviceParameter[0].":".$quotaDeviceParameter[2]."\n";
     }
   }
+
+  close ($quotatab);
   # end of quota tab edition
 }
 

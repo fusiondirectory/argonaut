@@ -354,10 +354,11 @@ sub argonaut_file_write {
 
   my $filename = shift;
   my $data = shift;
+  my $script;
 
-  open (SCRIPT,">${filename}") || warn "Can't create ${filename}. $!\n";
-  print SCRIPT $data;
-  close(SCRIPT);
+  open ($script,">${filename}") || warn "Can't create ${filename}. $!\n";
+  print $script $data;
+  close ($script);
 
   ($opts[2] ne "") && chmod oct($opts[2]),${filename};
   ($opts[3] ne "") && argonaut_file_chown(${filename}, $opts[3]);

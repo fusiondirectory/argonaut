@@ -470,6 +470,7 @@ Extract templates from packages.
 =cut
 sub cleanup_and_extract {
     my ($servdir,$distribs) = @_;
+    my $file;
 
     my $tmpdir = "/tmp";
     mkpath($tmpdir);
@@ -486,14 +487,14 @@ sub cleanup_and_extract {
             if( -f "$tmpdir/DEBIAN/templates" ) {
                 my $tmpl = encode_base64(file("$tmpdir/DEBIAN/templates")->slurp());
 
-                open (FILE, ">$outdir/".$package->{'PACKAGE'}) or die "cannot open file";
-                print FILE $tmpl;
-                close(FILE);
-                unlink("$tmpdir/DEBIAN/templates");
+                open ($file, ">$outdir/".$package->{'PACKAGE'}) or die "cannot open file";
+                print $file $tmpl;
+                close ($file);
+                unlink ("$tmpdir/DEBIAN/templates");
             } else {
-                open (FILE, ">$outdir/".$package->{'PACKAGE'}.'-NOTEMPLATE') or die "cannot open file";
-                print FILE "1\n";
-                close(FILE);
+                open ($file, ">$outdir/".$package->{'PACKAGE'}.'-NOTEMPLATE') or die "cannot open file";
+                print $file "1\n";
+                close ($file);
             }
         }
     }
