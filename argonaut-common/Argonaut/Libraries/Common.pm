@@ -557,7 +557,7 @@ sub argonaut_ldap_fsearch {
       else { $search_base = ''; }
     }
     elsif( 0 == scalar @rdns ) {
-      return undef;
+      return;
     }
     else {
       $search_base = $rdns[ 0 ] . ',' . $search_base;
