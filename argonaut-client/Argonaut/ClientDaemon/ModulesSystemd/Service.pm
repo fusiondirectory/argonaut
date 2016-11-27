@@ -23,7 +23,7 @@
 #
 #######################################################################
 
-package Argonaut::ClientDaemon::Modules::Service;
+package Argonaut::ClientDaemon::ModulesSystemd::Service;
 
 use strict;
 use warnings;

@@ -24,7 +24,7 @@
 #
 #######################################################################
 
-package Argonaut::FAI;
+package Argonaut::Libraries::FAI;
 
 use strict;
 use warnings;
