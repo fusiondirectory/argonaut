@@ -1018,10 +1018,10 @@ sub write_fai_file {
     my (@modelines) = ();
 
     if( -f "${filename}/file-modes" ) {
-      open( MODES, '<', "${filename}/file-modes" )
+      open( $faifilemodes, q{<}, "${filename}/file-modes" )
         || return( "Couldn't open modefile '${filename}/file-modes': $!\n" );
-      (@modelines) = <MODES>;
-      close( MODES );
+      (@modelines) = <$faifilemodes>;
+      close( $faifilemodes );
     }
 
     open( $faifilemodes, '>', "${filename}/file-modes" )

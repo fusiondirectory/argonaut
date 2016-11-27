@@ -269,6 +269,7 @@ sub argonaut_ldap_handle {
 sub argonaut_ldap_parse_config
 {
   my ($ldap_config) = @_;
+  my $ldapconf;
 
   # Try to guess the location of the ldap.conf - file
   $ldap_config = $ENV{ 'LDAPCONF' }
@@ -281,10 +282,10 @@ sub argonaut_ldap_parse_config
     if (!defined $ldap_config);
 
   # Read LDAP
-  return if( ! open (LDAPCONF,"${ldap_config}") );
+  return if( ! open ($ldapconf,q{<},"${ldap_config}") );
 
-  my @content=<LDAPCONF>;
-  close(LDAPCONF);
+  my @content=<$ldapconf>;
+  close($ldapconf);
 
   my ($ldap_base, @ldap_uris, %tls_options);
   # Scan LDAP config
