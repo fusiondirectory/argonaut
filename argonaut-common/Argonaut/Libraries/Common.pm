@@ -356,7 +356,7 @@ sub argonaut_file_write {
   my $data = shift;
   my $script;
 
-  open ($script,">${filename}") || warn "Can't create ${filename}. $!\n";
+  open ($script,q{>},${filename}) || warn "Can't create ${filename}. $!\n";
   print $script $data;
   close ($script);
 

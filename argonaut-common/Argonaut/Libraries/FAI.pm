@@ -654,7 +654,7 @@ sub dump_variables {
       return( "Can't create dir '$dumpdir/class': $!\n" ) if( $@ );
     }
 
-    open ($faivar,">$dumpdir/class/${class}.var")
+    open ($faivar,q{>},"$dumpdir/class/${class}.var")
         || return( "Can't create '$dumpdir/class/${class}.var': $!\n" );
     while( my( $key, $value ) = each( %vars ) ) {
       print( $faivar "${key}='${value}'\n" );
@@ -712,7 +712,7 @@ sub dump_package_list {
 
     next if( $self->{ 'flags' } & FAI_FLAG_DRY_RUN );
 
-    open( $faipackages, ">$dumpdir/package_config/$class" )
+    open( $faipackages, q{>}, "$dumpdir/package_config/$class" )
       ||  do_exit( 4, "Can't create $dumpdir/package_config/$class. $!\n" );
     print $faipackages "PACKAGES $method\n";
     print $faipackages join( "\n", $entry->get_value('FAIpackage') );
@@ -973,7 +973,7 @@ sub dump_disk_config {
         return( "Can't create dir '$dumpdir/class': $!\n" ) if( $@ );
       }
 
-      open ($faivar,">>$dumpdir/class/${class}.var")
+      open ($faivar,q{>>},"$dumpdir/class/${class}.var")
           || return( "Can't create/append '$dumpdir/class/${class}.var': $!\n" );
       print( $faivar "USE_SETUP_STORAGE=1\n" );
       close ($faivar);
@@ -1008,7 +1008,7 @@ sub write_fai_file {
   # Append class to filename
   $fclass = '/' . $class if( defined $class );
 
-  open( $faifile,">${filename}${fclass}" )
+  open( $faifile,q{>},"${filename}${fclass}" )
     || return( "Can't create file '${filename}${fclass}': $!\n" );
   print( $faifile $data ) if( defined $data );
   close( $faifile );
@@ -1255,7 +1255,7 @@ sub dump_release {
   }
 
   if( defined ${hostname} ) {
-    open( $faiclasslist, ">${dumpdir}/${hostname}" )
+    open( $faiclasslist,q{<},"${dumpdir}/${hostname}" )
       || return( "Can't create ${dumpdir}/${hostname}. $!\n" );
     print( $faiclasslist join( ' ', @${classref} ) );
     close( $faiclasslist );

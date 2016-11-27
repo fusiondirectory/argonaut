@@ -238,7 +238,7 @@ sub parse_package_list_debian {
       my $packages = $distributions->{$repo->{'release'}."/$section"};
       foreach my $arch (@{$repo->{'archs'}}) {
           my $packages_file = "$packages_folder/$localuri/dists/".$repo->{'release'}."/$section/binary-$arch/Packages";
-          open (PACKAGES, "<$packages_file") or next;
+          open (PACKAGES,q{<},"$packages_file") or next;
           my $parsed = {};
           while (<PACKAGES>) {
               if (/^$/) {
@@ -487,12 +487,12 @@ sub cleanup_and_extract {
             if( -f "$tmpdir/DEBIAN/templates" ) {
                 my $tmpl = encode_base64(file("$tmpdir/DEBIAN/templates")->slurp());
 
-                open ($file, ">$outdir/".$package->{'PACKAGE'}) or die "cannot open file";
+                open ($file,q{>},"$outdir/".$package->{'PACKAGE'}) or die "cannot open file";
                 print $file $tmpl;
                 close ($file);
                 unlink ("$tmpdir/DEBIAN/templates");
             } else {
-                open ($file, ">$outdir/".$package->{'PACKAGE'}.'-NOTEMPLATE') or die "cannot open file";
+                open ($file,q{>},"$outdir/".$package->{'PACKAGE'}.'-NOTEMPLATE') or die "cannot open file";
                 print $file "1\n";
                 close ($file);
             }
