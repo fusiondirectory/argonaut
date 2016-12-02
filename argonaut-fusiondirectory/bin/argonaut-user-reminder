@@ -44,10 +44,12 @@ my $die_endl = "\n"; # Change to "" to have verbose dies
 my $config;
 
 $config = argonaut_read_config;
-$config->{'config_rdn'}  = 'cn=config,ou=fusiondirectory';
-$config->{'fd_rdn'}      = 'ou=fusiondirectory,';
+$config->{'config_rdn'}  = 'cn=config';
+$config->{'fd_rdn'}      = 'ou=fusiondirectory';
 
 my $verbose = 0;
+
+
 
 sub print_usage
 {
@@ -80,19 +82,6 @@ sub die_on_ldap_errors
 
 #############################################################
 
-sub create_branch {
-  my ($ldap, $base, $ou) = @_;
-  $ou =~ m/^ou=([^,]*),?$/ or die "Can’t create branch of unknown type $ou\n";
-  my $branch_add = $ldap->add( "$ou,$base",
-    attr => [
-      'ou'  => $1,
-      'objectClass' =>  'organizationalUnit'
-      ]
-  );
-
-  $branch_add->code && die "! failed to add LDAP's $ou,$base branch: ".$branch_add->error."\n";
-}
-
 sub branch_exists {
   my ($ldap, $branch) = @_;
 
@@ -111,7 +100,7 @@ sub branch_exists {
 sub read_ldap_config {
   my ($ldap) = @_;
 
-  my $mesg = $ldap->search (base => $config->{'config_rdn'}.','.$config->{'ldap_base'}, filter => '(objectClass=fusionDirectoryConf)', scope => 'base');
+  my $mesg = $ldap->search (base => $config->{'config_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'}, filter => '(objectClass=fusionDirectoryConf)', scope => 'base');
   die_on_ldap_errors($mesg);
 
 
@@ -121,9 +110,6 @@ sub read_ldap_config {
   $config->{'resend_delay'}      = 7;
   # Should alert mails be forwarded to the manager
   $config->{'forward_alert'}     = 1;
-
-#  $config->{'user_rdn'}  = 'ou=people,';
-#  $config->{'token_rdn'} = 'ou=tokens,';
 
   if ($mesg->count > 0) {
     if (($mesg->entries)[0]->exists('fdUserRDN')) {
@@ -250,7 +236,7 @@ sub get_ldap_token
 {
   my ($ldap, $uid) = @_;
 
-  my $dn = "ou=$uid,".$config->{'token_rdn'}.$config->{'fd_rdn'}.$config->{'ldap_base'};
+  my $dn = "ou=$uid,".$config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'};
 
   my $mesg = $ldap->search(
     base    => $dn,
@@ -276,10 +262,10 @@ sub store_ldap_token
   }
   $token_hash = "{SHA}".$token_hash;
 
-  my $dn = "ou=$uid,".$config->{'token_rdn'}.$config->{'fd_rdn'}.$config->{'ldap_base'};
+  my $dn = "ou=$uid,".$config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'};
 
-  if (!branch_exists($ldap, $config->{'token_rdn'}.$config->{'fd_rdn'}.$config->{'ldap_base'})) {
-    create_branch($ldap, $config->{'fd_rdn'}.$config->{'ldap_base'}, $config->{'token_rdn'});
+  if (!branch_exists($ldap, $config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'})) {
+    die "! Branch ".$config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'}." doesnt exist \n";
   }
 
   my $mesg = $ldap->add(
