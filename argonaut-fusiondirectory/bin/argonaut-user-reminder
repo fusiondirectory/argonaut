@@ -122,15 +122,15 @@ sub read_ldap_config {
   # Should alert mails be forwarded to the manager
   $config->{'forward_alert'}     = 1;
 
-  $config->{'user_rdn'}  = 'ou=people,';
-  $config->{'token_rdn'} = 'ou=tokens,';
+#  $config->{'user_rdn'}  = 'ou=people,';
+#  $config->{'token_rdn'} = 'ou=tokens,';
 
   if ($mesg->count > 0) {
     if (($mesg->entries)[0]->exists('fdUserRDN')) {
       $config->{'user_rdn'} = ($mesg->entries)[0]->get_value('fdUserRDN');
     }
-    if (($mesg->entries)[0]->exists('fdTokenRDN')) {
-      $config->{'token_rdn'} = ($mesg->entries)[0]->get_value('fdTokenRDN');
+    if (($mesg->entries)[0]->exists('fdReminderTokenRDN')) {
+      $config->{'token_rdn'} = ($mesg->entries)[0]->get_value('fdReminderTokenRDN');
     }
     if (($mesg->entries)[0]->exists('fdUserReminderAlertDelay')) {
       $config->{'alert_delay'} = ($mesg->entries)[0]->get_value('fdUserReminderAlertDelay');
