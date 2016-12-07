@@ -44,8 +44,6 @@ my $die_endl = "\n"; # Change to "" to have verbose dies
 my $config;
 
 $config = argonaut_read_config;
-$config->{'config_rdn'}  = 'cn=config';
-$config->{'fd_rdn'}      = 'ou=fusiondirectory';
 
 my $verbose = 0;
 
@@ -97,50 +95,44 @@ sub branch_exists {
 }
 
 # Read FD config in the LDAP
-sub read_ldap_config {
+sub read_reminder_ldap_config {
   my ($ldap) = @_;
 
-  my $mesg = $ldap->search (base => $config->{'config_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'}, filter => '(objectClass=fusionDirectoryConf)', scope => 'base');
-  die_on_ldap_errors($mesg);
-
-
+  # Default values
+  $config->{'user_rdn'}       = 'ou=people';
+  $config->{'token_rdn'}      = 'ou=reminder';
   # Days before expiration to send the first mail
-  $config->{'alert_delay'}       = 15;
+  $config->{'alert_delay'}    = 15;
   # Days after first mail to send a new one
-  $config->{'resend_delay'}      = 7;
+  $config->{'resend_delay'}   = 7;
   # Should alert mails be forwarded to the manager
-  $config->{'forward_alert'}     = 1;
+  $config->{'forward_alert'}  = 1;
 
-  if ($mesg->count > 0) {
-    if (($mesg->entries)[0]->exists('fdUserRDN')) {
-      $config->{'user_rdn'} = ($mesg->entries)[0]->get_value('fdUserRDN');
+  my $entry = argonaut_read_ldap_config(
+    $ldap,
+    $config->{'ldap_base'},
+    $config,
+    '(&(objectClass=fusionDirectoryConf)(objectClass=fdUserReminderPluginConf))',
+    {
+      'user_rdn'          => "fdUserRDN",
+      'token_rdn'         => "fdReminderTokenRDN",
+      'alert_delay'       => "fdUserReminderAlertDelay",
+      'resend_delay'      => "fdUserReminderResendDelay",
+      'alert_mailsubject' => "fdUserReminderAlertSubject",
+      'alert_mailbody'    => "fdUserReminderAlertBody",
+      'alert_mailaddress' => "fdUserReminderEmail"
     }
-    if (($mesg->entries)[0]->exists('fdReminderTokenRDN')) {
-      $config->{'token_rdn'} = ($mesg->entries)[0]->get_value('fdReminderTokenRDN');
-    }
-    if (($mesg->entries)[0]->exists('fdUserReminderAlertDelay')) {
-      $config->{'alert_delay'} = ($mesg->entries)[0]->get_value('fdUserReminderAlertDelay');
-    }
-    if (($mesg->entries)[0]->exists('fdUserReminderResendDelay')) {
-      $config->{'resend_delay'} = ($mesg->entries)[0]->get_value('fdUserReminderResendDelay');
-    }
-    if (($mesg->entries)[0]->exists('fdUserReminderForwardAlert')) {
-      $config->{'forward_alert'} = (($mesg->entries)[0]->get_value('fdUserReminderForwardAlert') eq "TRUE");
-    }
-    $config->{'alert_mailsubject'}  = ($mesg->entries)[0]->get_value('fdUserReminderAlertSubject');
-    $config->{'alert_mailbody'}     = ($mesg->entries)[0]->get_value('fdUserReminderAlertBody');
-    $config->{'alert_mailaddress'}  = ($mesg->entries)[0]->get_value('fdUserReminderEmail');
-  } else {
-    die "Could not find configuration node in the LDAP".$die_endl;
+  );
+
+  if ($entry->exists('fdUserReminderForwardAlert')) {
+    $config->{'forward_alert'} = ($entry->get_value('fdUserReminderForwardAlert') eq "TRUE");
   }
-
-  return ($mesg->entries)[0];
 }
 
 sub check_expired_users {
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
   $config->{'ldap_base'} = $ldap_base;
-  read_ldap_config($ldap);
+  read_reminder_ldap_config($ldap);
 
   my $today = int(time() / 86400); # 24 * 60 * 60
 

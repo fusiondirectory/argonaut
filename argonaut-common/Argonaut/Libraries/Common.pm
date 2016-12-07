@@ -67,6 +67,7 @@ BEGIN
       &argonaut_ldap_split_dn
       &argonaut_ldap_init
       &argonaut_ldap_handle
+      &argonaut_read_ldap_config
       &argonaut_get_generic_settings
       &argonaut_get_client_settings
       &argonaut_get_server_settings
@@ -609,6 +610,32 @@ sub argonaut_read_config {
   $res{'ldap_tls'} = ($res{'ldap_tls'} =~ m/^on$/i);
 
   return \%res;
+}
+
+# Read a config in the LDAP
+sub argonaut_read_ldap_config {
+  my ($ldap, $ldap_base, $config, $configfilter, $params) = @_;
+
+  my $mesg = $ldap->search (base => $ldap_base, filter => $configfilter);
+  die_on_ldap_errors($mesg);
+
+  if ($mesg->count > 0) {
+    while (my ($key,$value) = each(%{$params})) {
+      if (ref $value eq ref []) {
+        $config->{"$key"} = ($mesg->entries)[0]->get_value(@$value);
+      } else {
+        if (($mesg->entries)[0]->get_value("$value")) {
+          $config->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+        } else {
+          $config->{"$key"} = "";
+        }
+      }
+    }
+  } else {
+    die "Could not find configuration node in the LDAP (filter:$configfilter)".$die_endl;
+  }
+
+  return ($mesg->entries)[0];
 }
 
 #------------------------------------------------------------------------------

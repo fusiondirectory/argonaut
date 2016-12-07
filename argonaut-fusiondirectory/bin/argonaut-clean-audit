@@ -49,24 +49,20 @@ foreach my $arg ( @ARGV ) {
 
 my $config = argonaut_read_config;
 my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
-
-my $mesg = $ldap->search( # Search for plugin configuration
-  base   => $ldap_base,
-  filter => "(&(objectClass=fdAuditPluginConf)(fdAuditRotationDelay=*))",
-  attrs => [ 'fdAuditRotationDelay' ]
+argonaut_read_ldap_config(
+  $ldap,
+  $ldap_base,
+  $config,
+  '(&(objectClass=fdAuditPluginConf)(fdAuditRotationDelay=*))',
+  {
+    'delay' => "fdAuditRotationDelay"
+  }
 );
-if ($mesg->code != 0) {
-  die "LDAP error: " . $mesg->error . "(" . $mesg->code . ")\n";
-}
-if ($mesg->count == 0) {
-  die "Could not find fdAuditRotationDelay setting in the LDAP\n";
-}
 
-my $delay = ($mesg->entries)[0]->get_value("fdAuditRotationDelay");
-my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time() - $delay * 24 * 60 * 60);
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time() - $config->{'delay'} * 24 * 60 * 60);
 my $date = sprintf("%04d%02d%02d%02d%02d%02dZ", 1900 + $year, 1 + $mon, $mday, $hour, $min, $sec);
 
-$mesg = $ldap->search( # list obsolete audit events
+my $mesg = $ldap->search( # list obsolete audit events
   base   => $ldap_base,
   filter => "(&(objectClass=fdAuditEvent)(fdAuditDateTime<=$date))",
   attrs => [ 'dn' ]
