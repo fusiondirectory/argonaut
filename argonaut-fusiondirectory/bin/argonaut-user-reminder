@@ -89,7 +89,7 @@ sub branch_exists {
   if ($branch_mesg->code == 32) {
     return 0;
   }
-  $branch_mesg->code && die $branch_mesg->error;
+  $branch_mesg->code && die "Error while searching for branch \"$branch\":".$branch_mesg->error;
 
   my @entries = $branch_mesg->entries;
   return (defined ($entries[0]));
