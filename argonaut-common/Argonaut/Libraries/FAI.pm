@@ -33,6 +33,7 @@ use 5.008;
 
 use Data::Dumper;
 use Net::LDAP;
+use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
 use File::Path;
 
 use Argonaut::Libraries::Common qw(:ldap :string :file);
@@ -278,7 +279,7 @@ sub generate_class_cache {
         scope => 'one',
         attrs => [ 'cn', 'FAIclass', 'FAIstate' ]);
 
-    next if( 32 == $mesg->code ); # Skip non-existent objects
+    next if( LDAP_NO_SUCH_OBJECT == $mesg->code ); # Skip non-existent objects
     return( "LDAP search error while searching for (objectClass=".@{$class}[0].") on base : ou=${type},@{$rdns}[0],${base}" . $mesg->error . ' (' . $mesg->code . ")\n" )
       if( 0 != $mesg->code );
 

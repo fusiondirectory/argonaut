@@ -581,7 +581,7 @@ sub argonaut_ldap_fsearch {
     # LDAP search
     $mesg = $ldap->search( %opts );
 
-    next if( $mesg->code == 32 ); # Ignore missing objects (32)
+    next if( $mesg->code == LDAP_NO_SUCH_OBJECT ); # Ignore missing objects (32)
     return $mesg if( $mesg->code ); # Return undef on other failures
 
     last if( $mesg->count() > 0 );
@@ -617,7 +617,9 @@ sub argonaut_read_ldap_config {
   my ($ldap, $ldap_base, $config, $configfilter, $params) = @_;
 
   my $mesg = $ldap->search (base => $ldap_base, filter => $configfilter);
-  die_on_ldap_errors($mesg);
+  if (($mesg->code != 0) && ($mesg->code != LDAP_NO_SUCH_OBJECT)) {
+    die $mesg->error;
+  }
 
   if ($mesg->count > 0) {
     while (my ($key,$value) = each(%{$params})) {

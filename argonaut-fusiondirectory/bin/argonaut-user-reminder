@@ -33,13 +33,13 @@ use Digest::SHA qw(sha256_base64);
 
 use Argonaut::Libraries::Common qw(:ldap :string :config);
 
+use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
+
 # first, create your message
 use Email::MIME;
 
 # send the message
 use Email::Sender::Simple qw(sendmail);
-
-my $die_endl = "\n"; # Change to "" to have verbose dies
 
 my $config;
 
@@ -74,7 +74,7 @@ exit 0;
 sub die_on_ldap_errors
 {
   my ($mesg) = @_;
-  if (($mesg->code != 0) && ($mesg->code != 32)) {
+  if (($mesg->code != 0) && ($mesg->code != LDAP_NO_SUCH_OBJECT)) {
     die $mesg->error;
   }
 }
@@ -86,7 +86,7 @@ sub branch_exists {
 
   # search for branch
   my $branch_mesg = $ldap->search (base => $branch, filter => '(objectClass=*)', scope => 'base');
-  if ($branch_mesg->code == 32) {
+  if ($branch_mesg->code == LDAP_NO_SUCH_OBJECT) {
     return 0;
   }
   $branch_mesg->code && die "Error while searching for branch \"$branch\":".$branch_mesg->error;
