@@ -81,20 +81,6 @@ sub die_on_ldap_errors
 
 #############################################################
 
-sub branch_exists {
-  my ($ldap, $branch) = @_;
-
-  # search for branch
-  my $branch_mesg = $ldap->search (base => $branch, filter => '(objectClass=*)', scope => 'base');
-  if ($branch_mesg->code == LDAP_NO_SUCH_OBJECT) {
-    return 0;
-  }
-  $branch_mesg->code && die "Error while searching for branch \"$branch\":".$branch_mesg->error;
-
-  my @entries = $branch_mesg->entries;
-  return (defined ($entries[0]));
-}
-
 # Read FD config in the LDAP
 sub read_reminder_ldap_config {
   my ($ldap) = @_;

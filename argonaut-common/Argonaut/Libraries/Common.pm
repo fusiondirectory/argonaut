@@ -65,6 +65,7 @@ BEGIN
       &argonaut_ldap_rsearch
       &argonaut_ldap_is_single_result
       &argonaut_ldap_split_dn
+      &argonaut_ldap_branch_exists
       &argonaut_ldap_init
       &argonaut_ldap_handle
       &argonaut_read_ldap_config
@@ -344,6 +345,21 @@ sub argonaut_ldap_split_dn {
   }
 
   return @result_rdns;
+}
+
+# Check if a designated branch exists
+sub branch_exists {
+  my ($ldap, $branch) = @_;
+
+  # search for branch
+  my $branch_mesg = $ldap->search (base => $branch, filter => '(objectClass=*)', scope => 'base');
+  if ($branch_mesg->code == LDAP_NO_SUCH_OBJECT) {
+    return 0;
+  }
+  $branch_mesg->code && die "Error while searching for branch \"$branch\":".$branch_mesg->error;
+
+  my @entries = $branch_mesg->entries;
+  return (defined ($entries[0]));
 }
 
 #------------------------------------------------------------------------------
