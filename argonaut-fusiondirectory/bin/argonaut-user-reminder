@@ -243,7 +243,7 @@ sub store_ldap_token
 
   my $dn = "ou=$uid,".$config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'};
 
-  if (!branch_exists($ldap, $config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'})) {
+  if (!argonaut_ldap_branch_exists($ldap, $config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'})) {
     die "! Branch ".$config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'}." doesnt exist \n";
   }
 
