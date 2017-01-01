@@ -348,7 +348,7 @@ sub argonaut_ldap_split_dn {
 }
 
 # Check if a designated branch exists
-sub branch_exists {
+sub argonaut_ldap_branch_exists {
   my ($ldap, $branch) = @_;
 
   # search for branch
