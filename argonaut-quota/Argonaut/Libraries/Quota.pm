@@ -51,8 +51,8 @@ Write warnquota and quotatab files
 sub write_warnquota_file {
   my ($settings,$warnquota_file) = @_;
   my $warnquota;
-  
-  open ($warnquota, ">", $warnquota_file) or die "Could not open file $warnquota_file";
+
+  open ($warnquota, q{>}, $warnquota_file) or die "Could not open file $warnquota_file";
 
   # edition of warnquota.conf
   print $warnquota "MAIL_CMD               = ".$settings->{'mail_cmd'}."\n";
@@ -85,7 +85,7 @@ sub write_quotatab_file {
   my ($settings,$quotatab_file) = @_;
   my $quotatab;
 
-  open ($quotatab, ">", $quotatab_file) or die "Could not open file $quotatab_file";
+  open ($quotatab, q{>}, $quotatab_file) or die "Could not open file $quotatab_file";
 
   # Begin of quota tab edition
   my @quotaDeviceParameters = @{$settings->{'device_parameters'}};

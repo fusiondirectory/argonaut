@@ -117,10 +117,10 @@ if( 'ARRAY' eq ref( $res_classlist ) ) {
 
 if( ! $dry_run ) {
   create_dir( "$dump_dir/class" );
-  open (FAICLASS,">$dump_dir/class/${hostname}")
+  open ($faiclass, q{>}, "$dump_dir/class/${hostname}")
     || do_exit( 4, "Can't create $dump_dir/class/${hostname}. $!\n" );
-  print( FAICLASS join( ' ', @$res_classlist ) );
-  close( FAICLASS );
+  print($faiclass join( ' ', @$res_classlist ) );
+  close($faiclass);
 }
 
 $res_classlist = $faiobj->expand_fai_classlist( $res_classlist, $hostname );
@@ -369,26 +369,26 @@ sub generate_sources_list {
 
   create_dir( "${dump_dir}/files/etc/apt/sources.list" );
   if( ! $dry_run ) {
-    open (SOURCES,">${dump_dir}/files/etc/apt/sources.list/LAST")
+    open ($sources, q{>}, "${dump_dir}/files/etc/apt/sources.list/LAST")
       || do_exit( 4, "Can't create ${dump_dir}/files/etc/apt/sources.list/LAST. $!\n" );
   }
 
   if( "auto" ne "$fai_mirror" ) {
     if( ! $dry_run ) {
-      print SOURCES "deb $fai_mirror $release @$sections\n";
-      close (SOURCES);
+      print $sources "deb $fai_mirror $release @$sections\n";
+      close ($sources);
     }
     print( " = Using default: $fai_mirror\n" ) if( $verbose );
     return 0;
   }
 
-  add_repo_for_release("SOURCES",$release,$sections);
+  add_repo_for_release($sources,$release,$sections);
   foreach my $custom (@$customs) {
     print "Searching custom $custom for sections @$sections\n";
-    add_repo_for_release("SOURCES",$custom,$sections);
+    add_repo_for_release($sources,$custom,$sections);
   }
 
-  close (SOURCES) if( ! $dry_run );
+  close ($sources) if( ! $dry_run );
 }
 
 sub add_repo_for_release {

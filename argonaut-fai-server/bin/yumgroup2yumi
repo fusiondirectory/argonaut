@@ -65,7 +65,7 @@ EOF
 my $class = shift or usage('Missing class parameter');
 
 if ($outfilename) {
-  open($outfile, '>'.$outfilename) or die "Could not open '$outfilename'\n";
+  open($outfile, q{>}, $outfilename) or die "Could not open '$outfilename'\n";
 } else {
   $outfile = *STDOUT;
 }
@@ -157,7 +157,7 @@ yumgroup2yumi - read yumgroups and create ldif files for use
 
 =head1 SYNOPSIS
 
-yumgroup2yumi [-hv] [-c config_space] [-o output filename] 
+yumgroup2yumi [-hv] [-c config_space] [-o output filename]
 
 =head1 DESCRIPTION
 

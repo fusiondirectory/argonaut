@@ -157,12 +157,12 @@ sub argonaut_get_ldap2repository_settings {
 
 sub generate_cronjob_daily {
   # generate new /etc/cron.d/argonaut-mirror
-  open (CROND, ">${crond_dir}/argonaut-mirror")
+  open ($crond, q{>}, "${crond_dir}/argonaut-mirror")
     || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
 
-  print CROND "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
-  print CROND "\@daily root $outdir/mirror-update-cronjob\n";
-  close (CROND);
+  print $crond "PATH=/sbin:/bin:/usr/sbin:/usr/bin\n\n";
+  print $crond "\@daily root $outdir/mirror-update-cronjob\n";
+  close ($crond);
 }
 
 sub generate_cronjob_script {
@@ -175,13 +175,13 @@ sub generate_cronjob_script {
     exit 0;
   }
 
-  open (CRON, ">${outdir}/mirror-update-cronjob")
+  open ($cron, q{>}, "${outdir}/mirror-update-cronjob")
     || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
 
   # Write cron script
-  print CRON "#!/bin/sh\n";
+  print $cron "#!/bin/sh\n";
 
-  open (SOURCES, ">${outdir}/sources.list");
+  open ($sources, q{>}, "${outdir}/sources.list");
 
   foreach my $repo (@repos) {
     my $uri = $repo->{'uri'};
@@ -199,7 +199,7 @@ sub generate_cronjob_script {
       next;
     }
 
-    print SOURCES "deb $uri $release @section_list\n";
+    print $sources "deb $uri $release @section_list\n";
 
     print "parent: $parent_or_opts\n" if( $verbose eq "TRUE" );
     print "sources.list: deb $uri $release @section_list\n" if( $verbose eq "TRUE" );
@@ -239,7 +239,7 @@ sub generate_cronjob_script {
         if (0 != scalar @{outline}) {
           my $cron_line = "\ndebmirror --nocleanup ${gpgcheck} ${source} ${errors} ${contents} --arch=${archs} --dist=${release} --section=" . join(",", @{outline})
                     . " --method=${method} --host=${host} --root=${root} ${proxy} ${mirrordir}/\n";
-          print CRON $cron_line;
+          print $cron $cron_line;
           print "mirror-update-cronjob: ".$cron_line."\n" if( $verbose eq "TRUE" );
         }
         last if (0 == scalar @section_list);
@@ -250,8 +250,8 @@ sub generate_cronjob_script {
       print "No repository was found in parent $parent_or_opts for release $release, for sections ".join(",", @section_list)."\n" if( $verbose eq "TRUE" );
     }
   }
-  close (SOURCES);
-  close (CRON);
+  close ($sources);
+  close ($cron);
   chmod 0750, "${outdir}/mirror-update-cronjob";
 }
 

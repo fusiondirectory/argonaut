@@ -1025,7 +1025,7 @@ sub write_fai_file {
       close( $faifilemodes );
     }
 
-    open( $faifilemodes, '>', "${filename}/file-modes" )
+    open( $faifilemodes, q{>}, "${filename}/file-modes" )
       || return( "Couldn't open modefile '${filename}/file-modes': $!\n" );
 
     # Remove old mode entry from file-modes
