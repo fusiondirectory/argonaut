@@ -196,7 +196,7 @@ sub getattr {
 
   # if directory, set type to dir and mode to 0755
   if ($filename eq '/') {
-    $type = oct(040);
+    $type = oct(40);
     $bits = oct(755);
   } else {
     $filename =~ s|^.*/||; # Keep only filename
