@@ -63,7 +63,7 @@ use base $base;
 =item trim
 trims whitespaces from a given string
 =cut
-sub trim($) : Private {
+sub trim : Private {
   my $string = shift;
   $string =~ s/^\s+//;
   $string =~ s/\s+$//;

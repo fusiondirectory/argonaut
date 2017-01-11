@@ -558,8 +558,10 @@ sub extend_class_cache {
 sub is_removed {
   my $entry = shift;
   my $state = $entry->get_value( 'FAIstate' );
-  my %states = map { $_ => 1 } split( "\\|", $state ) if( defined $state );
-  return 1 if( exists $states{ 'removed' } );
+  if (defined $state) {
+    my %states = map { $_ => 1 } split( "\\|", $state );
+    return 1 if( exists $states{ 'removed' } );
+  }
   return 0;
 }
 
@@ -686,7 +688,7 @@ sub dump_package_list {
     = $self->init_dump_function( $release, $classref, $flags, 'packages' );
   return $classref if( ! defined $dumpdir );
 
-  my( $class, $entry, $method );
+  my( $entry, $method );
 
   if( ! -d "$dumpdir/package_config" ) {
     eval { mkpath( "$dumpdir/package_config" ); };
@@ -695,7 +697,7 @@ sub dump_package_list {
 
   my %uniq_sections = ();
   my %uniq_customs = ();
-  foreach $class (@$classref) {
+  foreach my $class (@$classref) {
     next if( ! exists $cow_cacheref->{ $class } );
     $entry = $cow_cacheref->{ $class };
     $method = $entry->get_value( 'FAIinstallMethod' );
@@ -746,8 +748,6 @@ sub dump_debconf_info {
     = $self->init_dump_function( $release, $classref, $flags, 'debconf' );
   return $classref if( ! defined $dumpdir );
 
-  my( $entry );
-
   if( ! -d "$dumpdir/debconf" ) {
     eval { mkpath( "$dumpdir/debconf" ); };
     return( "Can't create dir '$dumpdir/debconf': $!\n" ) if( $@ );
@@ -756,7 +756,7 @@ sub dump_debconf_info {
   foreach my $class (@$classref) {
     next if( ! exists $cow_cacheref->{ $class } );
     my @lines = ();
-    foreach $entry (values %{$cow_cacheref->{ $class }}) {
+    foreach my $entry (values %{$cow_cacheref->{ $class }}) {
       next if( is_removed( $entry ) );
       push( @lines, sprintf( "%s %s %s %s",
           $entry->get_value('FAIpackage'),
@@ -809,10 +809,10 @@ sub dump_disk_config {
   foreach my $class (@$classref) {
     next if( ! exists $cow_cacheref->{ $class } );
     my $disk_config = $cow_cacheref->{ $class };
-    my( %all_disks, $disk, $entry );
+    my( %all_disks );
 
     foreach my $type ("disk", "raid", "lvm") {
-      foreach $disk (keys %{$disk_config}) {
+      foreach my $disk (keys %{$disk_config}) {
         next if( ! defined $disk_config->{ $disk } );
 
         # Extract setup storage mode

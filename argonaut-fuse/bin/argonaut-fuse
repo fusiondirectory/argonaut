@@ -190,14 +190,14 @@ sub getattr {
   my ($filename) = @_;
 
   # regular file
-  my $type = 0100;
-  my $bits = 0644;
+  my $type = oct(100);
+  my $bits = oct(644);
   my $size = 0;
 
   # if directory, set type to dir and mode to 0755
   if ($filename eq '/') {
-    $type = 0040;
-    $bits = 0755;
+    $type = oct(040);
+    $bits = oct(755);
   } else {
     $filename =~ s|^.*/||; # Keep only filename
     if ($filename =~ /^([0-9a-f]{1,2}-){6}[0-9a-f]{1,2}$/i) {

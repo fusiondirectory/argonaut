@@ -237,10 +237,10 @@ sub parse_package_list_debian {
       }
       my $packages = $distributions->{$repo->{'release'}."/$section"};
       foreach my $arch (@{$repo->{'archs'}}) {
-          my $packages_file = "$packages_folder/$localuri/dists/".$repo->{'release'}."/$section/binary-$arch/Packages";
-          open (PACKAGES,q{<},"$packages_file") or next;
+          my $packages_filepath = "$packages_folder/$localuri/dists/".$repo->{'release'}."/$section/binary-$arch/Packages";
+          open ($packages_file, q{<}, $packages_filepath) or next;
           my $parsed = {};
-          while (<PACKAGES>) {
+          while (<$packages_file>) {
               if (/^$/) {
                   # Empty line means this package info lines are over
                   $$package_indice++;
@@ -287,7 +287,7 @@ sub parse_package_list_debian {
                           }
                       }
                       if($match == 0) {
-                          while(<PACKAGES>) {
+                          while(<$packages_file>) {
                               if (/^$/) {
                                   last;
                               }
@@ -301,7 +301,7 @@ sub parse_package_list_debian {
                           $parsed->{'DESCRIPTION'} = encode_base64($value);
                       } elsif ((uc($key) eq 'PACKAGE') && (defined $packages->{$value}) && !(grep {uc($_) eq 'VERSION'} @{$attrs})) {
                           # We already have the info on this package and version was not asked, skip to next one.
-                          while(<PACKAGES>) {
+                          while(<$packages_file>) {
                               if (/^$/) {
                                   last;
                               }
@@ -315,7 +315,7 @@ sub parse_package_list_debian {
                               push @versions, $value;
                           }
                           $packages->{$parsed->{'PACKAGE'}}->{'VERSION'} = join(',',@versions);
-                          while(<PACKAGES>) {
+                          while(<$packages_file>) {
                               if (/^$/) {
                                   last;
                               }
@@ -336,7 +336,7 @@ sub parse_package_list_debian {
                   }
               }
           }
-          close(PACKAGES);
+          close($packages_file);
       }
       if((defined $to) && ($$package_indice>$to)) {
           last;
