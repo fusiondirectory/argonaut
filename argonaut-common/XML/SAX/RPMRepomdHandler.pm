@@ -31,7 +31,7 @@ use base qw(XML::SAX::Base);
 
   sub new {
     my $class = shift;
-    $self = {
+    my $self = {
       'type' => shift || 'primary',
     };
     return bless $self, $class;
