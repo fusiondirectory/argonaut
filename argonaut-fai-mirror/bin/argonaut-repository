@@ -157,6 +157,7 @@ sub argonaut_get_ldap2repository_settings {
 
 sub generate_cronjob_daily {
   # generate new /etc/cron.d/argonaut-mirror
+  my $crond;
   open ($crond, q{>}, "${crond_dir}/argonaut-mirror")
     || die "Can't create ${crond_dir}/argonaut-mirror: $!\n";
 
@@ -175,6 +176,7 @@ sub generate_cronjob_script {
     exit 0;
   }
 
+  my $cron, $sources;
   open ($cron, q{>}, "${outdir}/mirror-update-cronjob")
     || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
 

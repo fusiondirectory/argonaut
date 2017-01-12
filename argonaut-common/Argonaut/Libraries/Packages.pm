@@ -238,6 +238,7 @@ sub parse_package_list_debian {
       my $packages = $distributions->{$repo->{'release'}."/$section"};
       foreach my $arch (@{$repo->{'archs'}}) {
           my $packages_filepath = "$packages_folder/$localuri/dists/".$repo->{'release'}."/$section/binary-$arch/Packages";
+          my $packages_file;
           open ($packages_file, q{<}, $packages_filepath) or next;
           my $parsed = {};
           while (<$packages_file>) {
