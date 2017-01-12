@@ -63,6 +63,7 @@ sub get_module_settings {
 }
 
 sub get_pxe_config {
+  my $class = shift;
   my ($filename) = shift || return;
   my $settings = get_module_settings();
   my $lang  = $settings->{'lang'};
