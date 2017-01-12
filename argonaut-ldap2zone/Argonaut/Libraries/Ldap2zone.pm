@@ -30,7 +30,7 @@ use warnings;
 use 5.008;
 
 use Exporter 'import';              # gives you Exporter's import() method directly
-@EXPORT_OK = qw(&argonaut_ldap2zone);  # symbols to export on request
+my @EXPORT_OK = qw(&argonaut_ldap2zone);  # symbols to export on request
 
 use DNS::ZoneParse;
 
