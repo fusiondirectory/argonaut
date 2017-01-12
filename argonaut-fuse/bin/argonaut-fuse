@@ -166,13 +166,16 @@ sub readConfig
 
 sub import_modules {
   foreach my $module (modules()) {
-    my $info = eval($module.'::get_module_info()');
-    # Only load module if get_module_info() returns a non-null object
-    if ($info) {
-      $log->info("Loaded module $module ($info)\n");
-      $known_modules->{$module} = $info;
-    } else {
-      $log->info("$module is not a module\n");
+    eval {
+      if(my $info = $module->get_module_info()) {
+        $log->info("Loaded module $module ($info)\n");
+        $known_modules->{$module} = $info;
+      } else {
+        $log->warn("$module is not a module\n");
+      }
+      1;
+    } or do {
+      $log->warn("Exception when trying to call ->get_module_info on $module - $@");
     }
   }
 }
