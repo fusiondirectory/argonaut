@@ -1,6 +1,14 @@
 Argonaut changelog
 ==================
 
+* Argonaut 1.0
+
+[Fix] Bugs #5273: Incompatibility between recovery password and user-reminder
+[Feature] Bugs #5275: redesign the argonaut-fusiondirectory tools
+[Feature] Bugs #5281: create a function in argonaut to read correctly the fusiondirectory config
+[Fix] Bugs #5288: function branch_exists should go into common.pm
+[Fix] Bugs #5300: Errors when I try to start argonaut-client
+
 * Argonaut 0.9.8
 
 [Feature] Bugs #5059: module for creating samba shares
