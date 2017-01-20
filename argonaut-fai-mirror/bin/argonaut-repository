@@ -168,6 +168,7 @@ sub generate_cronjob_daily {
 
 sub generate_cronjob_script {
   my @repos = get_repolines($mac);
+  my $sources;
 
   if (scalar(@repos) == 0) {
     print( "This server doesn't contain software repositories\n" );
@@ -176,7 +177,7 @@ sub generate_cronjob_script {
     exit 0;
   }
 
-  my $cron, $sources;
+  my $cron;
   open ($cron, q{>}, "${outdir}/mirror-update-cronjob")
     || die "Can't create ${outdir}/mirror-update-cronjob: $!\n";
 
