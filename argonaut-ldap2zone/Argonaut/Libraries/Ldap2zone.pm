@@ -24,13 +24,13 @@
 
 package Argonaut::Libraries::Ldap2zone;
 
-use Exporter 'import';              # gives you Exporter's import() method directly
-@EXPORT_OK = qw(&argonaut_ldap2zone);  # symbols to export on request
-
 use strict;
 use warnings;
 
 use 5.008;
+
+use Exporter 'import';              # gives you Exporter's import() method directly
+our @EXPORT_OK = qw(&argonaut_ldap2zone);  # symbols to export on request
 
 use DNS::ZoneParse;
 
@@ -224,7 +224,7 @@ sub zoneparse
   print "Writing DNS Zone '$zone' in $output_BIND_CACHE_DIR/db.$zone\n" if $verbose;
   my $file_output = "$output_BIND_CACHE_DIR/db.$zone";
   my $newzone;
-  open($newzone, '>', $file_output) or die "error while trying to open $file_output";
+  open($newzone, q{>}, $file_output) or die "error while trying to open $file_output";
   print $newzone $zonefile->output();
   close $newzone;
 
@@ -351,7 +351,7 @@ sub create_namedconf
 
   print "Writing named.conf file in $output_BIND_DIR/named.conf.ldap2zone.$zone\n" if $verbose;
   my $namedfile;
-  open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone.$zone";
+  open($namedfile, q{>}, "$output_BIND_DIR/named.conf.ldap2zone.$zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone.$zone";
   my $zones;
   if (defined $view) {
     $zones = $view->{'zones'};
@@ -405,7 +405,7 @@ sub create_acl_namedconf
 
   print "Writing named.conf file in $output_BIND_DIR/named.conf.acls\n" if $verbose;
   my $namedfile;
-  open($namedfile, '>', "$output_BIND_DIR/named.conf.acls") or die "error while trying to open $output_BIND_DIR/named.conf.acls";
+  open($namedfile, q{>}, "$output_BIND_DIR/named.conf.acls") or die "error while trying to open $output_BIND_DIR/named.conf.acls";
   foreach my $acl (@$acls) {
     print $namedfile <<EOF;
   acl $acl->{'name'} {$acl->{'matchlist'}; };
@@ -419,7 +419,7 @@ sub refresh_main_namedconf
 
   print "Writing file $output_BIND_DIR/named.conf.ldap2zone\n" if $verbose;
   my $namedfile;
-  open($namedfile, '>', "$output_BIND_DIR/named.conf.ldap2zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone";
+  open($namedfile, q{>}, "$output_BIND_DIR/named.conf.ldap2zone") or die "error while trying to open $output_BIND_DIR/named.conf.ldap2zone";
   opendir DIR, $output_BIND_DIR or die "Error while openning $output_BIND_DIR!";
   my @files = readdir DIR;
   foreach my $file (grep { /^named\.conf\.ldap2zone\./ } @files) {

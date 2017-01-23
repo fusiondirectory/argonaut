@@ -63,7 +63,7 @@ use base $base;
 =item trim
 trims whitespaces from a given string
 =cut
-sub trim($) : Private {
+sub trim : Private {
   my $string = shift;
   $string =~ s/^\s+//;
   $string =~ s/\s+$//;
@@ -84,7 +84,7 @@ sub writeShareConfig : Private {
 
   $main::log->notice("SambaShares -> writing to file: $fname \n" );
   my $fd;
-  open($fd, '>', $fname) or die "error while trying to open $fname";
+  open($fd, q{>}, $fname) or die "error while trying to open $fname";
   print $fd <<"END_SHARE";
 ;===============================================================
 ; This is a share-configuration file auto-generated

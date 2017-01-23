@@ -63,7 +63,8 @@ sub get_module_settings {
 }
 
 sub get_pxe_config {
-  my ($filename) = shift || return undef;
+  my $class = shift;
+  my ($filename) = shift || return;
   my $settings = get_module_settings();
   my $lang  = $settings->{'lang'};
   my $mac   = argonaut_get_mac_pxe($filename);

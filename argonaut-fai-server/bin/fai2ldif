@@ -112,7 +112,7 @@ if ($release) {
   $faibaserdn = "ou=$release,$faibaserdn";
 }
 if ($outfilename) {
-  open($outfile, '>'.$outfilename) or die "Could not open '$outfilename'\n";
+  open($outfile, q{>}, $outfilename) or die "Could not open '$outfilename'\n";
 } else {
   $outfile = *STDOUT;
 }

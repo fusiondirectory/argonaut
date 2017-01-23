@@ -65,8 +65,10 @@ BEGIN
       &argonaut_ldap_rsearch
       &argonaut_ldap_is_single_result
       &argonaut_ldap_split_dn
+      &argonaut_ldap_branch_exists
       &argonaut_ldap_init
       &argonaut_ldap_handle
+      &argonaut_read_ldap_config
       &argonaut_get_generic_settings
       &argonaut_get_client_settings
       &argonaut_get_server_settings
@@ -269,6 +271,7 @@ sub argonaut_ldap_handle {
 sub argonaut_ldap_parse_config
 {
   my ($ldap_config) = @_;
+  my $ldapconf;
 
   # Try to guess the location of the ldap.conf - file
   $ldap_config = $ENV{ 'LDAPCONF' }
@@ -281,10 +284,10 @@ sub argonaut_ldap_parse_config
     if (!defined $ldap_config);
 
   # Read LDAP
-  return if( ! open (LDAPCONF,"${ldap_config}") );
+  return if( ! open ($ldapconf,q{<},"${ldap_config}") );
 
-  my @content=<LDAPCONF>;
-  close(LDAPCONF);
+  my @content=<$ldapconf>;
+  close($ldapconf);
 
   my ($ldap_base, @ldap_uris, %tls_options);
   # Scan LDAP config
@@ -344,6 +347,21 @@ sub argonaut_ldap_split_dn {
   return @result_rdns;
 }
 
+# Check if a designated branch exists
+sub argonaut_ldap_branch_exists {
+  my ($ldap, $branch) = @_;
+
+  # search for branch
+  my $branch_mesg = $ldap->search (base => $branch, filter => '(objectClass=*)', scope => 'base');
+  if ($branch_mesg->code == LDAP_NO_SUCH_OBJECT) {
+    return 0;
+  }
+  $branch_mesg->code && die "Error while searching for branch \"$branch\":".$branch_mesg->error;
+
+  my @entries = $branch_mesg->entries;
+  return (defined ($entries[0]));
+}
+
 #------------------------------------------------------------------------------
 #
 sub argonaut_file_write {
@@ -354,10 +372,11 @@ sub argonaut_file_write {
 
   my $filename = shift;
   my $data = shift;
+  my $script;
 
-  open (SCRIPT,">${filename}") || warn "Can't create ${filename}. $!\n";
-  print SCRIPT $data;
-  close(SCRIPT);
+  open ($script,q{>},${filename}) || warn "Can't create ${filename}. $!\n";
+  print $script $data;
+  close ($script);
 
   ($opts[2] ne "") && chmod oct($opts[2]),${filename};
   ($opts[3] ne "") && argonaut_file_chown(${filename}, $opts[3]);
@@ -556,7 +575,7 @@ sub argonaut_ldap_fsearch {
       else { $search_base = ''; }
     }
     elsif( 0 == scalar @rdns ) {
-      return undef;
+      return;
     }
     else {
       $search_base = $rdns[ 0 ] . ',' . $search_base;
@@ -578,7 +597,7 @@ sub argonaut_ldap_fsearch {
     # LDAP search
     $mesg = $ldap->search( %opts );
 
-    next if( $mesg->code == 32 ); # Ignore missing objects (32)
+    next if( $mesg->code == LDAP_NO_SUCH_OBJECT ); # Ignore missing objects (32)
     return $mesg if( $mesg->code ); # Return undef on other failures
 
     last if( $mesg->count() > 0 );
@@ -607,6 +626,34 @@ sub argonaut_read_config {
   $res{'ldap_tls'} = ($res{'ldap_tls'} =~ m/^on$/i);
 
   return \%res;
+}
+
+# Read a config in the LDAP
+sub argonaut_read_ldap_config {
+  my ($ldap, $ldap_base, $config, $configfilter, $params) = @_;
+
+  my $mesg = $ldap->search (base => $ldap_base, filter => $configfilter);
+  if (($mesg->code != 0) && ($mesg->code != LDAP_NO_SUCH_OBJECT)) {
+    die $mesg->error;
+  }
+
+  if ($mesg->count > 0) {
+    while (my ($key,$value) = each(%{$params})) {
+      if (ref $value eq ref []) {
+        $config->{"$key"} = ($mesg->entries)[0]->get_value(@$value);
+      } else {
+        if (($mesg->entries)[0]->get_value("$value")) {
+          $config->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+        } else {
+          $config->{"$key"} = "";
+        }
+      }
+    }
+  } else {
+    die "Could not find configuration node in the LDAP (filter:$configfilter)".$die_endl;
+  }
+
+  return ($mesg->entries)[0];
 }
 
 #------------------------------------------------------------------------------

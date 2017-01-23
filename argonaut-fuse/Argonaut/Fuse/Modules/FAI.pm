@@ -60,7 +60,8 @@ sub get_module_settings {
 }
 
 sub get_pxe_config {
-  my ($filename) = shift || return undef;
+  my $class = shift;
+  my ($filename) = shift || return;
   my $settings = get_module_settings();
   my $nfs_root  = $settings->{'nfs_root'};
   my $nfs_opts  = "";
@@ -92,7 +93,7 @@ sub get_pxe_config {
       if (-f "$main::tftp_root/$filename") {
         if (0 == unlink( "$main::tftp_root/$filename" )) {
           $log->error("$filename - removing from '$main::tftp_root' failed: $!\n");
-          return undef;
+          return;
         }
       } else {
         $log->info("$filename - no LDAP status - continue PXE boot\n");

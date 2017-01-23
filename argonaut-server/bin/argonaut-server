@@ -2,7 +2,7 @@
 
 #######################################################################
 #
-# argonaut-server -- Dispatching action received from FusionDirectory 
+# argonaut-server -- Dispatching action received from FusionDirectory
 # to the clients
 #
 # Copyright (C) 2011-2016 FusionDirectory project
@@ -694,14 +694,15 @@ POE::Session->create(
         load_dump => sub { # this function has not been tested
             my ($kernel,$filename) = @_[KERNEL,ARG0..$#_];
 
-            open (DUMP, $filename) or die "cannot open file";
-            while (<DUMP>) {
+            my $dump;
+            open ($dump, q{>}, $filename) or die "cannot open file";
+            while (<$dump>) {
                 my $task = from_json($_);
                 if(($task->{status} eq "waiting") && ($task->{data}->{timestamp} > time)) {
                     $kernel->yield(schedule=>$task->{date},$task->{action},$task->{target},$task->{data});
                 }
             }
-            close(DUMP);
+            close($dump);
         },
         sighup => sub {
             my ($kernel,$heap) = @_[KERNEL,HEAP];
@@ -732,12 +733,13 @@ POE::Session->create(
             $log->notice("exiting because of $signal…");
             #here, do something with waiting tasks
             if(scalar(keys(%{$_[HEAP]->{tasks}})) > 0) {
-                open (DUMP, ">dump_".time.".json") or die "cannot open file";
+                my $dump;
+                open ($dump, q{>}, "dump_".time.".json") or die "cannot open file";
                 foreach my $task (values(%{$_[HEAP]->{tasks}})) {
                     delete $task->{handle};
-                    print DUMP (to_json($task)."\n");
+                    print $dump (to_json($task)."\n");
                 }
-                close(DUMP);
+                close($dump);
             }
         },
         sigchild => sub {

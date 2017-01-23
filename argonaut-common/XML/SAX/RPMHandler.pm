@@ -23,11 +23,15 @@
 #######################################################################
 
 package XML::SAX::RPMHandler;
+
+use strict;
+use warnings;
+
 use base qw(XML::SAX::Base);
 
   sub new {
     my $type = shift;
-    $self = {
+    my $self = {
       'packages'  => shift,
       'package'   => undef,
       'key'       => undef,

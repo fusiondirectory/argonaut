@@ -166,13 +166,16 @@ sub readConfig
 
 sub import_modules {
   foreach my $module (modules()) {
-    my $info = eval($module.'::get_module_info()');
-    # Only load module if get_module_info() returns a non-null object
-    if ($info) {
-      $log->info("Loaded module $module ($info)\n");
-      $known_modules->{$module} = $info;
-    } else {
-      $log->info("$module is not a module\n");
+    eval {
+      if(my $info = $module->get_module_info()) {
+        $log->info("Loaded module $module ($info)\n");
+        $known_modules->{$module} = $info;
+      } else {
+        $log->warn("$module is not a module\n");
+      }
+      1;
+    } or do {
+      $log->warn("Exception when trying to call ->get_module_info on $module - $@");
     }
   }
 }
@@ -190,14 +193,14 @@ sub getattr {
   my ($filename) = @_;
 
   # regular file
-  my $type = 0100;
-  my $bits = 0644;
+  my $type = oct(100);
+  my $bits = oct(644);
   my $size = 0;
 
   # if directory, set type to dir and mode to 0755
   if ($filename eq '/') {
-    $type = 0040;
-    $bits = 0755;
+    $type = oct(40);
+    $bits = oct(755);
   } else {
     $filename =~ s|^.*/||; # Keep only filename
     if ($filename =~ /^([0-9a-f]{1,2}-){6}[0-9a-f]{1,2}$/i) {
@@ -207,12 +210,15 @@ sub getattr {
       # Process known Modules
       MODULE: foreach my $module (keys %{$known_modules}) {
         $log->info("Processing Module $module with argument ${filename}\n");
-        my $answer = eval($module.'::get_pxe_config("'.$filename.'")');
-        if ($@) {
+        eval {
+          my $answer = $module->get_pxe_config($filename);
+          if (exists($filesystem->{$filename})) {
+            last MODULE;
+          }
+          1;
+        } or do {
           $log->error("ERROR: Processing Module $module failed with $@\n");
-        }
-        if (exists($filesystem->{$filename})) {
-          last MODULE;
+          delete $filesystem->{$filename} if(exists($filesystem->{$filename}));
         }
       }
     }
