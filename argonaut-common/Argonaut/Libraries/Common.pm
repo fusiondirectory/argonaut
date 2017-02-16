@@ -685,7 +685,9 @@ sub argonaut_get_generic_settings {
     $settings->{'dn'}   = ($mesg->entries)[0]->dn();
     $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
     $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
-    if (($mesg->entries)[0]->exists('gotoMode')) {
+    if (($mesg->entries)[0]->exists('fdMode')) {
+      $settings->{'locked'} = ($mesg->entries)[0]->get_value("fdMode") eq 'locked';
+    } elsif (($mesg->entries)[0]->exists('gotoMode')) {
       $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
     } else {
       $settings->{'locked'} = 0;
@@ -709,7 +711,7 @@ sub argonaut_get_generic_settings {
     $mesg = $ldap->search( # perform a search
               base   => $ldap_base,
               filter => $filter,
-              attrs => [ 'dn', 'macAddress', 'gotoMode' ]
+              attrs => [ 'dn', 'macAddress', 'gotoMode', 'fdMode' ]
               );
     if (scalar($mesg->entries)>1) {
       die "Several computers matches $filter.$die_endl";
@@ -719,7 +721,9 @@ sub argonaut_get_generic_settings {
     $settings->{'dn'}   = ($mesg->entries)[0]->dn();
     $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
     $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
-    if (($mesg->entries)[0]->exists('gotoMode')) {
+    if (($mesg->entries)[0]->exists('fdMode')) {
+      $settings->{'locked'} = ($mesg->entries)[0]->get_value("fdMode") eq 'locked';
+    } elsif (($mesg->entries)[0]->exists('gotoMode')) {
       $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
     } else {
       $settings->{'locked'} = 0;
