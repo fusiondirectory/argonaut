@@ -108,7 +108,9 @@ sub read_reminder_ldap_config {
       'resend_delay'      => "fdUserReminderResendDelay",
       'alert_mailsubject' => "fdUserReminderAlertSubject",
       'alert_mailbody'    => "fdUserReminderAlertBody",
-      'alert_mailaddress' => "fdUserReminderEmail"
+      'alert_mailaddress' => "fdUserReminderEmail",
+      'ppolicy_default'   => "fdPpolicyDefaultCn",
+      'ppolicy_rdn'       => "fdPpolicyRDN"
     }
   );
 
@@ -144,25 +146,66 @@ sub check_expired_users {
   }
 
   # PPOLICY expiration
-  $mesg = $ldap->search(
-    base    => $config->{'ldap_base'},
-    filter  => '(pwdChangedTime=*)',
-    scope   => 'subtree',
-    attrs   => ['uid','cn','mail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
-  );
-  die_on_ldap_errors($mesg);
-
-  foreach my $entry ($mesg->entries()) {
-    my $cn = $entry->get_value('cn');
-    my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
-    if (not defined $pwdChangedTimestamp) {
-      print "Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn\n";
-      next;
+  if (($config->{'ppolicy_default'}) && ($config->{'ppolicy_rdn'})) {
+    my $defaultMaxAge;
+    my $ppolicydn = 'cn='.$config->{'ppolicy_default'}.','.$config->{'ppolicy_rdn'}.$config->{'ldap_base'};
+    $mesg = $ldap->search(
+      base    => $ppolicydn,
+      filter  => '(objectClass=*)',
+      scope   => 'base',
+      attrs   => ['pwdMaxAge']
+    );
+    die_on_ldap_errors($mesg);
+    if ($mesg->count > 0) {
+      $defaultMaxAge = ($mesg->entries)[0]->get_value("pwdMaxAge");
+    } else {
+      die "Default ppolicy '".$ppolicydn."' could not be found in the LDAP!\n";
     }
-    if ($pwdChangedTimestamp <= $today) {
-      print "$cn is Expired\n";
-    } elsif ($pwdChangedTimestamp <= $next_expired_date) {
-      alert_user_if_needed($ldap,$entry,$today);
+
+    $mesg = $ldap->search(
+      base    => $config->{'ldap_base'},
+      filter  => '(pwdChangedTime=*)',
+      scope   => 'subtree',
+      attrs   => ['uid','cn','mail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
+    );
+    die_on_ldap_errors($mesg);
+
+    my %maxAgeCache = ();
+    my @entries = $mesg->entries();
+    foreach my $entry (@entries) {
+      my $cn = $entry->get_value('cn');
+
+      my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
+      if (not defined $pwdChangedTimestamp) {
+        print "Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn\n";
+        next;
+      }
+
+      my $maxAge = $defaultMaxAge;
+      if (defined $entry->get_value('pwdPolicySubentry')) {
+        my $userPolicy = $entry->get_value('pwdPolicySubentry');
+        if (defined $maxAgeCache{$userPolicy}) {
+          $maxAge = $maxAgeCache{$userPolicy};
+        } else {
+          $mesg = $ldap->search(
+            base    => $userPolicy,
+            filter  => '(objectClass=*)',
+            scope   => 'base',
+            attrs   => ['pwdMaxAge']
+          );
+          die_on_ldap_errors($mesg);
+          if ($mesg->count > 0) {
+            $maxAge = ($mesg->entries)[0]->get_value("pwdMaxAge");
+          }
+          $maxAgeCache{$userPolicy} = $maxAge;
+        }
+      }
+
+      if ($pwdChangedTimestamp + $maxAge <= $today) {
+        print "$cn is Expired\n";
+      } elsif ($pwdChangedTimestamp + $maxAge <= $next_expired_date) {
+        alert_user_if_needed($ldap,$entry,$today);
+      }
     }
   }
 }
