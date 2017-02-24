@@ -148,7 +148,7 @@ sub check_expired_users {
   # PPOLICY expiration
   if (($config->{'ppolicy_default'}) && ($config->{'ppolicy_rdn'})) {
     my $defaultMaxAge;
-    my $ppolicydn = 'cn='.$config->{'ppolicy_default'}.','.$config->{'ppolicy_rdn'}.$config->{'ldap_base'};
+    my $ppolicydn = 'cn='.$config->{'ppolicy_default'}.','.$config->{'ppolicy_rdn'}.','.$config->{'ldap_base'};
     $mesg = $ldap->search(
       base    => $ppolicydn,
       filter  => '(objectClass=*)',
