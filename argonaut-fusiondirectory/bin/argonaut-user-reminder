@@ -168,7 +168,7 @@ sub check_expired_users {
       base    => $config->{'ldap_base'},
       filter  => '(pwdChangedTime=*)',
       scope   => 'subtree',
-      attrs   => ['uid','cn','mail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
+      attrs   => ['uid','cn','mail','fdPrivateMail','supannAutreMail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
     );
     die_on_ldap_errors($mesg);
 
@@ -220,15 +220,21 @@ sub alert_user_if_needed()
   # Check if we have a mail address for this user.
   my $mail_address = $entry->get_value('mail');
   if (not defined $mail_address) {
+    $mail_address = $entry->get_value('fdPrivateMail');
+  }
+  if (not defined $mail_address) {
+    $mail_address = $entry->get_value('supannAutreMail');
+  }
+  if (not defined $mail_address) {
     print "User $cn has no mail address, skipping…\n";
-    next;
+    return;
   }
 
   # Check if we already sent an email.
   my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
   if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
     print "User $cn was already sent a mail, not resending yet.\n" if $verbose;
-    next;
+    return;
   }
 
   my ($manager_cn, $manager_mail);
