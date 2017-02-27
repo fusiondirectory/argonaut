@@ -203,6 +203,11 @@ sub check_expired_users {
         }
       }
 
+      if (not defined $maxAge) {
+        print "No ppolicy max age found for $cn\n" if $verbose;
+        next;
+      }
+
       if ($pwdChangedTimestamp + $maxAge <= $now) {
         print "$cn is Expired\n" if $verbose;
       } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
