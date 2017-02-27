@@ -50,7 +50,6 @@ $config->{'fd_rdn'} = 'ou=fusiondirectory';
 my $verbose = 0;
 
 
-
 sub print_usage
 {
   print "Usage : argonaut-user-reminder [--verbose]\n";
@@ -124,9 +123,11 @@ sub check_expired_users {
   $config->{'ldap_base'} = $ldap_base;
   read_reminder_ldap_config($ldap);
 
-  my $today = int(time() / 86400); # 24 * 60 * 60
+  # Time and date in seconds
+  my $now = time();
 
-  my $next_expired_date = ($today + $config->{'alert_delay'});
+  # Convert alert_delay (days) to seconds and add it to $now (86400 is 24*60*60)
+  my $next_alert_date = ($now + ($config->{'alert_delay'} * 86400));
 
   # POSIX expiration
   my $mesg = $ldap->search(
@@ -138,10 +139,11 @@ sub check_expired_users {
 
   foreach my $entry ($mesg->entries()) {
     my $cn = $entry->get_value('cn');
-    if ($entry->get_value('shadowExpire') <= $today) {
-      print "$cn is Expired\n";
-    } elsif ($entry->get_value('shadowExpire') <= $next_expired_date) {
-      alert_user_if_needed($ldap,$entry,$today);
+    my $shadowExpireSeconds = $entry->get_value('shadowExpire') * 86400;
+    if ($shadowExpireSeconds <= $now) {
+      print "$cn is Expired\n" if $verbose;
+    } elsif ($shadowExpireSeconds <= $next_alert_date) {
+      alert_user_if_needed($ldap,$entry,$now);
     }
   }
 
@@ -201,10 +203,10 @@ sub check_expired_users {
         }
       }
 
-      if ($pwdChangedTimestamp + $maxAge <= $today) {
-        print "$cn is Expired\n";
-      } elsif ($pwdChangedTimestamp + $maxAge <= $next_expired_date) {
-        alert_user_if_needed($ldap,$entry,$today);
+      if ($pwdChangedTimestamp + $maxAge <= $now) {
+        print "$cn is Expired\n" if $verbose;
+      } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
+        alert_user_if_needed($ldap,$entry,$now);
       }
     }
   }
@@ -212,23 +214,26 @@ sub check_expired_users {
 
 sub alert_user_if_needed()
 {
-  my ($ldap,$entry,$today) = @_;
+  my ($ldap,$entry,$now) = @_;
   my $cn = $entry->get_value('cn');
-  #~ Check if we have a mail address for this user.
+
+  # Check if we have a mail address for this user.
   my $mail_address = $entry->get_value('mail');
   if (not defined $mail_address) {
     print "User $cn has no mail address, skipping…\n";
     next;
   }
-  my ($token_hash, $token_date) = get_ldap_token($ldap, $entry->get_value('uid'));
-  #~ Check if we already sent an email.
-  if ((defined $token_date) && ($token_date + $config->{'resend_delay'} > $today)) {
-    print "User $cn was already sent a mail, not resending yet.\n";
+
+  # Check if we already sent an email.
+  my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
+  if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
+    print "User $cn was already sent a mail, not resending yet.\n" if $verbose;
     next;
   }
+
   my ($manager_cn, $manager_mail);
   if ($config->{'forward_alert'}) {
-    #~ Find the manager
+    # Find the manager
     my $manager_dn = $entry->get_value('manager');
     if (not defined $manager_dn) {
       my $ou = $entry->dn;
@@ -255,20 +260,20 @@ sub alert_user_if_needed()
       $manager_mail = ($manager_mesg->entries)[0]->get_value('mail');
     }
   }
-  send_alert_mail($ldap, $entry->get_value('uid'), $today, $cn, $mail_address, $manager_cn, $manager_mail);
+  send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail);
 }
 
 sub send_alert_mail
 {
-  my ($ldap, $uid, $date, $user_cn, $user_mail, $manager_cn, $manager_mail) = @_;
-  my $token = store_ldap_token($ldap, $uid, $date);
-  print "Sending mail to $user_cn<$user_mail>";
+  my ($ldap, $uid, $datetime, $user_cn, $user_mail, $manager_cn, $manager_mail) = @_;
+  my $token = store_ldap_token($ldap, $uid, $datetime);
+  print "Sending mail to $user_cn<$user_mail>" if $verbose;
   my $cc = "";
   if (defined $manager_mail) {
-    print ", copy to $manager_cn<$manager_mail>";
+    print ", copy to $manager_cn<$manager_mail>" if $verbose;
     $cc = "$manager_cn<$manager_mail>";
   }
-  print " with token $token\n";
+  print " with token $token\n" if $verbose;
   my $message = Email::MIME->create(
     header_str => [
       From    => $config->{'alert_mailaddress'},
@@ -306,7 +311,7 @@ sub get_ldap_token
 
 sub store_ldap_token
 {
-  my ($ldap, $uid, $date) = @_;
+  my ($ldap, $uid, $datetime) = @_;
 
   my $token_password  = argonaut_gen_random_str(48);
   my $token_hash      = sha256_base64('expired'.$token_password);
@@ -327,7 +332,7 @@ sub store_ldap_token
       'ou'            => $uid,
       'objectClass'   => 'organizationalUnit',
       'userPassword'  => $token_hash,
-      'description'   => $date
+      'description'   => $datetime
     ]
   );
 
