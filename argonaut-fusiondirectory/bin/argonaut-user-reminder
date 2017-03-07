@@ -82,7 +82,8 @@ sub die_on_ldap_errors
 #############################################################
 
 # Read FD config in the LDAP
-sub read_reminder_ldap_config {
+sub read_reminder_ldap_config
+{
   my ($ldap) = @_;
 
   # Default values
@@ -118,7 +119,8 @@ sub read_reminder_ldap_config {
   }
 }
 
-sub check_expired_users {
+sub check_expired_users
+{
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
   $config->{'ldap_base'} = $ldap_base;
   read_reminder_ldap_config($ldap);
@@ -217,7 +219,7 @@ sub check_expired_users {
   }
 }
 
-sub alert_user_if_needed()
+sub alert_user_if_needed
 {
   my ($ldap,$entry,$now) = @_;
   my $cn = $entry->get_value('cn');
