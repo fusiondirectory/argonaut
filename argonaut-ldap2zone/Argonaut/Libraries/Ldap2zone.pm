@@ -355,7 +355,7 @@ sub create_namedconf
   }
 
   if ($CHECK_NAMES ne "") {
-    $CHECK_NAMES = "check-names {$CHECK_NAMES};";
+    $CHECK_NAMES = "check-names $CHECK_NAMES;";
   } else {
     $CHECK_NAMES = "";
   }
