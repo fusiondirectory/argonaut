@@ -86,6 +86,10 @@ sub argonaut_ldap2zone
 
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
+  if ($settings->{'searchbase'} ne "") {
+    $ldap_base = $settings->{'searchbase'};
+  }
+
   if ($ldap2view) {
     print "Searching DNS View '$zone'\n" if $verbose;
 

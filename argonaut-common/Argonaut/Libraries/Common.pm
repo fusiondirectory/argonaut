@@ -831,6 +831,7 @@ sub argonaut_get_ldap2zone_settings {
       'ttl'           => 'argonautLdap2zoneTTL',
       'rndc'          => 'argonautLdap2zoneRndc',
       'noreverse'     => 'argonautLdap2zoneNoReverse',
+      'searchbase'    => 'argonautLdap2zoneSearchBase',
     },
     @_
   );
