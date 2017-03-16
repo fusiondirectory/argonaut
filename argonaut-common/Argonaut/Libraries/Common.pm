@@ -827,6 +827,7 @@ sub argonaut_get_ldap2zone_settings {
       'allownotify'   => 'argonautLdap2zoneAllowNotify',
       'allowupdate'   => 'argonautLdap2zoneAllowUpdate',
       'allowtransfer' => 'argonautLdap2zoneAllowTransfer',
+      'checknames'    => 'argonautLdap2zoneCheckNames',
       'ttl'           => 'argonautLdap2zoneTTL',
       'rndc'          => 'argonautLdap2zoneRndc',
       'noreverse'     => 'argonautLdap2zoneNoReverse',
