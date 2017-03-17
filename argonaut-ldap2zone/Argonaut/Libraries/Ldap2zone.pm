@@ -40,13 +40,36 @@ my @record_types = ('a','aaaa','cname','mx','ns','ptr','txt','srv','hinfo','rp',
 
 my $NAMEDCHECKCONF = 'named-checkconf';
 
+#------------------------------------------------------------------------------
+# get ldap2zone settings
+#
+sub argonaut_get_ldap2zone_settings {
+  return argonaut_get_generic_settings(
+    'argonautDNSConfig',
+    {
+      'binddir'       => 'argonautLdap2zoneBindDir',
+      'bindcachedir'  => 'argonautLdap2zoneBindCacheDir',
+      'allownotify'   => 'argonautLdap2zoneAllowNotify',
+      'allowupdate'   => 'argonautLdap2zoneAllowUpdate',
+      'allowtransfer' => 'argonautLdap2zoneAllowTransfer',
+      'checknames'    => 'argonautLdap2zoneCheckNames',
+      'ttl'           => 'argonautLdap2zoneTTL',
+      'rndc'          => 'argonautLdap2zoneRndc',
+      'noreverse'     => 'argonautLdap2zoneNoReverse',
+      'searchbase'    => 'argonautLdap2zoneSearchBase',
+      'slavefiles'    => ['argonautLdap2zoneSlaveZones', asref => 1],
+    },
+    @_
+  );
+}
+
 =item argonaut_ldap2zone
 Write a zone file for the LDAP zone and its reverse, generate named.conf files and assure they are included
 Params : zone name, verbose flag
 =cut
 sub argonaut_ldap2zone
 {
-  my($zone,$verbose,$norefresh,$dumpdir,$noreverse,$ldap2view) = @_;
+  my($zone,$verbose,$norefresh,$dumpdir,$noreverse,$ldap2view,$slavefiles) = @_;
 
   my $config = argonaut_read_config;
 
@@ -101,6 +124,14 @@ sub argonaut_ldap2zone
         die "Could not find the view $zone\n";
       }
       create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose, $view);
+    }
+  } elsif ($slavefiles)  {
+    print "Updating all slave files\n" if $verbose;
+    my @zones = @{$settings->{'slavefiles'}};
+    foreach (@zones) {
+      my ($zoneName, $masterLine) = split /|/, $_, 2;
+      print "Updating slave $zoneName\n" if $verbose;
+      create_slave_namedconf($zoneName,$masterline,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
     }
   } else {
     if (substr($zone,-1) ne ".") { # If the end point is not there, add it
@@ -405,6 +436,35 @@ EOF
 };
 EOF
   }
+  close $namedfile;
+}
+
+=item create_slave_namedconf
+Create file $output_BIND_DIR/named.conf.ldap2zone.slave.$zone
+Params : zone name
+Returns :
+=cut
+sub create_slave_namedconf
+{
+  my($zone,$masterline,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose) = @_;
+
+  if (substr($masterline,-1) ne ";") {
+    # If the end semi-colon is not there, add it
+    $masterline = $masterline.";";
+  }
+
+  my $filename = "$output_BIND_DIR/named.conf.ldap2zone.slave.$zone"
+
+  print "Writing named.conf file in $filename\n" if $verbose;
+  my $namedfile;
+  open($namedfile, q{>}, "$filename") or die "error while trying to open $filename";
+  print $namedfile <<EOF;
+zone "$zone" {
+  type slave;
+  masters {$masterline};
+  file "$BIND_CACHE_DIR/db.$zone";
+};
+EOF
   close $namedfile;
 }
 

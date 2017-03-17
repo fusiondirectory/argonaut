@@ -73,7 +73,6 @@ BEGIN
       &argonaut_get_client_settings
       &argonaut_get_server_settings
       &argonaut_get_crawler_settings
-      &argonaut_get_ldap2zone_settings
       &argonaut_get_fuse_settings
     )],
     'file' => [qw(
@@ -810,28 +809,6 @@ sub argonaut_get_crawler_settings {
     {
       'mirrordir'       => 'argonautMirrorDir',
       'packagesfolder'  => 'argonautCrawlerPackagesFolder',
-    },
-    @_
-  );
-}
-
-#------------------------------------------------------------------------------
-# get ldap2zone settings
-#
-sub argonaut_get_ldap2zone_settings {
-  return argonaut_get_generic_settings(
-    'argonautDNSConfig',
-    {
-      'binddir'       => 'argonautLdap2zoneBindDir',
-      'bindcachedir'  => 'argonautLdap2zoneBindCacheDir',
-      'allownotify'   => 'argonautLdap2zoneAllowNotify',
-      'allowupdate'   => 'argonautLdap2zoneAllowUpdate',
-      'allowtransfer' => 'argonautLdap2zoneAllowTransfer',
-      'checknames'    => 'argonautLdap2zoneCheckNames',
-      'ttl'           => 'argonautLdap2zoneTTL',
-      'rndc'          => 'argonautLdap2zoneRndc',
-      'noreverse'     => 'argonautLdap2zoneNoReverse',
-      'searchbase'    => 'argonautLdap2zoneSearchBase',
     },
     @_
   );
