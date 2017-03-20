@@ -129,7 +129,7 @@ sub argonaut_ldap2zone
     print "Updating all slave files\n" if $verbose;
     my @zones = @{$settings->{'slavefiles'}};
     foreach (@zones) {
-      my ($zoneName, $masterLine) = split /|/, $_, 2;
+      my ($zoneName, $masterline) = split /|/, $_, 2;
       print "Updating slave $zoneName\n" if $verbose;
       create_slave_namedconf($zoneName,$masterline,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
     }
@@ -453,7 +453,7 @@ sub create_slave_namedconf
     $masterline = $masterline.";";
   }
 
-  my $filename = "$output_BIND_DIR/named.conf.ldap2zone.slave.$zone"
+  my $filename = "$output_BIND_DIR/named.conf.ldap2zone.slave.$zone";
 
   print "Writing named.conf file in $filename\n" if $verbose;
   my $namedfile;
