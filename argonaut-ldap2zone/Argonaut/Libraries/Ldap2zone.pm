@@ -129,9 +129,14 @@ sub argonaut_ldap2zone
     print "Updating all slave files\n" if $verbose;
     my @zones = @{$settings->{'slavefiles'}};
     foreach (@zones) {
-      my ($zoneName, $masterline) = split /\|/, $_, 2;
+      my ($zoneName, $masterline, $reverse) = split /\|/, $_, 3;
       print "Updating slave $zoneName\n" if $verbose;
-      create_slave_namedconf($zoneName,$masterline,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
+      my $zonedn = zonesearch($ldap,$ldap_base,$zoneName,$verbose);
+      my $reverse_zones = [];
+      if ($zonedn and ($reverse ne 'noreverse')) {
+        $reverse_zones = get_reverse_zones($ldap,$ldap_base,$zonedn);
+      }
+      create_slave_namedconf($zoneName,$masterline,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
     }
   } else {
     if (substr($zone,-1) ne ".") { # If the end point is not there, add it
@@ -265,6 +270,29 @@ sub zoneparse
   close $newzone;
 
   return $dn;
+}
+
+=item zonesearch
+Search the zone in the LDAP
+Params : ldap handle, ldap base, zone name, bind dir, TTL, verbose flag
+Returns : dn of the zone
+=cut
+sub zonesearch
+{
+  my ($ldap,$ldap_base,$zone,$verbose) = @_;
+  my $mesg = $ldap->search( # perform a search
+    base   => $ldap_base,
+    filter => "zoneName=$zone",
+    attrs => [ 'soaRecord' ]
+  );
+
+  $mesg->code && die "Error while searching DNS Zone '$zone' :".$mesg->error;
+
+  foreach my $entry ($mesg->entries()) {
+    if($entry->get_value("soaRecord")) {
+      return $entry->dn();
+    }
+  }
 }
 
 =item viewparse
@@ -446,7 +474,7 @@ Returns :
 =cut
 sub create_slave_namedconf
 {
-  my($zone,$masterline,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose) = @_;
+  my($zone,$masterline,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose) = @_;
 
   if (substr($masterline,-1) ne ";") {
     # If the end semi-colon is not there, add it
@@ -465,6 +493,16 @@ zone "$zone" {
   file "$BIND_CACHE_DIR/db.$zone";
 };
 EOF
+  foreach my $reverse_zone (@$reverse_zones) {
+    print "Writing reverse zone '$reverse_zone'\n" if $verbose;
+    print $namedfile <<EOF;
+zone "$reverse_zone" {
+  type slave;
+  masters {$masterline};
+  file "$BIND_CACHE_DIR/db.$reverse_zone";
+};
+EOF
+  }
   close $namedfile;
 }
 
