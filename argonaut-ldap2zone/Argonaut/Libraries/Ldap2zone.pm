@@ -50,6 +50,7 @@ sub argonaut_get_ldap2zone_settings {
       'binddir'       => 'argonautLdap2zoneBindDir',
       'bindcachedir'  => 'argonautLdap2zoneBindCacheDir',
       'allownotify'   => 'argonautLdap2zoneAllowNotify',
+      'notify'        => 'argonautLdap2zoneNotify',
       'allowupdate'   => 'argonautLdap2zoneAllowUpdate',
       'allowtransfer' => 'argonautLdap2zoneAllowTransfer',
       'checknames'    => 'argonautLdap2zoneCheckNames',
@@ -85,7 +86,7 @@ sub argonaut_ldap2zone
     $output_BIND_DIR = $BIND_DIR;
     $output_BIND_CACHE_DIR = $BIND_CACHE_DIR;
   }
-  my $ALLOW_NOTIFY            =   $settings->{'allownotify'};
+  my $NOTIFY                  =   $settings->{'notify'};
   my $ALLOW_UPDATE            =   $settings->{'allowupdate'};
   my $ALLOW_TRANSFER          =   $settings->{'allowtransfer'};
   my $CHECK_NAMES             =   $settings->{'checknames'};
@@ -93,6 +94,9 @@ sub argonaut_ldap2zone
   my $RNDC                    =   $settings->{'rndc'};
   if (not defined $noreverse) {
     $noreverse = ($settings->{'noreverse'} eq 'TRUE');
+  }
+  if (($NOTIFY eq '') and ($settings->{'allownotify'} eq 'TRUE')) {
+    $NOTIFY = 'yes';
   }
 
   if (not -d $output_BIND_DIR) {
@@ -123,7 +127,7 @@ sub argonaut_ldap2zone
       if (not defined($view)) {
         die "Could not find the view $zone\n";
       }
-      create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose, $view);
+      create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose, $view);
     }
   } elsif ($slavefiles)  {
     print "Updating all slave files\n" if $verbose;
@@ -146,7 +150,7 @@ sub argonaut_ldap2zone
     print "Searching DNS Zone '$zone'\n" if $verbose;
 
     my $dn = zoneparse($ldap,$ldap_base,$zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
-    create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose);
+    create_namedconf($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose);
 
     unless ($noreverse) {
       my $reverse_zones = get_reverse_zones($ldap,$ldap_base,$dn);
@@ -154,7 +158,7 @@ sub argonaut_ldap2zone
       foreach my $reverse_zone (@$reverse_zones) {
         print "Parsing reverse zone '$reverse_zone'\n" if $verbose;
         zoneparse($ldap,$ldap_base,$reverse_zone,$output_BIND_CACHE_DIR,$TTL,$verbose);
-        create_namedconf($reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose);
+        create_namedconf($reverse_zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose);
       }
     }
   }
@@ -393,12 +397,12 @@ Returns :
 =cut
 sub create_namedconf
 {
-  my($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$ALLOW_NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose,$view) = @_;
+  my($zone,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$NOTIFY,$ALLOW_UPDATE,$ALLOW_TRANSFER,$CHECK_NAMES,$verbose,$view) = @_;
 
-  if($ALLOW_NOTIFY eq "TRUE") {
-    $ALLOW_NOTIFY = "notify yes;";
+  if($NOTIFY ne "") {
+    $NOTIFY = "notify $NOTIFY;";
   } else {
-    $ALLOW_NOTIFY = "";
+    $NOTIFY = "";
   }
 
   if ($ALLOW_UPDATE ne "") {
@@ -451,7 +455,7 @@ EOF
     print $namedfile <<EOF;
 zone "$zone_" {
   type master;
-  $ALLOW_NOTIFY
+  $NOTIFY
   file "$BIND_CACHE_DIR/db.$zone_";
   $ALLOW_UPDATE
   $ALLOW_TRANSFER
