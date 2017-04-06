@@ -73,7 +73,6 @@ BEGIN
       &argonaut_get_client_settings
       &argonaut_get_server_settings
       &argonaut_get_crawler_settings
-      &argonaut_get_ldap2zone_settings
       &argonaut_get_fuse_settings
     )],
     'file' => [qw(
@@ -685,7 +684,9 @@ sub argonaut_get_generic_settings {
     $settings->{'dn'}   = ($mesg->entries)[0]->dn();
     $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
     $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
-    if (($mesg->entries)[0]->exists('gotoMode')) {
+    if (($mesg->entries)[0]->exists('fdMode')) {
+      $settings->{'locked'} = ($mesg->entries)[0]->get_value("fdMode") eq 'locked';
+    } elsif (($mesg->entries)[0]->exists('gotoMode')) {
       $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
     } else {
       $settings->{'locked'} = 0;
@@ -709,7 +710,7 @@ sub argonaut_get_generic_settings {
     $mesg = $ldap->search( # perform a search
               base   => $ldap_base,
               filter => $filter,
-              attrs => [ 'dn', 'macAddress', 'gotoMode' ]
+              attrs => [ 'dn', 'macAddress', 'gotoMode', 'fdMode' ]
               );
     if (scalar($mesg->entries)>1) {
       die "Several computers matches $filter.$die_endl";
@@ -719,7 +720,9 @@ sub argonaut_get_generic_settings {
     $settings->{'dn'}   = ($mesg->entries)[0]->dn();
     $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
     $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
-    if (($mesg->entries)[0]->exists('gotoMode')) {
+    if (($mesg->entries)[0]->exists('fdMode')) {
+      $settings->{'locked'} = ($mesg->entries)[0]->get_value("fdMode") eq 'locked';
+    } elsif (($mesg->entries)[0]->exists('gotoMode')) {
       $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
     } else {
       $settings->{'locked'} = 0;
@@ -806,26 +809,6 @@ sub argonaut_get_crawler_settings {
     {
       'mirrordir'       => 'argonautMirrorDir',
       'packagesfolder'  => 'argonautCrawlerPackagesFolder',
-    },
-    @_
-  );
-}
-
-#------------------------------------------------------------------------------
-# get ldap2zone settings
-#
-sub argonaut_get_ldap2zone_settings {
-  return argonaut_get_generic_settings(
-    'argonautDNSConfig',
-    {
-      'binddir'       => 'argonautLdap2zoneBindDir',
-      'bindcachedir'  => 'argonautLdap2zoneBindCacheDir',
-      'allownotify'   => 'argonautLdap2zoneAllowNotify',
-      'allowupdate'   => 'argonautLdap2zoneAllowUpdate',
-      'allowtransfer' => 'argonautLdap2zoneAllowTransfer',
-      'ttl'           => 'argonautLdap2zoneTTL',
-      'rndc'          => 'argonautLdap2zoneRndc',
-      'noreverse'     => 'argonautLdap2zoneNoReverse',
     },
     @_
   );

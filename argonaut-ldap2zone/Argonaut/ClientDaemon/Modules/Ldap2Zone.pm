@@ -49,6 +49,16 @@ sub start : Public {
   return "ldap2zone done";
 }
 
+=item slaves
+Update all slave files with information from the LDAP
+=cut
+sub slaves : Public {
+  my ($s, $args) = @_;
+  $main::log->notice("ldap2zone slaves update called");
+  argonaut_ldap2zone("",undef,undef,undef,undef,undef,1);
+  return "ldap2zone slaves update done";
+}
+
 1;
 
 __END__

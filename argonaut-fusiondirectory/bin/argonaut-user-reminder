@@ -34,6 +34,7 @@ use Digest::SHA qw(sha256_base64);
 use Argonaut::Libraries::Common qw(:ldap :string :config);
 
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
+use Net::LDAP::Util qw(generalizedTime_to_time);
 
 # first, create your message
 use Email::MIME;
@@ -47,7 +48,6 @@ $config = argonaut_read_config;
 $config->{'fd_rdn'} = 'ou=fusiondirectory';
 
 my $verbose = 0;
-
 
 
 sub print_usage
@@ -82,7 +82,8 @@ sub die_on_ldap_errors
 #############################################################
 
 # Read FD config in the LDAP
-sub read_reminder_ldap_config {
+sub read_reminder_ldap_config
+{
   my ($ldap) = @_;
 
   # Default values
@@ -107,7 +108,9 @@ sub read_reminder_ldap_config {
       'resend_delay'      => "fdUserReminderResendDelay",
       'alert_mailsubject' => "fdUserReminderAlertSubject",
       'alert_mailbody'    => "fdUserReminderAlertBody",
-      'alert_mailaddress' => "fdUserReminderEmail"
+      'alert_mailaddress' => "fdUserReminderEmail",
+      'ppolicy_default'   => "fdPpolicyDefaultCn",
+      'ppolicy_rdn'       => "fdPpolicyRDN"
     }
   );
 
@@ -116,85 +119,174 @@ sub read_reminder_ldap_config {
   }
 }
 
-sub check_expired_users {
+sub check_expired_users
+{
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
   $config->{'ldap_base'} = $ldap_base;
   read_reminder_ldap_config($ldap);
 
-  my $today = int(time() / 86400); # 24 * 60 * 60
+  # Time and date in seconds
+  my $now = time();
 
-  my $next_expired_date = ($today + $config->{'alert_delay'});
+  # Convert alert_delay (days) to seconds and add it to $now (86400 is 24*60*60)
+  my $next_alert_date = ($now + ($config->{'alert_delay'} * 86400));
 
-  my $filter = '(&(objectClass=person)(shadowExpire=*))';
+  # POSIX expiration
   my $mesg = $ldap->search(
     base    => $config->{'ldap_base'},
-    filter  => $filter,
+    filter  => '(&(objectClass=person)(shadowExpire=*))',
     scope   => 'subtree'
   );
   die_on_ldap_errors($mesg);
 
   foreach my $entry ($mesg->entries()) {
     my $cn = $entry->get_value('cn');
-    if ($entry->get_value('shadowExpire') <= $today) {
-      print "$cn is Expired\n";
-    } elsif ($entry->get_value('shadowExpire') <= $next_expired_date) {
-      #~ Check if we have a mail address for this user.
-      my $mail_address = $entry->get_value('mail');
-      if (not defined $mail_address) {
-        print "User $cn has no mail address, skipping…\n";
+    my $shadowExpireSeconds = $entry->get_value('shadowExpire') * 86400;
+    if ($shadowExpireSeconds <= $now) {
+      print "$cn is Expired\n" if $verbose;
+    } elsif ($shadowExpireSeconds <= $next_alert_date) {
+      alert_user_if_needed($ldap,$entry,$now);
+    }
+  }
+
+  # PPOLICY expiration
+  if (($config->{'ppolicy_default'}) && ($config->{'ppolicy_rdn'})) {
+    my $defaultMaxAge;
+    my $ppolicydn = 'cn='.$config->{'ppolicy_default'}.','.$config->{'ppolicy_rdn'}.','.$config->{'ldap_base'};
+    $mesg = $ldap->search(
+      base    => $ppolicydn,
+      filter  => '(objectClass=*)',
+      scope   => 'base',
+      attrs   => ['pwdMaxAge']
+    );
+    die_on_ldap_errors($mesg);
+    if ($mesg->count > 0) {
+      $defaultMaxAge = ($mesg->entries)[0]->get_value("pwdMaxAge");
+    } else {
+      die "Default ppolicy '".$ppolicydn."' could not be found in the LDAP!\n";
+    }
+
+    $mesg = $ldap->search(
+      base    => $config->{'ldap_base'},
+      filter  => '(pwdChangedTime=*)',
+      scope   => 'subtree',
+      attrs   => ['uid','cn','mail','fdPrivateMail','supannAutreMail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
+    );
+    die_on_ldap_errors($mesg);
+
+    my %maxAgeCache = ();
+    my @entries = $mesg->entries();
+    foreach my $entry (@entries) {
+      my $cn = $entry->get_value('cn');
+
+      my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
+      if (not defined $pwdChangedTimestamp) {
+        print "Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn\n";
         next;
       }
-      my ($token_hash, $token_date) = get_ldap_token($ldap, $entry->get_value('uid'));
-      #~ Check if we already sent an email.
-      if ((defined $token_date) && ($token_date + $config->{'resend_delay'} > $today)) {
-        print "User $cn was already sent a mail, not resending yet.\n";
-        next;
-      }
-      my ($manager_cn, $manager_mail);
-      if ($config->{'forward_alert'}) {
-        #~ Find the manager
-        my $manager_dn = $entry->get_value('manager');
-        if (not defined $manager_dn) {
-          my $ou = $entry->dn;
-          $ou =~ s/^[^,]+,$config->{'user_rdn'}//;
-          my $manager_mesg = $ldap->search(
-            base    => $ou,
+
+      my $maxAge = $defaultMaxAge;
+      if (defined $entry->get_value('pwdPolicySubentry')) {
+        my $userPolicy = $entry->get_value('pwdPolicySubentry');
+        if (defined $maxAgeCache{$userPolicy}) {
+          $maxAge = $maxAgeCache{$userPolicy};
+        } else {
+          $mesg = $ldap->search(
+            base    => $userPolicy,
             filter  => '(objectClass=*)',
-            scope   => 'base'
+            scope   => 'base',
+            attrs   => ['pwdMaxAge']
           );
-          if ($manager_mesg->count() > 0) {
-            $manager_dn = ($manager_mesg->entries)[0]->get_value('manager');
+          die_on_ldap_errors($mesg);
+          if ($mesg->count > 0) {
+            $maxAge = ($mesg->entries)[0]->get_value("pwdMaxAge");
           }
-        }
-        if (not defined $manager_dn) {
-          print "No manager found for $cn\n";
-        }
-        my $manager_mesg = $ldap->search(
-          base    => $manager_dn,
-          filter  => '(objectClass=*)',
-          scope   => 'base'
-        );
-        if ($manager_mesg->count() > 0) {
-          $manager_cn   = ($manager_mesg->entries)[0]->get_value('cn');
-          $manager_mail = ($manager_mesg->entries)[0]->get_value('mail');
+          $maxAgeCache{$userPolicy} = $maxAge;
         }
       }
-      send_alert_mail($ldap, $entry->get_value('uid'), $today, $cn, $mail_address, $manager_cn, $manager_mail);
+
+      if (not defined $maxAge) {
+        print "No ppolicy max age found for $cn\n" if $verbose;
+        next;
+      }
+
+      if ($pwdChangedTimestamp + $maxAge <= $now) {
+        print "$cn is Expired\n" if $verbose;
+      } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
+        alert_user_if_needed($ldap,$entry,$now);
+      }
     }
   }
 }
 
+sub alert_user_if_needed
+{
+  my ($ldap,$entry,$now) = @_;
+  my $cn = $entry->get_value('cn');
+
+  # Check if we have a mail address for this user.
+  my $mail_address = $entry->get_value('mail');
+  if (not defined $mail_address) {
+    $mail_address = $entry->get_value('fdPrivateMail');
+  }
+  if (not defined $mail_address) {
+    $mail_address = $entry->get_value('supannAutreMail');
+  }
+  if (not defined $mail_address) {
+    print "User $cn has no mail address, skipping…\n";
+    return;
+  }
+
+  # Check if we already sent an email.
+  my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
+  if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
+    print "User $cn was already sent a mail, not resending yet.\n" if $verbose;
+    return;
+  }
+
+  my ($manager_cn, $manager_mail);
+  if ($config->{'forward_alert'}) {
+    # Find the manager
+    my $manager_dn = $entry->get_value('manager');
+    if (not defined $manager_dn) {
+      my $ou = $entry->dn;
+      $ou =~ s/^[^,]+,$config->{'user_rdn'}//;
+      my $manager_mesg = $ldap->search(
+        base    => $ou,
+        filter  => '(objectClass=*)',
+        scope   => 'base'
+      );
+      if ($manager_mesg->count() > 0) {
+        $manager_dn = ($manager_mesg->entries)[0]->get_value('manager');
+      }
+    }
+    if (not defined $manager_dn) {
+      print "No manager found for $cn\n";
+    }
+    my $manager_mesg = $ldap->search(
+      base    => $manager_dn,
+      filter  => '(objectClass=*)',
+      scope   => 'base'
+    );
+    if ($manager_mesg->count() > 0) {
+      $manager_cn   = ($manager_mesg->entries)[0]->get_value('cn');
+      $manager_mail = ($manager_mesg->entries)[0]->get_value('mail');
+    }
+  }
+  send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail);
+}
+
 sub send_alert_mail
 {
-  my ($ldap, $uid, $date, $user_cn, $user_mail, $manager_cn, $manager_mail) = @_;
-  my $token = store_ldap_token($ldap, $uid, $date);
-  print "Sending mail to $user_cn<$user_mail>";
+  my ($ldap, $uid, $datetime, $user_cn, $user_mail, $manager_cn, $manager_mail) = @_;
+  my $token = store_ldap_token($ldap, $uid, $datetime);
+  print "Sending mail to $user_cn<$user_mail>" if $verbose;
   my $cc = "";
   if (defined $manager_mail) {
-    print ", copy to $manager_cn<$manager_mail>";
+    print ", copy to $manager_cn<$manager_mail>" if $verbose;
     $cc = "$manager_cn<$manager_mail>";
   }
-  print " with token $token\n";
+  print " with token $token\n" if $verbose;
   my $message = Email::MIME->create(
     header_str => [
       From    => $config->{'alert_mailaddress'},
@@ -232,7 +324,7 @@ sub get_ldap_token
 
 sub store_ldap_token
 {
-  my ($ldap, $uid, $date) = @_;
+  my ($ldap, $uid, $datetime) = @_;
 
   my $token_password  = argonaut_gen_random_str(48);
   my $token_hash      = sha256_base64('expired'.$token_password);
@@ -253,7 +345,7 @@ sub store_ldap_token
       'ou'            => $uid,
       'objectClass'   => 'organizationalUnit',
       'userPassword'  => $token_hash,
-      'description'   => $date
+      'description'   => $datetime
     ]
   );
 

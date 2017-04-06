@@ -1,6 +1,14 @@
 Argonaut changelog
 ==================
 
+* Argonaut 1.1
+
+[Feature] Bugs #5379: Argonaut should support fdMode instead of gotoMode for FD 1.1
+[Feature] Bugs #5439: we should add the directive check-names into the argonaut-dns service
+[Feature] Bugs #5440: argonaut-ldap2zone should be able to get data from a branch
+[Feature] Bugs #5447: argonaut ldap2zone should be able to create config for dns slave also, but not create the data
+[Feature] Wishlist #5332: argonaut-user-reminder should support ppolicy
+
 * Argonaut 1.0
 
 [Fix] Bugs #5273: Incompatibility between recovery password and user-reminder

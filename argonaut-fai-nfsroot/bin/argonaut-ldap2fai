@@ -230,7 +230,7 @@ sub get_classes {
   my $host_info;
   my $real_hostname;
 
-  my $filter = "(&(objectClass=goHard)";
+  my $filter = "(&(objectClass=FAIobject)";
   if ($mac ne '') {
     print( "Lookup host for MAC '$mac'...\n" ) if( $verbose );
     $filter .= "(macAddress=$mac))";
