@@ -370,6 +370,7 @@ sub reinstall_or_update {
         "clientId"            => $self->{'fqdn'},
         "type"                => "ProductOnClient",
         "installationStatus"  => "installed",
+        "productType"         => "LocalbootProduct",
       }]
     );
     foreach my $product (@$productOnClients) {
