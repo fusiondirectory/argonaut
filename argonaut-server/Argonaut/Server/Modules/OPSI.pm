@@ -337,7 +337,7 @@ sub reinstall_or_update {
   #3 - set netboot as the profile specifies
   if (!$reinstall && defined $self->{'netboot'}) {
     # Check if netboot is correctly installed
-    if ($productStates->{$self->{'netboot'}} ne 'installed') {
+    if ((not exists($productStates->{$self->{'netboot'}})) || ($productStates->{$self->{'netboot'}} ne 'installed')) {
       $reinstall = 1;
     }
   }
