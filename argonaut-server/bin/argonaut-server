@@ -654,9 +654,13 @@ POE::Session->create(
           if (defined $heap->{tasks}->{$taskid}->{'handler'}) {
             $heap->{tasks}->{$taskid} = $heap->{tasks}->{$taskid}->{'handler'}->task_processed($heap->{tasks}->{$taskid});
           }
-          $heap->{tasks}->{$taskid}->{status} = "processed";
-          if($delete_finished_tasks) {
-            $kernel->call($session => 'delete_task' => $taskid);
+          if (defined $heap->{tasks}->{$taskid}->{data}->{periodic}) {
+            $heap->{tasks}->{$taskid}->{status} = "waiting";
+          } else {
+            $heap->{tasks}->{$taskid}->{status} = "processed";
+            if ($delete_finished_tasks) {
+              $kernel->call($session => 'delete_task' => $taskid);
+            }
           }
         },
         get_new_task_id => sub {
