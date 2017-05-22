@@ -450,56 +450,70 @@ POE::Session->create(
           my ($kernel, $heap, $session, $jsonrpc, $id, @params) = @_[KERNEL,HEAP,SESSION, ARG0..$#_ ];
           my ($action,$targets,$data) = @params;
 
-          if (scalar(@$targets) == 0) {
-            $log->debug("No targets, refusing action $action");
-            $kernel->post( $jsonrpc => 'error' => $id, "Empty target list was given");
-            return;
-          }
+          eval {
+            if (scalar(@$targets) == 0) {
+              $log->debug("No targets, refusing action $action");
+              $kernel->post( $jsonrpc => 'error' => $id, "Empty target list was given");
+              return;
+            }
 
-          if (ref $data ne ref {}) {
-            #If data is not an hash reference, make it so to avoid errors.
-            $data = {};
-          }
-          $log->info("adding action $action");
+            if (ref $data ne ref {}) {
+              #If data is not an hash reference, make it so to avoid errors.
+              $data = {};
+            }
+            $log->info("adding action $action");
 
-          if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) &&
-              (grep {$_ eq $action} @{$heap->{scheduled_only}})) {
-              # If the action is scheduled_only and there is no timestamp
-              # We schedule it for now
-              $data->{timestamp} = time();
-          }
+            if( ((! defined $data->{timestamp}) || ($data->{timestamp} eq "")) &&
+                (grep {$_ eq $action} @{$heap->{scheduled_only}})) {
+                # If the action is scheduled_only and there is no timestamp
+                # We schedule it for now
+                $data->{timestamp} = time();
+            }
 
-          if(defined $data->{timestamp} && ($data->{timestamp} ne "")) {
-            $kernel->post( $jsonrpc => 'result' => $id, "OK" ); # asynchronous
-
-            my $date = DateTime->from_epoch(epoch => $data->{timestamp});
-            my $datetime;
-            if (defined $data->{periodic} && ($data->{periodic} =~ /^(\d+)_(\w+)$/)) {
-              my $periodic_nb = $1;
-              my $periodic_keyword = $2;
-              $datetime = DateTime::Set->from_recurrence (
-                after      => $date,
-                recurrence => sub {
-                  return $_[0]->add( $periodic_keyword => $periodic_nb )
-                },
-              );
+            if(defined $data->{timestamp} && ($data->{timestamp} ne "")) {
+              # asynchronous
+              my $date = DateTime->from_epoch(epoch => $data->{timestamp});
+              my $datetime;
+              if (defined $data->{periodic}) {
+                if ($data->{periodic} =~ /^(\d+)_(\w+)$/) {
+                  my $periodic_nb = $1;
+                  my $periodic_keyword = $2;
+                  $datetime = DateTime::Set->from_recurrence (
+                    after      => $date,
+                    recurrence => sub {
+                      return $_[0]->add( $periodic_keyword => $periodic_nb )
+                    },
+                  );
+                } else {
+                  $log->error($@);
+                  $kernel->post( $jsonrpc => 'error' => $id, "Periodic string does not match mask");
+                  return;
+                }
+              } else {
+                $datetime = DateTime::Set->from_datetimes(dates => [ $date ]);
+              }
+              foreach my $target (@{$targets}) {
+                $kernel->yield(schedule => $datetime->clone, $action, lc($target), $data);
+              }
+              $kernel->post( $jsonrpc => 'result' => $id, "OK" );
+              $log->info("action $action scheduled");
             } else {
-              $datetime = DateTime::Set->from_datetimes(dates => [ $date ]);
+              # synchronous
+              my $errors = "";
+              my @results;
+              my $taskid = $kernel->call($session => 'get_new_task_id');
+              $heap->{tasks}->{$taskid}->{nb_targets} = scalar(@$targets);
+              $heap->{tasks}->{$taskid}->{jsonid} = $id;
+              $heap->{tasks}->{$taskid}->{jsonsession} = $jsonrpc;
+              foreach my $target (@{$targets}) {
+                $kernel->yield('action' => $taskid,$action,lc($target),$data);
+              }
             }
-            foreach my $target (@{$targets}) {
-              $kernel->yield(schedule => $datetime->clone, $action, lc($target), $data);
-            }
-            $log->info("action $action scheduled");
-          } else {
-            my $errors = "";
-            my @results;
-            my $taskid = $kernel->call($session => 'get_new_task_id');
-            $heap->{tasks}->{$taskid}->{nb_targets} = scalar(@$targets);
-            $heap->{tasks}->{$taskid}->{jsonid} = $id;
-            $heap->{tasks}->{$taskid}->{jsonsession} = $jsonrpc;
-            foreach my $target (@{$targets}) {
-              $kernel->yield('action' => $taskid,$action,lc($target),$data);
-            }
+          };
+          if($@) {
+            $log->error($@);
+            $kernel->post( $jsonrpc => 'error' => $id, "Error :$@");
+            return;
           }
         },
         get_entries_by_id => sub {
@@ -591,6 +605,7 @@ POE::Session->create(
         },
         set_task_error => sub {
           my ($kernel,$heap,$session,$taskid,$error) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          $log->debug("Setting task error '$error' for task '$taskid'");
           if (defined $heap->{tasks}->{$taskid}->{jsonid}) {
             $heap->{tasks}->{$taskid}->{error} .= $error;
             $kernel->call($session => 'send_result' => $taskid);
