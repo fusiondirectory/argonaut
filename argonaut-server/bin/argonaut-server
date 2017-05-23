@@ -479,7 +479,7 @@ POE::Session->create(
                   my $periodic_nb = $1;
                   my $periodic_keyword = $2;
                   $datetime = DateTime::Set->from_recurrence (
-                    after      => $date,
+                    start      => $date,
                     recurrence => sub {
                       return $_[0]->add( $periodic_keyword => $periodic_nb )
                     },
