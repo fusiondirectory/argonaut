@@ -194,14 +194,14 @@ sub update_task {
   if ($task->{status} ne 'processing') {
     return $task;
   }
-  if ($task->{action} eq 'Deployment.reinstall') {
+  if (($task->{action} eq 'Deployment.reinstall') || ($task->{action} eq 'Deployment.update')) {
     my $attrs = [
       'actionResult',
       'actionRequest',
       'actionProgress',
       'installationStatus',
     ];
-    $task->{progress} = 0;
+    $task->{progress} = 10;
     $task->{substatus} = "";
     if (defined $self->{'netboot'}) {
       my $filter = {
@@ -212,15 +212,16 @@ sub update_task {
       my $results = $self->launch('productOnClient_getObjects',[$attrs, $filter]);
       my $res = shift @$results;
       if ($res->{'actionRequest'} eq 'setup') {
-        $task->{substatus} = $res->{'actionProgress'};
-        $task->{progress} = 10;
-        return;
+        $task->{substatus}  = $res->{'actionProgress'};
+        $task->{progress}   = 20;
+        return $task;
       } elsif ($res->{'installationStatus'} eq 'installed') {
-        $task->{substatus} = 'netboot installed';
-        $task->{progress} = 50;
+        $task->{substatus}  = 'netboot installed';
+        $task->{progress}   = 50;
       } elsif ($res->{'actionResult'} eq 'failed') {
         $task->{status} = "error";
-        $task->{error} = $res->{'actionProgress'};
+        $task->{error}  = $res->{'actionProgress'};
+        return $task;
       }
     }
     my $nblocals = 0;
@@ -246,13 +247,14 @@ sub update_task {
         } elsif ($res->{'actionResult'} eq 'failed') {
           $task->{status} = "error";
           $task->{error} = $res->{'actionProgress'};
+          return $task;
         }
       }
     }
     if ($nblocals eq 0) {
       $task->{progress} = 100;
     } else {
-      $task->{progress} += (100 - $task->{progress})*$nbinstalled/$nblocals;
+      $task->{progress} += (100 - $task->{progress}) * $nbinstalled / $nblocals;
       if ($status ne "") {
         $task->{substatus} = $status;
       }
@@ -452,6 +454,10 @@ sub reinstall_or_update {
     $res = $self->launch('hostControl_fireEvent',['on_demand', $self->{'fqdn'}]);
   }
 
+  # If we did not die until here, all went well
+  $self->{task}->{'substatus'}  = 'Order sent';
+  $self->{task}->{'progress'}   = 10;
+
   return $res;
 }
 
@@ -521,22 +527,7 @@ sub do_action {
       unshift @$params, $self->{'fqdn'};
     }
     $main::log->info("[OPSI] sending action ".$actions->{$action}." to ".$self->{'fqdn'});
-    $res = $self->launch($actions->{$action},$params);
-    if ($hostParam) {
-      if ((ref $res eq ref {}) && defined $res->{$self->{'fqdn'}}) {
-        my $result = $res->{$self->{'fqdn'}};
-        if (JSON::XS::is_bool($result)) {
-          $res = $result;
-        } elsif (defined $result->{'error'}) {
-          $main::log->error("[OPSI] Error : ".$result->{'error'});
-          die "Error while sending '".$actions->{$action}."' to '".$self->{'fqdn'}."' : ", $result->{'error'}."\n";
-        } elsif (defined $result->{'result'}) {
-          $res = $result->{'result'};
-        } else {
-          undef $res;
-        }
-      }
-    }
+    $res = $self->launch($actions->{$action}, $params);
   } else {
     my $sub = $actions->{$action};
     $res = $self->$sub($action, $params);
@@ -588,7 +579,21 @@ sub launch {
       $main::log->error("[OPSI] Error : ".$res->error_message->{'message'});
       die "Error : ", $res->error_message->{'message'}."\n";
     } else {
-      return $res->result;
+      $res = $res->result;
+      if ((ref $res eq ref {}) && defined $res->{$self->{'fqdn'}}) {
+        my $result = $res->{$self->{'fqdn'}};
+        if (JSON::XS::is_bool($result)) {
+          $res = $result;
+        } elsif (defined $result->{'error'}) {
+          $main::log->error("[OPSI] Error : ".$result->{'error'});
+          die "Error while sending '".$action."' to '".$self->{'fqdn'}."' : ", $result->{'error'}."\n";
+        } elsif (defined $result->{'result'}) {
+          $res = $result->{'result'};
+        } else {
+          undef $res;
+        }
+      }
+      return $res;
     }
   } else {
     $main::log->info("[OPSI] Status : ".$client->status_line);
