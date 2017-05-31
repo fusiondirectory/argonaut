@@ -64,9 +64,9 @@ If you like [Argonaut][Argonaut] and would like to [donate][donate-liberapay] ev
 
 [register]: https://register.fusiondirectory.org
 
-[issues-forge]: https://forge.fusiondirectory.org/projects/fd-plugins/issues/new
+[issues-forge]: https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new
 
-[issues-github]: https://github.com/fusiondirectory/fusiondirectory-plugins/issues
+[issues-github]: https://github.com/fusiondirectory/argonaut/issues
 
 [donate-liberapay]: https://liberapay.com/fusiondirectory/donate
 
