@@ -241,7 +241,7 @@ sub zoneparse
         print "Added record $type $name $class $value $ttl\n" if $verbose;
       }
     }
-    my $soa = $entry->get_value("soaRecord");
+    my $soa = $entry->get_value("sOARecord");
     if($soa) {
       my $soa_record = $zonefile->soa();
       my (@soa_fields) = split(' ',$soa);
@@ -288,16 +288,18 @@ sub zonesearch
   my $mesg = $ldap->search( # perform a search
     base   => $ldap_base,
     filter => "zoneName=$zone",
-    attrs => [ 'soaRecord' ]
+    attrs => [ 'sOARecord' ]
   );
 
   $mesg->code && die "Error while searching DNS Zone '$zone' :".$mesg->error;
 
   foreach my $entry ($mesg->entries()) {
-    if($entry->get_value("soaRecord")) {
+    if($entry->get_value("sOARecord")) {
       return $entry->dn();
     }
   }
+
+  die "Could not find DNS Zone '$zone'\n";
 }
 
 =item viewparse
