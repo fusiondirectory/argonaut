@@ -1,6 +1,17 @@
 Argonaut changelog
 ==================
 
+* Argonaut 1.2
+
+[Fix] Bugs #5461: Error with Ldap2zone slave when using multiple domains with a common reverse zone
+[Fix] Bugs #5513: netboot stayed in uninstall state
+[Fix] Bugs #5523: Periodical schedule is not repeated
+[Fix] Bugs #5541: Errors when trying to schedule actions
+[Fix] Bugs #5544: Periodical jobs miss the first launch
+[Fix] Bugs #5546: OPSI update software stay in deployement queue with "in progress" status
+[Feature] Bugs #5558: Use some trim on argonaut.conf
+[Fix] Bugs #5559: Argonaut client and server systemd service definition fails
+
 * Argonaut 1.1
 
 [Feature] Bugs #5379: Argonaut should support fdMode instead of gotoMode for FD 1.1
