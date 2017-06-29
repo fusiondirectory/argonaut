@@ -11,6 +11,7 @@ Argonaut changelog
 [Fix] Bugs #5546: OPSI update software stay in deployement queue with "in progress" status
 [Feature] Bugs #5558: Use some trim on argonaut.conf
 [Fix] Bugs #5559: Argonaut client and server systemd service definition fails
+[Fix] Bugs #5646: changing the library used to send mail in argonaut-user-reminder
 
 * Argonaut 1.1
 
