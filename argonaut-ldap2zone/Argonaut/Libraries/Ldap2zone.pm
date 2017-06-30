@@ -132,6 +132,7 @@ sub argonaut_ldap2zone
   } elsif ($slavefiles)  {
     print "Updating all slave files\n" if $verbose;
     my @zones = @{$settings->{'slavefiles'}};
+    my $all_reverse_zones = [];
     foreach (@zones) {
       my ($zoneName, $masterline, $reverse) = split /\|/, $_, 3;
       print "Updating slave $zoneName\n" if $verbose;
@@ -140,7 +141,7 @@ sub argonaut_ldap2zone
       if ($zonedn and ($reverse ne 'noreverse')) {
         $reverse_zones = get_reverse_zones($ldap,$ldap_base,$zonedn);
       }
-      create_slave_namedconf($zoneName,$masterline,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
+      create_slave_namedconf($zoneName,$masterline,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose,$all_reverse_zones);
     }
   } else {
     if (substr($zone,-1) ne ".") { # If the end point is not there, add it
@@ -240,7 +241,7 @@ sub zoneparse
         print "Added record $type $name $class $value $ttl\n" if $verbose;
       }
     }
-    my $soa = $entry->get_value("soaRecord");
+    my $soa = $entry->get_value("sOARecord");
     if($soa) {
       my $soa_record = $zonefile->soa();
       my (@soa_fields) = split(' ',$soa);
@@ -287,16 +288,18 @@ sub zonesearch
   my $mesg = $ldap->search( # perform a search
     base   => $ldap_base,
     filter => "zoneName=$zone",
-    attrs => [ 'soaRecord' ]
+    attrs => [ 'sOARecord' ]
   );
 
   $mesg->code && die "Error while searching DNS Zone '$zone' :".$mesg->error;
 
   foreach my $entry ($mesg->entries()) {
-    if($entry->get_value("soaRecord")) {
+    if($entry->get_value("sOARecord")) {
       return $entry->dn();
     }
   }
+
+  die "Could not find DNS Zone '$zone'\n";
 }
 
 =item viewparse
@@ -478,7 +481,7 @@ Returns :
 =cut
 sub create_slave_namedconf
 {
-  my($zone,$masterline,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose) = @_;
+  my($zone,$masterline,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose,$all_reverse_zones) = @_;
 
   if (substr($masterline,-1) ne ";") {
     # If the end semi-colon is not there, add it
@@ -498,6 +501,11 @@ zone "$zone" {
 };
 EOF
   foreach my $reverse_zone (@$reverse_zones) {
+    if (grep {$_ eq $reverse_zone} @$all_reverse_zones) {
+      # this avoids having twice the same reverse zones in slave conf
+      next;
+    }
+    push @$all_reverse_zones, $reverse_zone;
     print "Writing reverse zone '$reverse_zone'\n" if $verbose;
     print $namedfile <<EOF;
 zone "$reverse_zone" {

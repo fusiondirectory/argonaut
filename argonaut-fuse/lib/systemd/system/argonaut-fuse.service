@@ -1,6 +1,8 @@
 [Unit]
 Description=Start argonaut-fuse
 ConditionPathExists=/usr/sbin/argonaut-fuse
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=forking

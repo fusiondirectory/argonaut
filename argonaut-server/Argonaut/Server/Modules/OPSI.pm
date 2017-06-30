@@ -194,14 +194,14 @@ sub update_task {
   if ($task->{status} ne 'processing') {
     return $task;
   }
-  if ($task->{action} eq 'Deployment.reinstall') {
+  if (($task->{action} eq 'Deployment.reinstall') || ($task->{action} eq 'Deployment.update')) {
     my $attrs = [
       'actionResult',
       'actionRequest',
       'actionProgress',
       'installationStatus',
     ];
-    $task->{progress} = 0;
+    $task->{progress} = 10;
     $task->{substatus} = "";
     if (defined $self->{'netboot'}) {
       my $filter = {
@@ -212,15 +212,16 @@ sub update_task {
       my $results = $self->launch('productOnClient_getObjects',[$attrs, $filter]);
       my $res = shift @$results;
       if ($res->{'actionRequest'} eq 'setup') {
-        $task->{substatus} = $res->{'actionProgress'};
-        $task->{progress} = 10;
-        return;
+        $task->{substatus}  = $res->{'actionProgress'};
+        $task->{progress}   = 20;
+        return $task;
       } elsif ($res->{'installationStatus'} eq 'installed') {
-        $task->{substatus} = 'netboot installed';
-        $task->{progress} = 50;
+        $task->{substatus}  = 'netboot installed';
+        $task->{progress}   = 50;
       } elsif ($res->{'actionResult'} eq 'failed') {
         $task->{status} = "error";
-        $task->{error} = $res->{'actionProgress'};
+        $task->{error}  = $res->{'actionProgress'};
+        return $task;
       }
     }
     my $nblocals = 0;
@@ -246,13 +247,14 @@ sub update_task {
         } elsif ($res->{'actionResult'} eq 'failed') {
           $task->{status} = "error";
           $task->{error} = $res->{'actionProgress'};
+          return $task;
         }
       }
     }
     if ($nblocals eq 0) {
       $task->{progress} = 100;
     } else {
-      $task->{progress} += (100 - $task->{progress})*$nbinstalled/$nblocals;
+      $task->{progress} += (100 - $task->{progress}) * $nbinstalled / $nblocals;
       if ($status ne "") {
         $task->{substatus} = $status;
       }
@@ -293,7 +295,6 @@ sub update_or_insert {
 
 sub reinstall_or_update {
   my ($self, $reinstall,$action,$params) = @_;
-  my $res;
 
   #1 - fetch the host profile
   my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
@@ -324,32 +325,21 @@ sub reinstall_or_update {
     $productStates->{$product->{'productId'}} = $product->{'installationStatus'};
     $product->{"actionRequest"} = 'none';
   }
-  $res = $self->launch('productOnClient_updateObjects', [$productOnClients]);
-  $productOnClients = $self->launch('productPropertyState_getObjects',
+  $self->launch('productOnClient_updateObjects', [$productOnClients]);
+  my $productPropertyStates = $self->launch('productPropertyState_getObjects',
     [[],
     {
       "objectId"      => $self->{'fqdn'},
       "type"          => "ProductPropertyState",
     }]
   );
-  $res = $self->launch('productPropertyState_deleteObjects', [$productOnClients]);
+  if (scalar(@$productPropertyStates) > 0) {
+    $self->launch('productPropertyState_deleteObjects', [$productPropertyStates]);
+  }
   #3 - set netboot as the profile specifies
   if (!$reinstall && defined $self->{'netboot'}) {
     # Check if netboot is correctly installed
-    my $attrs = [
-      'actionResult',
-      'actionRequest',
-      'actionProgress',
-      'installationStatus',
-    ];
-    my $filter = {
-      "productId"     => $self->{'netboot'},
-      "clientId"      => $self->{'fqdn'},
-      "productType"   => "NetbootProduct",
-    };
-    my $results = $self->launch('productOnClient_getObjects',[$attrs, $filter]);
-    my $res = shift @$results;
-    if ($res->{'installationStatus'} ne 'installed') {
+    if ((not exists($productStates->{$self->{'netboot'}})) || ($productStates->{$self->{'netboot'}} ne 'installed')) {
       $reinstall = 1;
     }
   }
@@ -361,24 +351,28 @@ sub reinstall_or_update {
       "type"          => "ProductOnClient",
       "productType"   => "NetbootProduct",
     };
-    $res = $self->launch('productOnClient_updateObject',[$infos]);
+    $self->launch('productOnClient_updateObject',[$infos]);
   } else {
     #3 bis - set to uninstall product that are not in the profile
-    $productOnClients = $self->launch('productOnClient_getObjects',
-      [[],
-      {
-        "clientId"            => $self->{'fqdn'},
-        "type"                => "ProductOnClient",
-        "installationStatus"  => "installed",
-      }]
-    );
+    # (all products on the client for now - step 4 will cancel uninstall on needed products)
+    my $infos = [];
     foreach my $product (@$productOnClients) {
-      if (($product->{"productId"} ne 'opsi-client-agent') && ($product->{"productId"} ne 'opsi-winst')) {
-        $product->{"actionRequest"} = "uninstall";
-        $main::log->debug("[OPSI] uninstall ".$product->{"productId"});
+      if (($product->{"productType"} eq "LocalbootProduct") &&
+          ($product->{"installationStatus"} eq "installed") &&
+          ($product->{"productId"} ne 'opsi-client-agent') &&
+          ($product->{"productId"} ne 'opsi-winst')) {
+        push @$infos, {
+          "productId"     => $product->{"productId"},
+          "clientId"      => $self->{'fqdn'},
+          "type"          => "ProductOnClient",
+          "productType"   => "LocalbootProduct",
+          "actionRequest" => "uninstall",
+        };
       }
     }
-    $res = $self->launch('productOnClient_updateObjects', [$productOnClients]);
+    if (scalar(@$infos) > 0) {
+      $self->launch('productOnClient_updateObjects',[$infos]);
+    }
   }
   #4 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile - see 3 bis)
   if (defined $self->{'softlists'}) {
@@ -431,7 +425,9 @@ sub reinstall_or_update {
         $self->launch('configState_create',['software-on-demand.show-details', $self->{'fqdn'}, ($showdetails?JSON::true:JSON::false)]);
       }
     }
-    $res = $self->launch('productOnClient_updateObjects',[$infos]);
+    if (scalar(@$infos) > 0) {
+      $self->launch('productOnClient_updateObjects',[$infos]);
+    }
   }
   #5 - set properties as the profile specifies
   if (defined $self->{'properties'}) {
@@ -446,14 +442,21 @@ sub reinstall_or_update {
         "type"          => "ProductPropertyState",
       };
     }
-    $res = $self->launch('productPropertyState_updateObjects',[$infos]);
+    if (scalar(@$infos) > 0) {
+      $self->launch('productPropertyState_updateObjects',[$infos]);
+    }
   }
   #6 - reboot the host or fire the event
+  my $res;
   if (defined $self->{'netboot'}) {
     $res = $self->launch('hostControl_reboot',[$self->{'fqdn'}]);
   } else {
     $res = $self->launch('hostControl_fireEvent',['on_demand', $self->{'fqdn'}]);
   }
+
+  # If we did not die until here, all went well
+  $self->{task}->{'substatus'}  = 'Order sent';
+  $self->{task}->{'progress'}   = 10;
 
   return $res;
 }
@@ -524,22 +527,7 @@ sub do_action {
       unshift @$params, $self->{'fqdn'};
     }
     $main::log->info("[OPSI] sending action ".$actions->{$action}." to ".$self->{'fqdn'});
-    $res = $self->launch($actions->{$action},$params);
-    if ($hostParam) {
-      if ((ref $res eq ref {}) && defined $res->{$self->{'fqdn'}}) {
-        my $result = $res->{$self->{'fqdn'}};
-        if (JSON::XS::is_bool($result)) {
-          $res = $result;
-        } elsif (defined $result->{'error'}) {
-          $main::log->error("[OPSI] Error : ".$result->{'error'});
-          die "Error while sending '".$actions->{$action}."' to '".$self->{'fqdn'}."' : ", $result->{'error'}."\n";
-        } elsif (defined $result->{'result'}) {
-          $res = $result->{'result'};
-        } else {
-          undef $res;
-        }
-      }
-    }
+    $res = $self->launch($actions->{$action}, $params);
   } else {
     my $sub = $actions->{$action};
     $res = $self->$sub($action, $params);
@@ -591,7 +579,21 @@ sub launch {
       $main::log->error("[OPSI] Error : ".$res->error_message->{'message'});
       die "Error : ", $res->error_message->{'message'}."\n";
     } else {
-      return $res->result;
+      $res = $res->result;
+      if ((ref $res eq ref {}) && defined $res->{$self->{'fqdn'}}) {
+        my $result = $res->{$self->{'fqdn'}};
+        if (JSON::XS::is_bool($result)) {
+          $res = $result;
+        } elsif (defined $result->{'error'}) {
+          $main::log->error("[OPSI] Error : ".$result->{'error'});
+          die "Error while sending '".$action."' to '".$self->{'fqdn'}."' : ", $result->{'error'}."\n";
+        } elsif (defined $result->{'result'}) {
+          $res = $result->{'result'};
+        } else {
+          undef $res;
+        }
+      }
+      return $res;
     }
   } else {
     $main::log->info("[OPSI] Status : ".$client->status_line);

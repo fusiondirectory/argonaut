@@ -37,10 +37,11 @@ use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
 use Net::LDAP::Util qw(generalizedTime_to_time);
 
 # first, create your message
-use Email::MIME;
+#~ use Email::MIME;
 
 # send the message
-use Email::Sender::Simple qw(sendmail);
+#~ use Email::Sender::Simple qw(sendmail);
+use Mail::Sendmail qw(sendmail);
 
 my $config;
 
@@ -287,20 +288,14 @@ sub send_alert_mail
     $cc = "$manager_cn<$manager_mail>";
   }
   print " with token $token\n" if $verbose;
-  my $message = Email::MIME->create(
-    header_str => [
-      From    => $config->{'alert_mailaddress'},
-      To      => "$user_cn<$user_mail>",
-      Cc      => $cc,
-      Subject => $config->{'alert_mailsubject'},
-    ],
-    attributes => {
-      encoding => 'quoted-printable',
-      charset  => 'UTF-8',
-    },
-    body_str => sprintf($config->{'alert_mailbody'},$user_cn,$uid,$token),
+  my %message = (
+    From    => $config->{'alert_mailaddress'},
+    To      => "$user_cn<$user_mail>",
+    Cc      => $cc,
+    Subject => $config->{'alert_mailsubject'},
+    Message => sprintf($config->{'alert_mailbody'},$user_cn,$uid,$token)
   );
-  sendmail($message);
+  sendmail(%message) or die $Mail::Sendmail::error;
 }
 
 sub get_ldap_token

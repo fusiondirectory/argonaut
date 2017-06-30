@@ -605,6 +605,16 @@ sub argonaut_ldap_fsearch {
   return( $mesg, ${search_base} );
 }
 
+=item trim
+trims whitespaces from a given string
+=cut
+sub trim {
+  my $string = shift;
+  $string =~ s/^\s+//;
+  $string =~ s/\s+$//;
+  return $string;
+}
+
 #------------------------------------------------------------------------------
 # function for reading argonaut config
 #
@@ -612,12 +622,12 @@ sub argonaut_read_config {
   my %res = ();
   my $config = Config::IniFiles->new( -file => $configfile, -allowempty => 1, -nocase => 1);
 
-  $res{'server_ip'}       = $config->val( server  => "server_ip", "");
-  $res{'client_ip'}       = $config->val( client  => "client_ip", "");
-  $res{'ldap_configfile'} = $config->val( ldap    => "config",    "/etc/ldap/ldap.conf");
-  $res{'ldap_dn'}         = $config->val( ldap    => "dn",        "");
-  $res{'ldap_password'}   = $config->val( ldap    => "password",  "");
-  $res{'ldap_tls'}        = $config->val( ldap    => "tls",       "off");
+  $res{'server_ip'}       = trim($config->val( server  => "server_ip", ""));
+  $res{'client_ip'}       = trim($config->val( client  => "client_ip", ""));
+  $res{'ldap_configfile'} = trim($config->val( ldap    => "config",    "/etc/ldap/ldap.conf"));
+  $res{'ldap_dn'}         = trim($config->val( ldap    => "dn",        ""));
+  $res{'ldap_password'}   = trim($config->val( ldap    => "password",  ""));
+  $res{'ldap_tls'}        = trim($config->val( ldap    => "tls",       "off"));
 
   if ($res{'ldap_tls'} !~ m/^off|on$/i) {
     warn "Unknown value for option ldap/tls: ".$res{'ldap_tls'}." (valid values are on/off)\n";
