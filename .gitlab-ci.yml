@@ -1,6 +1,6 @@
 # Define variable
 variables:
-  CI_REPOSITORY_URL: http://gitlab.fusiondirectory.org/jswaelens/argonaut.git
+  CI_REPOSITORY_URL: "http://gitlab.fusiondirectory.org/jswaelens/argonaut.git"
 
 # Execute before every job
 # Install libperl-critic-perl and authorize git clone without ssl verification
