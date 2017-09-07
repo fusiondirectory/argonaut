@@ -6,4 +6,5 @@ before_script:
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
-  - perlcritic --quiet --verbose "%f~|~%s~|~%l~|~%c~|~%m~|~%e~|~%p~||~%n" . > perlcritic_report.txt
+  script:
+    - perlcritic --quiet --verbose "%f~|~%s~|~%l~|~%c~|~%m~|~%e~|~%p~||~%n" . > perlcritic_report.txt
