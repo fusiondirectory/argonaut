@@ -1,0 +1,9 @@
+# Execute before every job
+# Install libperl-critic-perl
+before_script:
+  - apt-get update -qq
+  - apt-get install -y -qq libperl-critic-perl
+
+# Generate perlcritic rapport
+create_perlcritic_rapport:
+  - perlcritic --quiet --verbose "%f~|~%s~|~%l~|~%c~|~%m~|~%e~|~%p~||~%n" . > perlcritic_report.txt
