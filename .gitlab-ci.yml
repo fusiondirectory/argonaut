@@ -15,3 +15,4 @@ before_script:
 create_perlcritic_rapport:
   script:
     - perlcritic --quiet --verbose "%f~|~%s~|~%l~|~%c~|~%m~|~%e~|~%p~||~%n" . > perlcritic_report.txt
+    - cat perlcritic_report.txt
