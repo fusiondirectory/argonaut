@@ -1,18 +1,17 @@
 # Specify docker image
 image: debian:stretch
 
-# Define variable
+# Define variable to disable SSL verification of GIT
 variables:
-  CI_REPOSITORY_URL: "http://gitlab.fusiondirectory.org/jswaelens/argonaut.git"
+  GIT_SSL_NO_VERIFY: "true"
 
 # Execute before every job
-# Install libperl-critic-perl and ca-certificates
+# Install libperl-critic-perl
 before_script:
   - apt-get update -qq
-  - apt-get install -y -qq libperl-critic-perl ca-certificates
+  - apt-get install -y -qq libperl-critic-perl
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
   script:
-    - export
     - perlcritic --quiet --verbose "%f~|~%s~|~%l~|~%c~|~%m~|~%e~|~%p~||~%n" . > perlcritic_report.txt
