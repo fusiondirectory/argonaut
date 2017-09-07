@@ -3,7 +3,11 @@
 before_script:
   - apt-get update -qq
   - apt-get install -y -qq libperl-critic-perl
-  - git config --global http.sslVerify false
+
+# Configure git to autorized no ssl verification
+configure_git:
+  script:
+    - git config --global http.sslVerify false
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
