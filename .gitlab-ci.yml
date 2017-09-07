@@ -3,11 +3,10 @@ variables:
   CI_REPOSITORY_URL: "http://gitlab.fusiondirectory.org/jswaelens/argonaut.git"
 
 # Execute before every job
-# Install libperl-critic-perl and authorize git clone without ssl verification
-# Install fusionirectory.org certificate
+# Install libperl-critic-perl and ca-certificates
 before_script:
   - apt-get update -qq
-  - apt-get install -y -qq libperl-critic-perl openssl
+  - apt-get install -y -qq libperl-critic-perl ca-certificates
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
