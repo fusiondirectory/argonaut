@@ -1,13 +1,10 @@
 # Execute before every job
 # Install libperl-critic-perl and authorize git clone without ssl verification
+# Install fusionirectory.org certificate
 before_script:
   - apt-get update -qq
-  - apt-get install -y -qq libperl-critic-perl
-
-# Configure git to autorized no ssl verification
-configure_git:
-  script:
-    - git config --global http.sslVerify false
+  - apt-get install -y -qq libperl-critic-perl openssl
+  - openssl s_client -showcerts -connect gitlab.fusiondirectory.org.com:443 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' >> /etc/ssl/certs/ca-certificates.crt
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
