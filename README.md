@@ -35,7 +35,7 @@ Modules can provide some more functionalities :
 
 There are a couple ways you can try [to get help][get help].You can also join the `#fusiondirectory` IRC channel at freenode.net.
 
-You can [register on our system][register] and enter your bug [on the forge][issues-forge] or [here at github][issues-github] even if the forge is the prefered way of dealing with bugs
+You can [register on our system][register] and enter issues [Argonaut][issues-core].
 
 ## IRC Etiquette
 
@@ -64,9 +64,7 @@ If you like [Argonaut][Argonaut] and would like to [donate][donate-liberapay] ev
 
 [register]: https://register.fusiondirectory.org
 
-[issues-forge]: https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new
-
-[issues-github]: https://github.com/fusiondirectory/argonaut/issues
+[issues-core]: https://gitlab.fusiondirectory.org/argonaut/argonaut/issues
 
 [donate-liberapay]: https://liberapay.com/fusiondirectory/donate
 
