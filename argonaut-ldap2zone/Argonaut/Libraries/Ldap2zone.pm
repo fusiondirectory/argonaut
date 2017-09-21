@@ -44,7 +44,7 @@ my $NAMEDCHECKCONF = 'named-checkconf';
 # get ldap2zone settings
 #
 sub argonaut_get_ldap2zone_settings {
-  return argonaut_get_generic_settings(
+  my $settings = argonaut_get_generic_settings(
     'argonautDNSConfig',
     {
       'binddir'       => 'argonautLdap2zoneBindDir',
@@ -62,6 +62,10 @@ sub argonaut_get_ldap2zone_settings {
     },
     @_
   );
+  if (not defined $settings->{'slavefiles'}) {
+    $settings->{'slavefiles'} = [];
+  }
+  return $settings;
 }
 
 =item argonaut_ldap2zone
