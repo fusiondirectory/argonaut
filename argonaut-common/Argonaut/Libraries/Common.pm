@@ -857,7 +857,7 @@ sub argonaut_check_time_frames {
     return 1;
   }
   foreach my $frame (@{$settings->{'timeframes'}}) {
-    if ($frame ~= m/(\d\d):(\d\d)-(\d\d):(\d\d)/) {
+    if ($frame =~ m/(\d\d):(\d\d)-(\d\d):(\d\d)/) {
       my ($sec,$min,$hour) = gmtime(time());
       if ($hour < $1) {
         # Too soon
