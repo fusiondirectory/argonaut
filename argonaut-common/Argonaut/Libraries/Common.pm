@@ -93,6 +93,9 @@ BEGIN
      'net' => [qw(
       &argonaut_get_mac
     )],
+     'utils' => [qw(
+      &argonaut_check_time_frames
+    )],
      'config' => [qw(
       &argonaut_read_config
       USE_LEGACY_JSON_RPC
@@ -685,7 +688,7 @@ sub argonaut_get_generic_settings {
   my $mesg = $ldap->search( # perform a search
     base    => $ldap_base,
     filter  => "(&(objectClass=$objectClass)$filter)",
-    attrs   => [values(%{$params}), 'dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode' ]
+    attrs   => [values(%{$params}), 'dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode', 'argonautDeploymentTimeframe' ]
   );
 
   my $settings = {
@@ -701,7 +704,7 @@ sub argonaut_get_generic_settings {
     $mesg = $ldap->search( # Get the system object
       base    => $ldap_base,
       filter  => $filter,
-      attrs   => [values(%{$params}), 'dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode' ]
+      attrs   => [values(%{$params}), 'dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode', 'argonautDeploymentTimeframe' ]
     );
     if (scalar($mesg->entries) > 1) {
       die "Several computers matches $filter.$die_endl";
@@ -731,13 +734,20 @@ sub argonaut_get_generic_settings {
   } else {
     $settings->{'locked'} = 0;
   }
+  $settings->{'timeframes'} = ($mesg->entries)[0]->get_value('argonautDeploymentTimeframe', asref => 1);
 
   my $dn = ($mesg->entries)[0]->dn();
   my $mesgGroup = $ldap->search( # Get the group object
     base   => $ldap_base,
     filter => "(&(objectClass=$objectClass)(member=$dn))",
-    attrs => [values(%{$params})]
+    attrs => [values(%{$params}), 'argonautDeploymentTimeframe']
   );
+
+  if (scalar($mesgGroup->entries) == 1) {
+    if (not defined $settings->{'timeframes'}) {
+      $settings->{'timeframes'} = ($mesgGroup->entries)[0]->get_value('argonautDeploymentTimeframe', asref => 1);
+    }
+  }
 
   if (not $foundOC) {
     if (scalar($mesgGroup->entries) == 1) {
@@ -836,6 +846,38 @@ sub argonaut_get_fuse_settings {
     },
     @_
   );
+}
+
+#------------------------------------------------------------------------------
+# check if we are in an authorized time frame - Returns true if we are
+#
+sub argonaut_check_time_frames {
+  my ($settings) = @_;
+  if (not defined $settings->{'timeframes'}) {
+    return 1;
+  }
+  foreach my $frame (@{$settings->{'timeframes'}}) {
+    if ($frame ~= m/(\d\d):(\d\d)-(\d\d):(\d\d)/) {
+      my ($sec,$min,$hour) = gmtime(time());
+      if ($hour < $1) {
+        # Too soon
+        next;
+      } elsif ($hour > $3) {
+        # Too late
+        next;
+      } elsif (($hour == $1) and ($min < $2)) {
+        # Too soon (minutes)
+        next;
+      } elsif (($hour == $3) and ($min > $4)) {
+        # Too late (minutes)
+        next;
+      }
+      return 1;
+    } else {
+      die "Invalid value in time frames: $frame".$die_endl;
+    }
+  }
+  return 0;
 }
 
 #------------------------------------------------------------------------------

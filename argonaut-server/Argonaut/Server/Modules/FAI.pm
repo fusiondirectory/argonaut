@@ -29,7 +29,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file :config);
+use Argonaut::Libraries::Common qw(:ldap :file :config :utils);
 
 my @fai_actions = ("Deployment.reinstall", "Deployment.update", "Deployment.wake", "Deployment.reboot");
 
@@ -75,6 +75,12 @@ sub do_action {
 
   if ($self->{'locked'}) {
     die 'This computer is locked';
+  }
+
+  if ($self->{action} =~ m/^Deployment\./) {
+    unless (argonaut_check_time_frames($self)) {
+      die 'Deployment actions are forbidden outside of the authorized time frames';
+    }
   }
 
   my $substatus = $self->handler_fai($self->{taskid},$self->{action},$params);
