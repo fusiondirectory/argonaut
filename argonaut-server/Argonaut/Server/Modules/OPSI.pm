@@ -31,7 +31,7 @@ use JSON;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file :config);
+use Argonaut::Libraries::Common qw(:ldap :file :config :utils);
 
 my $actions = {
   'ping'                        => 'hostControl_reachable',
@@ -485,6 +485,12 @@ sub do_action {
 
   if ($self->{'locked'} && not (grep {$_ eq $action} @locked_actions)) {
     die 'This computer is locked';
+  }
+
+  if ($self->{action} =~ m/^Deployment\./) {
+    unless (argonaut_check_time_frames($self)) {
+      die 'Deployment actions are forbidden outside of the authorized time frames';
+    }
   }
 
   $self->{task}->{handler} = 1;

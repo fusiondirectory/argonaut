@@ -93,6 +93,9 @@ BEGIN
      'net' => [qw(
       &argonaut_get_mac
     )],
+     'utils' => [qw(
+      &argonaut_check_time_frames
+    )],
      'config' => [qw(
       &argonaut_read_config
       USE_LEGACY_JSON_RPC
@@ -683,70 +686,76 @@ sub argonaut_get_generic_settings {
   }
 
   my $mesg = $ldap->search( # perform a search
-            base   => $ldap_base,
-            filter => "(&(objectClass=$objectClass)$filter)"
-            );
+    base    => $ldap_base,
+    filter  => "(&(objectClass=$objectClass)$filter)",
+    attrs   => [values(%{$params}), 'dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode', 'argonautDeploymentTimeframe' ]
+  );
 
   my $settings = {
   };
 
-  if(scalar($mesg->entries)==1) {
-    $settings->{'dn'}   = ($mesg->entries)[0]->dn();
-    $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
-    $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
-    if (($mesg->entries)[0]->exists('fdMode')) {
-      $settings->{'locked'} = ($mesg->entries)[0]->get_value("fdMode") eq 'locked';
-    } elsif (($mesg->entries)[0]->exists('gotoMode')) {
-      $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
-    } else {
-      $settings->{'locked'} = 0;
-    }
-    while (my ($key,$value) = each(%{$params})) {
-      if (ref $value eq ref []) {
-        $settings->{"$key"} = ($mesg->entries)[0]->get_value(@$value);
-      } else {
-        if (($mesg->entries)[0]->get_value("$value")) {
-          $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
-        } else {
-          $settings->{"$key"} = "";
-        }
-      }
-    }
-    return $settings;
-  } elsif(scalar($mesg->entries)==0) {
+  my $foundOC = 0;
+  if (scalar($mesg->entries) > 1) {
+    die "Several computers matches $filter.$die_endl";
+  } elsif (scalar($mesg->entries) == 0) {
     unless ($inheritance) {
       die "This computer ($filter) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
     }
-    $mesg = $ldap->search( # perform a search
-              base   => $ldap_base,
-              filter => $filter,
-              attrs => [ 'dn', 'macAddress', 'gotoMode', 'fdMode' ]
-              );
-    if (scalar($mesg->entries)>1) {
+    $mesg = $ldap->search( # Get the system object
+      base    => $ldap_base,
+      filter  => $filter,
+      attrs   => [values(%{$params}), 'dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode', 'argonautDeploymentTimeframe' ]
+    );
+    if (scalar($mesg->entries) > 1) {
       die "Several computers matches $filter.$die_endl";
-    } elsif (scalar($mesg->entries)<1) {
+    } elsif (scalar($mesg->entries) < 1) {
       die "There is no computer matching $filter.$die_endl";
     }
-    $settings->{'dn'}   = ($mesg->entries)[0]->dn();
-    $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
-    $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
-    if (($mesg->entries)[0]->exists('fdMode')) {
-      $settings->{'locked'} = ($mesg->entries)[0]->get_value("fdMode") eq 'locked';
-    } elsif (($mesg->entries)[0]->exists('gotoMode')) {
-      $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
-    } else {
-      $settings->{'locked'} = 0;
+  } else {
+    $foundOC = 1;
+    while (my ($key,$value) = each(%{$params})) {
+      if (ref $value eq ref []) {
+        $settings->{"$key"} = ($mesg->entries)[0]->get_value(@$value);
+      } elsif (($mesg->entries)[0]->get_value("$value")) {
+        $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+      } else {
+        $settings->{"$key"} = "";
+      }
     }
-    my $dn = ($mesg->entries)[0]->dn();
-    my $mesg = $ldap->search( # perform a search
-      base   => $ldap_base,
-      filter => "(&(objectClass=$objectClass)(member=$dn))",
-      attrs => [values(%{$params})]
-    );
-    if(scalar($mesg->entries)==1) {
+  }
+
+  $settings->{'dn'}   = ($mesg->entries)[0]->dn();
+  $settings->{'mac'}  = ($mesg->entries)[0]->get_value("macAddress");
+  $settings->{'ip'}   = ($mesg->entries)[0]->get_value("ipHostNumber");
+  if (($mesg->entries)[0]->exists('fdMode')) {
+    $settings->{'locked'} = ($mesg->entries)[0]->get_value("fdMode") eq 'locked';
+  } elsif (($mesg->entries)[0]->exists('gotoMode')) {
+    $settings->{'locked'} = ($mesg->entries)[0]->get_value("gotoMode") eq 'locked';
+  } else {
+    $settings->{'locked'} = 0;
+  }
+  $settings->{'timeframes'} = ($mesg->entries)[0]->get_value('argonautDeploymentTimeframe', asref => 1);
+
+  my $dn = ($mesg->entries)[0]->dn();
+  my $mesgGroup = $ldap->search( # Get the group object
+    base   => $ldap_base,
+    filter => "(&(objectClass=$objectClass)(member=$dn))",
+    attrs => [values(%{$params}), 'argonautDeploymentTimeframe']
+  );
+
+  if (scalar($mesgGroup->entries) == 1) {
+    if (not defined $settings->{'timeframes'}) {
+      $settings->{'timeframes'} = ($mesgGroup->entries)[0]->get_value('argonautDeploymentTimeframe', asref => 1);
+    }
+  }
+
+  if (not $foundOC) {
+    if (scalar($mesgGroup->entries) == 1) {
       while (my ($key,$value) = each(%{$params})) {
-        if (($mesg->entries)[0]->get_value("$value")) {
-          $settings->{"$key"} = ($mesg->entries)[0]->get_value("$value");
+        if (ref $value eq ref []) {
+          $settings->{"$key"} = ($mesgGroup->entries)[0]->get_value(@$value);
+        } elsif (($mesgGroup->entries)[0]->get_value("$value")) {
+          $settings->{"$key"} = ($mesgGroup->entries)[0]->get_value("$value");
         } else {
           $settings->{"$key"} = "";
         }
@@ -755,9 +764,9 @@ sub argonaut_get_generic_settings {
     } else {
       die "This computer ($filter) is not configured in LDAP to run this module (missing service $objectClass).$die_endl";
     }
-  } else {
-    die "Several computers matches $filter.$die_endl";
   }
+
+  return $settings;
 }
 
 #------------------------------------------------------------------------------
@@ -837,6 +846,38 @@ sub argonaut_get_fuse_settings {
     },
     @_
   );
+}
+
+#------------------------------------------------------------------------------
+# check if we are in an authorized time frame - Returns true if we are
+#
+sub argonaut_check_time_frames {
+  my ($settings) = @_;
+  if (not defined $settings->{'timeframes'}) {
+    return 1;
+  }
+  foreach my $frame (@{$settings->{'timeframes'}}) {
+    if ($frame =~ m/(\d\d):(\d\d)-(\d\d):(\d\d)/) {
+      my ($sec,$min,$hour) = gmtime(time());
+      if ($hour < $1) {
+        # Too soon
+        next;
+      } elsif ($hour > $3) {
+        # Too late
+        next;
+      } elsif (($hour == $1) and ($min < $2)) {
+        # Too soon (minutes)
+        next;
+      } elsif (($hour == $3) and ($min > $4)) {
+        # Too late (minutes)
+        next;
+      }
+      return 1;
+    } else {
+      die "Invalid value in time frames: $frame".$die_endl;
+    }
+  }
+  return 0;
 }
 
 #------------------------------------------------------------------------------
