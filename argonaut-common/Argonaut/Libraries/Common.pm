@@ -857,19 +857,23 @@ sub argonaut_check_time_frames {
     return 1;
   }
   foreach my $frame (@{$settings->{'timeframes'}}) {
-    if ($frame =~ m/(\d\d):(\d\d)-(\d\d):(\d\d)/) {
+    if ($frame =~ m/(\d\d)(\d\d)-(\d\d)(\d\d)/) {
       my ($sec,$min,$hour) = gmtime(time());
-      if ($hour < $1) {
+      my $begin = ($1 * 60) + $2;
+      my $end   = ($3 * 60) + $4;
+      my $now   = ($hour * 60) + $min;
+      if ($begin > $end) {
+        # Frame over midnight
+        $end += 24 * 60;
+        if ($now < $begin) {
+          $now += 24 * 60;
+        }
+      }
+      if ($now < $begin) {
         # Too soon
         next;
-      } elsif ($hour > $3) {
+      } elsif ($now > $end) {
         # Too late
-        next;
-      } elsif (($hour == $1) and ($min < $2)) {
-        # Too soon (minutes)
-        next;
-      } elsif (($hour == $3) and ($min > $4)) {
-        # Too late (minutes)
         next;
       }
       return 1;
