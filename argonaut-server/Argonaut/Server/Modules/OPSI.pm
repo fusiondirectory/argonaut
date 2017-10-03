@@ -151,7 +151,7 @@ sub get_winstation_fqdn_settings {
     );
     if ($mesg->count == 1) {
       $zoneName = ($mesg->entries)[0]->get_value("zoneName");
-
+      last;
     }
   }
   my $cn = $settings->{'cn'};
