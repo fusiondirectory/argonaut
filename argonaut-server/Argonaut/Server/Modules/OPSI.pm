@@ -133,24 +133,32 @@ sub get_winstation_fqdn_settings {
     {
       'cn'              => 'cn',
       'description'     => 'description',
+      'dns-zones-dn'    => 'fdDNSZoneDn',
     },
     @_,
     0
   );
-  my $cn = $settings->{'cn'};
-  $cn =~ s/\$$//;
 
   my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
 
-  my $mesg = $ldap->search( # perform a search
-    base    => $ldap_base,
-    filter  => "(&(relativeDomainName=$cn)(aRecord=".$settings->{'ip'}.")(zoneName=*))",
-    attrs   => ['zoneName']
-  );
-  if ($mesg->count <= 0) {
+  my $zoneName = undef;
+  foreach my $zonedn (@{$settings->{'dns-zones-dn'}}) {
+    my $mesg = $ldap->search(
+      base    => $zonedn,
+      scope   => 'base',
+      filter  => '(zoneName=*)',
+      attrs   => ['zoneName']
+    );
+    if ($mesg->count == 1) {
+      $zoneName = ($mesg->entries)[0]->get_value("zoneName");
+
+    }
+  }
+  my $cn = $settings->{'cn'};
+  if (not defined $zoneName) {
     die "[OPSI] Could not find any DNS domain name for $cn";
   }
-  my $zoneName = ($mesg->entries)[0]->get_value("zoneName");
+  $cn =~ s/\$$//;
   $zoneName =~ s/\.$//;
   $settings->{'fqdn'} = $cn.'.'.$zoneName;
 
@@ -164,10 +172,8 @@ sub handle_client {
     return 0;
   }
 
-  my $ip = main::getIpFromMac($mac);
-
   eval { #try
-    my $settings = get_opsi_settings($main::config,$ip);
+    my $settings = get_opsi_settings($main::config, "(macAddress=$mac)");
     %$self = %$settings;
     $self->{action} = $action;
   };
