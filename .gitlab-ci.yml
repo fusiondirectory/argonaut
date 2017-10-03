@@ -13,8 +13,8 @@ before_script:
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
-  except:
+  only:
     - branches
     - tags
   script:
-    - perlcritic --quiet --verbose "%f~|~%s~|~%l~|~%c~|~%m~|~%e~|~%p~||~%n" .
+    - perlcritic . | grep -vP ModulesInit* | grep -vP ModulesSyste*
