@@ -17,4 +17,4 @@ create_perlcritic_rapport:
     - branches
     - tags
   script:
-    - perlcritic . | grep -vP ModulesInit* | grep -vP ModulesSyste*
+    - perlcritic .
