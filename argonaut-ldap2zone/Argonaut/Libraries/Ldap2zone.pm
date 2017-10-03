@@ -136,16 +136,23 @@ sub argonaut_ldap2zone
   } elsif ($slavefiles)  {
     print "Updating all slave files\n" if $verbose;
     my @zones = @{$settings->{'slavefiles'}};
-    my $all_reverse_zones = [];
+    my @all_reverse_zones = ();
     foreach (@zones) {
       my ($zoneName, $masterline, $reverse) = split /\|/, $_, 3;
       print "Updating slave $zoneName\n" if $verbose;
+      create_slave_namedconf($zoneName,$masterline,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
       my $zonedn = zonesearch($ldap,$ldap_base,$zoneName,$verbose);
-      my $reverse_zones = [];
       if ($zonedn and ($reverse ne 'noreverse')) {
-        $reverse_zones = get_reverse_zones($ldap,$ldap_base,$zonedn);
+        my $reverse_zones = get_reverse_zones($ldap,$ldap_base,$zonedn);
+        foreach my $reverse_zone (@$reverse_zones) {
+          if (grep {$_ eq $reverse_zone} @all_reverse_zones) {
+            # this avoids treating twice the same reverse zone
+            next;
+          }
+          push @all_reverse_zones, $reverse_zone;
+          create_slave_namedconf($reverse_zone,$masterline,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose);
+        }
       }
-      create_slave_namedconf($zoneName,$masterline,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose,$all_reverse_zones);
     }
   } else {
     if (substr($zone,-1) ne ".") { # If the end point is not there, add it
@@ -485,7 +492,7 @@ Returns :
 =cut
 sub create_slave_namedconf
 {
-  my($zone,$masterline,$reverse_zones,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose,$all_reverse_zones) = @_;
+  my($zone,$masterline,$BIND_DIR,$BIND_CACHE_DIR,$output_BIND_DIR,$verbose) = @_;
 
   if (substr($masterline,-1) ne ";") {
     # If the end semi-colon is not there, add it
@@ -504,21 +511,6 @@ zone "$zone" {
   file "$BIND_CACHE_DIR/db.$zone";
 };
 EOF
-  foreach my $reverse_zone (@$reverse_zones) {
-    if (grep {$_ eq $reverse_zone} @$all_reverse_zones) {
-      # this avoids having twice the same reverse zones in slave conf
-      next;
-    }
-    push @$all_reverse_zones, $reverse_zone;
-    print "Writing reverse zone '$reverse_zone'\n" if $verbose;
-    print $namedfile <<EOF;
-zone "$reverse_zone" {
-  type slave;
-  masters {$masterline};
-  file "$BIND_CACHE_DIR/db.$reverse_zone";
-};
-EOF
-  }
   close $namedfile;
 }
 
