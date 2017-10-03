@@ -23,7 +23,11 @@
 #
 #######################################################################
 
+## no critic
+
 package Argonaut::ClientDaemon::Modules::Service;
+
+## use critic
 
 use strict;
 use warnings;
