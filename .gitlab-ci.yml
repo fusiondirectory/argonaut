@@ -10,16 +10,16 @@ variables:
 before_script:
   - apt-get update -qq
   - apt-get install -y -qq libperl-critic-perl
-  - apt get install -y -qq libapp-daemon-perl libconfig-inifiles-perl libdigest-sha-perl libfile-pid-perl libio-socket-ssl-perl
-  - apt get install -y -qq libjson-perl libjson-rpc-perl liblog-handler-perl libmodule-pluggable-perl libnet-ldap-perl libpath-class-perl libxml-sax-expatxs-perl
-  - apt get install -y -qq bind9utils libdns-zoneparse-perl
-  - apt get install -y -qq libquota-perl
-  - apt get install -y -qq libdatetime-perl libpoe-perl libpoe-component-pool-thread-perl libpoe-component-schedule-perl libpoe-component-server-jsonrpc-perl libpoe-component-server-simplehttp-perl libpoe-component-sslify-perl
-  - apt get install -y -qq libhttp-daemon-ssl-perl
-  - apt get install -y -qq fuse libfuse-perl
+  - apt-get install -y -qq libapp-daemon-perl libconfig-inifiles-perl libdigest-sha-perl libfile-pid-perl libio-socket-ssl-perl
+  - apt-get install -y -qq libjson-perl libjson-rpc-perl liblog-handler-perl libmodule-pluggable-perl libnet-ldap-perl libpath-class-perl libxml-sax-expatxs-perl
+  - apt-get install -y -qq bind9utils libdns-zoneparse-perl
+  - apt-get install -y -qq libquota-perl
+  - apt-get install -y -qq libdatetime-perl libpoe-perl libpoe-component-pool-thread-perl libpoe-component-schedule-perl libpoe-component-server-jsonrpc-perl libpoe-component-server-simplehttp-perl libpoe-component-sslify-perl
+  - apt-get install -y -qq libhttp-daemon-ssl-perl
+  - apt-get install -y -qq fuse libfuse-perl
   - apt-get install -y -qq debmirror libwww-perl
-  - apt get install -y -qq libmail-sendmail-perl
-  - apt get install -y -qq libfile-slurp-perl libdigest-perl-md5-perl
+  - apt-get install -y -qq libmail-sendmail-perl
+  - apt-get install -y -qq libfile-slurp-perl libdigest-perl-md5-perl
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
