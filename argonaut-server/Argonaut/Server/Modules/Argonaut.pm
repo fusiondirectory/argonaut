@@ -31,6 +31,9 @@ use 5.008;
 
 use Argonaut::Libraries::Common qw(:ldap :file :config :string);
 
+use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
+use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
+
 my @unlocked_actions = ['System.halt', 'System.reboot'];
 
 sub new
