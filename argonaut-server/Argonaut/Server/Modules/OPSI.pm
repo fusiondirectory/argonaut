@@ -33,6 +33,9 @@ use 5.008;
 
 use Argonaut::Libraries::Common qw(:ldap :file :config :utils);
 
+use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
+use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
+
 my $actions = {
   'ping'                        => 'hostControl_reachable',
   'System.halt'                 => 'hostControl_shutdown',
