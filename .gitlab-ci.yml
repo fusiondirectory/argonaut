@@ -1,5 +1,5 @@
 # Specify docker image
-image: newtmitch:sonar-scanner
+image: newtmitch/sonar-scanner
 
 # Define variable to disable SSL verification of GIT
 variables:
