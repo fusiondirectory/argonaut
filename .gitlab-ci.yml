@@ -1,5 +1,5 @@
 # Specify docker image
-image: debian:stretch
+image: newtmitch:sonar-scanner
 
 # Define variable to disable SSL verification of GIT
 variables:
