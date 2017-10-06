@@ -35,3 +35,21 @@ create_perl_lint_rapport:
     - apt-get install -y -qq libfile-slurp-perl libdigest-perl-md5-perl
   script:
     - find . -type f -name '*.pm' -print0 | xargs -0 -n1 perl -cw -I argonaut-ldap2zone -I argonaut-common
+
+#sonar cube preview
+sonarqube_preview:
+  script:
+    - mvn --batch-mode verify sonar:sonar -Dsonar.host.url=$SONAR_URL -Dsonar.analysis.mode=preview -Dsonar.gitlab.project_id=$CI_PROJECT_PATH -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA -Dsonar.gitlab.ref_name=$CI_COMMIT_REF_NAME
+  stage: test
+  only:
+    - branches
+    - tags
+
+#sonar
+sonarqube:
+  script:
+    - mvn --batch-mode verify sonar:sonar -Dsonar.host.url=$SONAR_URL
+  stage: test
+  only:
+    - branches
+    - tags
