@@ -253,23 +253,27 @@ sub zoneparse
       }
     }
     my $soa = $entry->get_value("sOARecord");
-    if($soa) {
+    if ($soa) {
       my $soa_record = $zonefile->soa();
       my (@soa_fields) = split(' ',$soa);
-      $soa_record->{'primary'}  = $soa_fields[0];
-      $soa_record->{'email'}    = $soa_fields[1];
-      $soa_record->{'serial'}   = $soa_fields[2];
-      $soa_record->{'refresh'}  = $soa_fields[3];
-      $soa_record->{'retry'}    = $soa_fields[4];
-      $soa_record->{'expire'}   = $soa_fields[5];
-      $soa_record->{'minimumTTL'}  = $soa_fields[6];
+      if ($soa_fields[2] > $soa_record->{'serial'}) {
+        $soa_record->{'primary'}  = $soa_fields[0];
+        $soa_record->{'email'}    = $soa_fields[1];
+        $soa_record->{'serial'}   = $soa_fields[2];
+        $soa_record->{'refresh'}  = $soa_fields[3];
+        $soa_record->{'retry'}    = $soa_fields[4];
+        $soa_record->{'expire'}   = $soa_fields[5];
+        $soa_record->{'minimumTTL'}  = $soa_fields[6];
 
-      $soa_record->{'class'}    = $class;
-      $soa_record->{'ttl'}      = $TTL;
-      $soa_record->{'origin'}   = $name;
-      $soa_record->{'ORIGIN'}   = $zone;
-      print "Added record SOA $name $class $soa $TTL\n" if $verbose;
-      $dn = $entry->dn();
+        $soa_record->{'class'}    = $class;
+        $soa_record->{'ttl'}      = $TTL;
+        $soa_record->{'origin'}   = $name;
+        $soa_record->{'ORIGIN'}   = $zone;
+        print "Added record SOA $name $class $soa $TTL\n" if $verbose;
+        $dn = $entry->dn();
+      } else {
+        print "Ignored SOA $name $class $soa $TTL (lower serial)\n" if $verbose;
+      }
     }
   }
 
