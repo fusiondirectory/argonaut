@@ -685,10 +685,18 @@ sub argonaut_get_generic_settings {
     $filter = "($filter)";
   }
 
+  my @attrs = ('dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode', 'argonautDeploymentTimeframe');
+  for my $param (values(%{$params})) {
+    if (ref $param eq ref []) {
+      push @attrs, $param->[0]
+    } else {
+      push @attrs, $param;
+    }
+  }
   my $mesg = $ldap->search( # perform a search
     base    => $ldap_base,
     filter  => "(&(objectClass=$objectClass)$filter)",
-    attrs   => [values(%{$params}), 'dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode', 'argonautDeploymentTimeframe' ]
+    attrs   => \@attrs
   );
 
   my $settings = {
@@ -704,7 +712,7 @@ sub argonaut_get_generic_settings {
     $mesg = $ldap->search( # Get the system object
       base    => $ldap_base,
       filter  => $filter,
-      attrs   => [values(%{$params}), 'dn', 'ipHostNumber', 'macAddress', 'gotoMode', 'fdMode', 'argonautDeploymentTimeframe' ]
+      attrs   => \@attrs
     );
     if (scalar($mesg->entries) > 1) {
       die "Several computers matches $filter.$die_endl";
