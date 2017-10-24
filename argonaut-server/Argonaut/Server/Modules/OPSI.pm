@@ -136,7 +136,7 @@ sub get_winstation_fqdn_settings {
     {
       'cn'              => 'cn',
       'description'     => 'description',
-      'dns-zones-dn'    => 'fdDNSZoneDn',
+      'dns-zones-dn'    => ['fdDNSZoneDn', asref => 1],
     },
     @_,
     0
