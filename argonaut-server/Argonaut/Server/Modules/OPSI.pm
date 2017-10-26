@@ -85,6 +85,7 @@ sub get_opsi_settings {
       {
         'server-dn'   => "fdOpsiServerDn",
         'profile-dn'  => "fdOpsiProfileDn",
+        'softs'       => ["fdOpsiLocalbootProduct", asref => 1],
       },
       @_
     );
@@ -382,8 +383,32 @@ sub reinstall_or_update {
     }
   }
   #4 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile - see 3 bis)
+  my $infos = [];
+  if (defined $self->{'softs'}) {
+    # Handle localboots directly on the node
+    foreach my $localboot (@{$self->{'softs'}}) {
+      my ($product, $action) = split('\|',$localboot);
+      push @{$self->{'localboots'}}, $localboot;
+      if ($reinstall || ($action ne 'setup') || (! defined $productStates->{$product}) || ($productStates->{$product} ne 'installed')) {
+        push @$infos, {
+          "productId"     => $product,
+          "clientId"      => $self->{'fqdn'},
+          "actionRequest" => $action,
+          "type"          => "ProductOnClient",
+          "productType"   => "LocalbootProduct"
+        };
+      } else {
+        push @$infos, {
+          "productId"     => $product,
+          "clientId"      => $self->{'fqdn'},
+          "actionRequest" => "none",
+          "type"          => "ProductOnClient",
+          "productType"   => "LocalbootProduct"
+        };
+      }
+    }
+  }
   if (defined $self->{'softlists'}) {
-    my $infos = [];
     foreach my $softlistdn (@{$self->{'softlists'}}) {
       my $mesg = $ldap->search( # perform a search
         base    => $softlistdn,
@@ -399,6 +424,10 @@ sub reinstall_or_update {
       if (grep {$_ eq 'opsiSoftwareList'} @$ocs) {
         foreach my $localboot (@{$localboots}) {
           my ($product, $action) = split('\|',$localboot);
+          if (grep {$_ =~ m/^$product\|/} @{$self->{'localboots'}}) {
+            # Products from $self->{'softs'} have priority, do not overwrite
+            next;
+          }
           push @{$self->{'localboots'}}, $localboot;
           if ($reinstall || ($action ne 'setup') || (! defined $productStates->{$product}) || ($productStates->{$product} ne 'installed')) {
             push @$infos, {
@@ -432,9 +461,9 @@ sub reinstall_or_update {
         $self->launch('configState_create',['software-on-demand.show-details', $self->{'fqdn'}, ($showdetails?JSON::true:JSON::false)]);
       }
     }
-    if (scalar(@$infos) > 0) {
-      $self->launch('productOnClient_updateObjects',[$infos]);
-    }
+  }
+  if (scalar(@$infos) > 0) {
+    $self->launch('productOnClient_updateObjects',[$infos]);
   }
   #5 - set properties as the profile specifies
   if (defined $self->{'properties'}) {
