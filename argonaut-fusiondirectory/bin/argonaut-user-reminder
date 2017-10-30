@@ -169,7 +169,7 @@ sub check_expired_users
 
     $mesg = $ldap->search(
       base    => $config->{'ldap_base'},
-      filter  => '(pwdChangedTime=*)',
+      filter  => '(&(objectClass=person)(pwdChangedTime=*))',
       scope   => 'subtree',
       attrs   => ['uid','cn','mail','fdPrivateMail','supannAutreMail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
     );
@@ -179,6 +179,9 @@ sub check_expired_users
     my @entries = $mesg->entries();
     foreach my $entry (@entries) {
       my $cn = $entry->get_value('cn');
+      if (not defined $cn) {
+        $cn = $entry->dn;
+      }
 
       my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
       if (not defined $pwdChangedTimestamp) {
