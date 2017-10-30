@@ -209,8 +209,8 @@ sub check_expired_users
         }
       }
 
-      if (not defined $maxAge) {
-        print "No ppolicy max age found for $cn\n" if $verbose;
+      if ((not defined $maxAge) || ($maxAge == 0)) {
+        print "No ppolicy max age defined for $cn\n" if $verbose;
         next;
       }
 
