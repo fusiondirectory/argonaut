@@ -653,7 +653,7 @@ sub argonaut_read_ldap_config {
       } else {
         if (($mesg->entries)[0]->get_value("$value")) {
           $config->{"$key"} = ($mesg->entries)[0]->get_value("$value");
-        } else {
+        } elsif (not defined $config->{"$key"}) {
           $config->{"$key"} = "";
         }
       }
