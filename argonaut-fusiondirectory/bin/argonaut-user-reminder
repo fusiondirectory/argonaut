@@ -55,8 +55,21 @@ my $ppolicy = 1;
 
 sub print_usage
 {
-  print "Usage : argonaut-user-reminder [--verbose] [--posix|--ppolicy|--both (default)]\n";
-  exit(0);
+  my ($help) = @_;
+  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix|--ppolicy|--both (default)]\n";
+  if ($help) {
+    print << "EOF";
+
+  --help    : this (help) message
+  --verbose : be verbose
+  --posix   : check POSIX account expiration
+  --ppolicy : check ppolicy password expiration
+  --both    : check both (default)
+EOF
+    exit(0);
+  } else {
+    exit(-1);
+  }
 }
 
 foreach my $arg ( @ARGV ) {
@@ -71,8 +84,10 @@ foreach my $arg ( @ARGV ) {
   } elsif (lc($arg) eq "--both") {
     $posix    = 1;
     $ppolicy  = 1;
+  } elsif ((lc($arg) eq "--help") || (lc($arg) eq "-h")) {
+    print_usage(1);
   } else {
-    print_usage();
+    print_usage(0);
   }
 }
 
