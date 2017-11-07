@@ -307,19 +307,22 @@ sub reinstall_or_update {
   #1 - fetch the host profile
   my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
 
-  my $mesg = $ldap->search( # perform a search
-    base    => $self->{'profile-dn'},
-    scope   => 'base',
-    filter  => "(objectClass=opsiProfile)",
-    attrs   => ['fdOpsiNetbootProduct', 'fdOpsiSoftwareList', 'fdOpsiProductProperty']
-  );
-  if ($mesg->count <= 0) {
-    die "[OPSI] Client with OPSI activated but profile '".$self->{'profile-dn'}."' could not be found";
+  if ($self->{'profile-dn'} ne '') {
+    my $mesg = $ldap->search( # perform a search
+      base    => $self->{'profile-dn'},
+      scope   => 'base',
+      filter  => "(objectClass=opsiProfile)",
+      attrs   => ['fdOpsiNetbootProduct', 'fdOpsiSoftwareList', 'fdOpsiProductProperty']
+    );
+    if ($mesg->count <= 0) {
+      die "[OPSI] Client with OPSI activated but profile '".$self->{'profile-dn'}."' could not be found";
+    }
+    $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
+    $self->{'softlists'}  = ($mesg->entries)[0]->get_value("fdOpsiSoftwareList", asref => 1);
+    $self->{'properties'} = ($mesg->entries)[0]->get_value("fdOpsiProductProperty", asref => 1);
   }
-  $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
-  $self->{'softlists'}  = ($mesg->entries)[0]->get_value("fdOpsiSoftwareList", asref => 1);
+
   $self->{'localboots'} = [];
-  $self->{'properties'} = ($mesg->entries)[0]->get_value("fdOpsiProductProperty", asref => 1);
   #2 - remove existing setups and properties
   my $productOnClients = $self->launch('productOnClient_getObjects',
     [[],
