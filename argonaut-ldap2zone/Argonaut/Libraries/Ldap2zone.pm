@@ -249,7 +249,7 @@ sub zoneparse
     if ($soa) {
       my $soa_record = $zonefile->soa();
       my (@soa_fields) = split(' ',$soa);
-      if ($soa_fields[2] > $soa_record->{'serial'}) {
+      if ((not defined $soa_record->{'serial'}) or ($soa_fields[2] > $soa_record->{'serial'})) {
         $soa_record->{'primary'}  = $soa_fields[0];
         $soa_record->{'email'}    = $soa_fields[1];
         $soa_record->{'serial'}   = $soa_fields[2];
