@@ -590,7 +590,13 @@ POE::Session->create(
             # Is this module able to handle this client and action?
             if (eval {$module->handle_client($target,$action)}) {
               $handled = 1;
-              # If it is, send him the infos
+              # Refresh pending tasks on the same target
+              foreach my $id (keys(%{$heap->{tasks}})) {
+                if ((not defined $heap->{tasks}->{$id}->{jsonid}) && ($target eq $heap->{tasks}->{$id}->{'target'})) {
+                  refresh_task($kernel,$heap,$session,$id);
+                }
+              }
+              # Send the infos to the module
               my $args = undef;
               if(defined $data->{args}) {
                 $args = $data->{args};
