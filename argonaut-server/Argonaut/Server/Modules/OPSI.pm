@@ -43,6 +43,8 @@ my $actions = {
   'Deployment.reboot'           => 'hostControl_reboot',
   'Deployment.reinstall'        => \&reinstall,
   'Deployment.update'           => \&update,
+  'System.list_logs'            => \&list_logs,
+  'System.get_log'              => \&get_log,
   'OPSI.update_or_insert'       => \&update_or_insert,
   'OPSI.delete'                 => 'host_delete',
   'OPSI.host_getObjects'        => 'host_getObjects',
@@ -55,6 +57,7 @@ my @locked_actions = (
   'ping',
   'OPSI.update_or_insert', 'OPSI.delete',
   'OPSI.host_getObjects', 'OPSI.get_netboots', 'OPSI.get_localboots',
+  'System.list_logs', 'System.get_log',
 );
 
 sub new
@@ -510,6 +513,30 @@ sub update {
   my ($self, $action,$params) = @_;
 
   return $self->reinstall_or_update(0, $action, $params);
+}
+
+sub get_log {
+  my ($self, $action,$params) = @_;
+
+  if (scalar(@$params) < 1) {
+    die "Missing parameter for get_log\n";
+  }
+
+  return $self->launch('log_read',[$params->[0], $self->{'fqdn'}]);
+}
+
+sub list_logs {
+  my ($self, $action,$params) = @_;
+
+  my @logTypes = ('instlog', 'clientconnect', 'userlogin', 'bootimage', 'opsiconfd');
+  my $result = [];
+  foreach my $logType (@logTypes) {
+    if ($self->launch('log_read',[$logType, $self->{'fqdn'}, 100])) {
+      push @$result, $logType;
+    }
+  }
+
+  return $result;
 }
 
 =pod
