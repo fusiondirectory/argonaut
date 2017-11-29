@@ -800,7 +800,8 @@ sub argonaut_get_server_settings {
       'delete_finished_tasks' => "argonautDeleteFinished",
       'fetch_packages'        => "argonautFetchPackages",
       'interface'             => "argonautWakeOnLanInterface",
-      'logdir'                => "argonautLogDir"
+      'logdir'                => "argonautLogDir",
+      'timeout'               => "argonautTimeout"
     },
     $config,$ip
   );
