@@ -44,15 +44,17 @@ sub new
 sub handle_client {
   my ($self, $mac, $action) = @_;
 
+  $self->{target} = $mac;
+
   if (grep {$_ eq $action} @fai_actions) {
-    my $ip = main::getIpFromMac($mac);
     eval { #try
       my $settings = argonaut_get_generic_settings(
         'FAIobject', {'state' => "FAIstate"},
-        $main::config,$ip
+        $main::config, "(macAddress=$mac)"
       );
       %$self = %$settings;
       $self->{action} = $action;
+      $self->{target} = $mac;
     };
     if ($@) { #catch
       $main::log->debug("[FAI] Can't handle client : $@");
@@ -68,7 +70,7 @@ sub handle_client {
 =pod
 =item do_action
 Execute a JSON-RPC method on a client which the ip is given.
-Parameters : ip,action,params
+Parameters : params
 =cut
 sub do_action {
   my ($self, $params) = @_;
@@ -112,7 +114,7 @@ sub handler_fai {
   $self->flag($fai_state->{$action});
 
   if($need_reboot) {
-    $self->{launch_actions} = [["System.reboot", [$self->{'mac'}], {'args' => []}]];
+    $self->{launch_actions} = [["System.reboot", [$self->{target}], {'args' => []}]];
     return "rebooting";
   } else {
     main::wakeOnLan($self->{'mac'});

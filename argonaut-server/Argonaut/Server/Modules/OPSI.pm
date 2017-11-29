@@ -175,6 +175,8 @@ sub get_winstation_fqdn_settings {
 sub handle_client {
   my ($self, $mac,$action) = @_;
 
+  $self->{target} = $mac;
+
   if (not defined $actions->{$action}) {
     return 0;
   }
@@ -183,6 +185,7 @@ sub handle_client {
     my $settings = get_opsi_settings($main::config, "(macAddress=$mac)");
     %$self = %$settings;
     $self->{action} = $action;
+    $self->{target} = $mac;
   };
   if ($@) { #catch
     if ($@ =~ /^[OPSI]/) {
