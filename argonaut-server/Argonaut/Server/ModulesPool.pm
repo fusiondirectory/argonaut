@@ -118,7 +118,7 @@ sub module_thread_result_handler {
   my ($kernel, $error, $result, $o) = @_[ KERNEL, ARG0..$#_];
   my $object = thread_getobject($o);
   if (defined $error) {
-    $kernel->post( $_[HEAP]->{sender}, "set_task_error", $object->{taskid}, $error);
+    $kernel->post( $_[HEAP]->{sender}, "set_task_error", $object->{taskid}, $object->{target}, $error);
     return;
   }
   if (defined $object->{task}) {
@@ -138,7 +138,7 @@ sub module_thread_result_handler {
       $kernel->post( $_[HEAP]->{sender}, "add", undef, undef, @$action);
     }
   }
-  $kernel->post( $_[HEAP]->{sender}, "set_task_result", $object->{taskid}, $result);
+  $kernel->post( $_[HEAP]->{sender}, "set_task_result", $object->{taskid}, $object->{target}, $result);
 }
 
 1;

@@ -505,6 +505,7 @@ POE::Session->create(
               $heap->{tasks}->{$taskid}->{nb_targets} = scalar(@$targets);
               $heap->{tasks}->{$taskid}->{jsonid} = $id;
               $heap->{tasks}->{$taskid}->{jsonsession} = $jsonrpc;
+              $heap->{tasks}->{$taskid}->{data} = $data;
               foreach my $target (@{$targets}) {
                 $kernel->yield('action' => $taskid,$action,lc($target),$data);
               }
@@ -606,14 +607,24 @@ POE::Session->create(
             }
           }
           unless ($handled) {
-            $kernel->yield('set_task_error' => $taskid, "No client module can handle action $action for target $target");
+            $kernel->yield('set_task_error' => $taskid, $target, "No client module can handle action $action for target $target");
           }
         },
         set_task_error => sub {
-          my ($kernel,$heap,$session,$taskid,$error) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          my ($kernel,$heap,$session,$taskid,$target,$error) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
           $log->debug("Setting task error '$error' for task '$taskid'");
           if (defined $heap->{tasks}->{$taskid}->{jsonid}) {
-            $heap->{tasks}->{$taskid}->{error} .= $error;
+            if (defined $heap->{tasks}->{$taskid}->{data}->{fullresult} && $heap->{tasks}->{$taskid}->{data}->{fullresult}) {
+              if (ref $heap->{tasks}->{$taskid}->{result} ne ref {}) {
+                $heap->{tasks}->{$taskid}->{result} = {};
+              }
+              if (not defined $heap->{tasks}->{$taskid}->{result}->{errors}) {
+                $heap->{tasks}->{$taskid}->{result}->{errors} = {};
+              }
+              $heap->{tasks}->{$taskid}->{result}->{errors}->{$target} = $error;
+            } else {
+              $heap->{tasks}->{$taskid}->{error} .= $error;
+            }
             $kernel->call($session => 'send_result' => $taskid);
           } else {
             $log->warning("Error occured : ".$error);
@@ -622,10 +633,20 @@ POE::Session->create(
           }
         },
         set_task_result => sub {
-          my ($kernel,$heap,$session,$taskid,$res) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          my ($kernel,$heap,$session,$taskid,$target,$res) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
           $log->debug("Setting task result '$res' for task '$taskid'");
           if (defined $heap->{tasks}->{$taskid}->{jsonid}) {
-            push @{$heap->{tasks}->{$taskid}->{result}}, $res;
+            if (defined $heap->{tasks}->{$taskid}->{data}->{fullresult} && $heap->{tasks}->{$taskid}->{data}->{fullresult}) {
+              if (ref $heap->{tasks}->{$taskid}->{result} ne ref {}) {
+                $heap->{tasks}->{$taskid}->{result} = {};
+              }
+              if (not defined $heap->{tasks}->{$taskid}->{result}->{results}) {
+                $heap->{tasks}->{$taskid}->{result}->{results} = {};
+              }
+              $heap->{tasks}->{$taskid}->{result}->{results}->{$target} = $res;
+            } else {
+              push @{$heap->{tasks}->{$taskid}->{result}}, $res;
+            }
             $kernel->call($session => 'send_result' => $taskid);
           } else {
             $heap->{tasks}->{$taskid}->{error} = "";
