@@ -62,7 +62,7 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-our ($config,$protocol,$server_ip,$server_port);
+our ($config,$protocol,$server_settings,$server_port);
 my ($sslkeyfile,$sslcertfile,$sslcacertfile,$iptool,$delete_finished_tasks,
     $interface,$logdir,$packages_folder,$fetch_packages,$token);
 my $logfile = "argonaut-server.log";
@@ -95,19 +95,19 @@ $log->add(
 
 sub readConfig {
   $config = argonaut_read_config;
-  my $settings = argonaut_get_server_settings($config,$config->{'server_ip'});
+  $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
-  $protocol               = $settings->{'protocol'};
-  $server_port            = $settings->{'port'};
-  $iptool                 = $settings->{'iptool'};
-  $delete_finished_tasks  = ($settings->{'delete_finished_tasks'} eq "TRUE");
-  $fetch_packages         = ($settings->{'fetch_packages'} eq "TRUE");
-  $interface              = $settings->{'interface'};
-  $logdir                 = $settings->{'logdir'};
-  $sslkeyfile             = $settings->{'keyfile'};
-  $sslcertfile            = $settings->{'certfile'};
-  $sslcacertfile          = $settings->{'cacertfile'};
-  $token                  = $settings->{'token'};
+  $protocol               = $server_settings->{'protocol'};
+  $server_port            = $server_settings->{'port'};
+  $iptool                 = $server_settings->{'iptool'};
+  $delete_finished_tasks  = ($server_settings->{'delete_finished_tasks'} eq "TRUE");
+  $fetch_packages         = ($server_settings->{'fetch_packages'} eq "TRUE");
+  $interface              = $server_settings->{'interface'};
+  $logdir                 = $server_settings->{'logdir'};
+  $sslkeyfile             = $server_settings->{'keyfile'};
+  $sslcertfile            = $server_settings->{'certfile'};
+  $sslcacertfile          = $server_settings->{'cacertfile'};
+  $token                  = $server_settings->{'token'};
 
   $packages_folder        = "/var/cache/argonaut/packages";
 }

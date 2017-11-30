@@ -71,11 +71,10 @@ sub handle_client {
     $main::log->debug("[Argonaut] Can't handle client : $@");
     return 0;
   };
-  my $server_settings = argonaut_get_server_settings($main::config,$main::server_ip);
-  $self->{cacertfile} = $server_settings->{cacertfile};
-  $self->{token}      = $server_settings->{token};
+  $self->{cacertfile} = $main::server_settings->{cacertfile};
+  $self->{token}      = $main::server_settings->{token};
   # We take a lower timeout than the server so that it's possible to return the result
-  $self->{timeout}    = $server_settings->{timeout} - 2;
+  $self->{timeout}    = $main::server_settings->{timeout} - 2;
   if ($self->{timeout} <= 0) {
     $self->{timeout} = 1;
   }

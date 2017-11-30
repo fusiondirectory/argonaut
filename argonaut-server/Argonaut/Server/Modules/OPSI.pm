@@ -49,6 +49,7 @@ my $clientActions = {
   'OPSI.delete'                 => 'host_delete',
 };
 my $serverActions = {
+  'ping'                        => 'accessControl_authenticated',
   'OPSI.delete'                 => 'host_delete',
   'OPSI.host_getObjects'        => 'host_getObjects',
   'OPSI.get_netboots'           => 'product_getObjects',
@@ -598,10 +599,15 @@ sub do_action {
     $actions = $serverActions;
   }
   if (ref $actions->{$action} eq ref "") {
-    if ($action eq 'ping') {
-      $params = ['1000'];
-    }
     if ($self->{client}) {
+      if ($action eq 'ping') {
+        # We take a lower timeout than the server so that it's possible to return the result
+        my $timeout = $main::server_settings->{timeout} - 2;
+        if ($timeout <= 0) {
+          $timeout = 1;
+        }
+        $params = [$timeout];
+      }
       unshift @$params, $self->{'fqdn'};
     }
     $main::log->info("[OPSI] sending action ".$actions->{$action}." to ".$self->{'fqdn'});
