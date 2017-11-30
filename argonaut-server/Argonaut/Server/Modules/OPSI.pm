@@ -36,7 +36,7 @@ use Argonaut::Libraries::Common qw(:ldap :file :config :utils);
 use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
 use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
 
-my $actions = {
+my $clientActions = {
   'ping'                        => 'hostControl_reachable',
   'System.halt'                 => 'hostControl_shutdown',
   'System.reboot'               => 'hostControl_reboot',
@@ -46,6 +46,9 @@ my $actions = {
   'System.list_logs'            => \&list_logs,
   'System.get_log'              => \&get_log,
   'OPSI.update_or_insert'       => \&update_or_insert,
+  'OPSI.delete'                 => 'host_delete',
+};
+my $serverActions = {
   'OPSI.delete'                 => 'host_delete',
   'OPSI.host_getObjects'        => 'host_getObjects',
   'OPSI.get_netboots'           => 'product_getObjects',
@@ -68,18 +71,6 @@ sub new
   return $self;
 }
 
-sub needs_host_param
-{
-  my ($self, $action, $params) = @_;
-  #Right now update_or_insert and host_getObjects are the only actions
-  # that does not require the host as first parameter
-  return 0 if ($action eq 'productProperty_getObjects');
-  return 0 if ($action eq 'host_getObjects');
-  return 0 if ($action eq 'product_getObjects');
-  return 0 if (($action eq 'host_delete') && (@$params > 0));
-  return 1;
-}
-
 sub get_opsi_settings {
   my $settings;
   eval { #try
@@ -92,6 +83,7 @@ sub get_opsi_settings {
       },
       @_
     );
+    $settings->{client} = 1;
   };
   if ($@) { #catch
     my $error = $@;
@@ -105,6 +97,7 @@ sub get_opsi_settings {
         },
         @_
       );
+      $settings->{client} = 0;
     };
     if ($@) {
       die $error;
@@ -177,13 +170,18 @@ sub handle_client {
 
   $self->{target} = $mac;
 
-  if (not defined $actions->{$action}) {
+  if ((not defined $clientActions->{$action}) && (not defined $serverActions->{$action})) {
     return 0;
   }
 
   eval { #try
     my $settings = get_opsi_settings($main::config, "(macAddress=$mac)");
     %$self = %$settings;
+    if ($self->{client} && (not defined $clientActions->{$action})) {
+      return 0;
+    } elsif ((not $self->{client}) && (not defined $serverActions->{$action})) {
+      return 0;
+    }
     $self->{action} = $action;
     $self->{target} = $mac;
   };
@@ -593,12 +591,17 @@ sub do_action {
     }
     $params->[0] = \@fqdns;
   }
+  my $actions;
+  if ($self->{client}) {
+    $actions = $clientActions;
+  } else {
+    $actions = $serverActions;
+  }
   if (ref $actions->{$action} eq ref "") {
     if ($action eq 'ping') {
       $params = ['1000'];
     }
-    my $hostParam = $self->needs_host_param($actions->{$action}, $params);
-    if ($hostParam) {
+    if ($self->{client}) {
       unshift @$params, $self->{'fqdn'};
     }
     $main::log->info("[OPSI] sending action ".$actions->{$action}." to ".$self->{'fqdn'});
