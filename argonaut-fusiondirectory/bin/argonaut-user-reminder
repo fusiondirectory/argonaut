@@ -335,7 +335,7 @@ sub send_alert_mail
     $alert_mailbody     = $config->{'alert_mailbody'};
     $token              = store_ldap_token($ldap, $uid, $datetime);
   }
-  if (($alert_mailbody == '') || ($alert_mailsubject == '')) {
+  if (($alert_mailbody eq '') || ($alert_mailsubject eq '')) {
     print "Skipping mail to $user_cn<$user_mail> as mail body or subject is empty\n" if $verbose;
     return;
   }
