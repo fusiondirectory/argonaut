@@ -293,12 +293,22 @@ sub update_or_insert {
     "ipAddress"       => $self->{'ip'},
     "type"            => "OpsiClient",
   };
+
   my $opsiaction = 'host_updateObject';
-  my $tmpres = $self->launch('host_getObjects',[['id'],{'id' => $self->{'fqdn'}}]);
-  if (scalar(@$tmpres) < 1) {
-    $opsiaction = 'host_insertObject';
-    $infos->{"notes"} = "Created by FusionDirectory";
+
+  if (scalar(@$params) > 0) {
+    # If our id changed, rename the object in OPSI
+    if ($params->[0] ne $self->{'fqdn'}) {
+      $res = $self->launch('host_renameOpsiClient',[$params->[0], $self->{'fqdn'}]);
+    }
+  } else {
+    my $tmpres = $self->launch('host_getObjects',[['id'],{'id' => $self->{'fqdn'}}]);
+    if (scalar(@$tmpres) < 1) {
+      $opsiaction = 'host_insertObject';
+      $infos->{"notes"} = "Created by FusionDirectory";
+    }
   }
+
   $res = $self->launch($opsiaction,[$infos]);
   if (defined $self->{'depot'}) {
     $res = $self->launch('configState_create',["clientconfig.depot.id", $self->{'fqdn'}, $self->{'depot'}]);
