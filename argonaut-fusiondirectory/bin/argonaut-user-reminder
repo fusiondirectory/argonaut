@@ -345,7 +345,6 @@ sub send_alert_mail
   print " with token $token" if ($verbose and (not $ppolicy_mode));
   print "\n" if $verbose;
   my $body = sprintf($alert_mailbody,$user_cn,$uid,$token);
-  utf8::encode($body);
   my %message = (
     'From'                      => $config->{'alert_mailaddress'},
     'To'                        => encode_mimewords($user_cn, Charset => 'utf-8', Encoding => 'B')." <$user_mail>",
