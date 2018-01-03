@@ -36,12 +36,9 @@ use Argonaut::Libraries::Common qw(:ldap :string :config);
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
 use Net::LDAP::Util qw(generalizedTime_to_time);
 
-# first, create your message
-#~ use Email::MIME;
-
-# send the message
-#~ use Email::Sender::Simple qw(sendmail);
 use Mail::Sendmail qw(sendmail);
+use MIME::Base64;
+use MIME::Words qw(encode_mimewords);
 
 my $config;
 
@@ -343,16 +340,20 @@ sub send_alert_mail
   my $cc = "";
   if (defined $manager_mail) {
     print ", copy to $manager_cn<$manager_mail>" if $verbose;
-    $cc = "$manager_cn<$manager_mail>";
+    $cc = encode_mimewords($manager_cn, Charset => 'utf-8', Encoding => 'B')." <$manager_mail>";
   }
   print " with token $token" if ($verbose and (not $ppolicy_mode));
   print "\n" if $verbose;
+  my $body = sprintf($alert_mailbody,$user_cn,$uid,$token);
+  utf8::encode($body);
   my %message = (
-    From    => $config->{'alert_mailaddress'},
-    To      => "$user_cn<$user_mail>",
-    Cc      => $cc,
-    Subject => $alert_mailsubject,
-    Message => sprintf($alert_mailbody,$user_cn,$uid,$token)
+    'From'                      => $config->{'alert_mailaddress'},
+    'To'                        => encode_mimewords($user_cn, Charset => 'utf-8', Encoding => 'B')." <$user_mail>",
+    'Cc'                        => $cc,
+    'Subject'                   => encode_mimewords($alert_mailsubject, Charset => 'utf-8', Encoding => 'B'),
+    'Content-type'              => 'text/plain; charset="utf-8"',
+    'Content-Transfer-Encoding' => 'base64',
+    'Message'                   => encode_base64($body)
   );
   sendmail(%message) or die $Mail::Sendmail::error;
 }
