@@ -49,12 +49,13 @@ my $clientActions = {
   'OPSI.delete'                 => 'host_delete',
 };
 my $serverActions = {
-  'ping'                        => 'accessControl_authenticated',
-  'OPSI.delete'                 => 'host_delete',
-  'OPSI.host_getObjects'        => 'host_getObjects',
-  'OPSI.get_netboots'           => 'product_getObjects',
-  'OPSI.get_localboots'         => 'product_getObjects',
-  'OPSI.get_product_properties' => 'productProperty_getObjects',
+  'ping'                            => 'accessControl_authenticated',
+  'OPSI.delete'                     => 'host_delete',
+  'OPSI.host_getObjects'            => 'host_getObjects',
+  'OPSI.get_netboots'               => 'product_getObjects',
+  'OPSI.get_localboots'             => 'product_getObjects',
+  'OPSI.get_product_properties'     => 'productProperty_getObjects',
+  'OPSI.productOnClient_getObjects' => 'productOnClient_getObjects',
 };
 
 my @locked_actions = (
