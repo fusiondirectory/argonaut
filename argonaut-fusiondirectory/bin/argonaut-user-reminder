@@ -120,6 +120,7 @@ sub read_reminder_ldap_config
   # Should alert mails be forwarded to the manager
   $config->{'forward_alert'}    = 1;
   $config->{'forward_ppolicy'}  = 1;
+  $config->{'use_alternate'}    = 1;
 
   my $entry = argonaut_read_ldap_config(
     $ldap,
@@ -144,8 +145,13 @@ sub read_reminder_ldap_config
   if ($entry->exists('fdUserReminderForwardAlert')) {
     $config->{'forward_alert'} = ($entry->get_value('fdUserReminderForwardAlert') eq "TRUE");
   }
+
   if ($entry->exists('fdUserReminderForwardPpolicyAlert')) {
     $config->{'forward_ppolicy'} = ($entry->get_value('fdUserReminderForwardPpolicyAlert') eq "TRUE");
+  }
+
+  if ($entry->exists('fdUserReminderUseAlternate')) {
+    $config->{'use_alternate'} = ($entry->get_value('fdUserReminderUseAlternate') eq "TRUE");
   }
 }
 
@@ -203,7 +209,7 @@ sub check_expired_users
         base    => $config->{'ldap_base'},
         filter  => '(&(objectClass=person)(pwdChangedTime=*))',
         scope   => 'subtree',
-        attrs   => ['uid','cn','mail','fdPrivateMail','supannAutreMail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
+        attrs   => ['uid','cn','mail','gosaMailAlternateAddress','fdPrivateMail','supannAutreMail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
       );
       die_on_ldap_errors($mesg);
 
@@ -256,6 +262,24 @@ sub check_expired_users
   }
 }
 
+sub get_mail_from_entry
+{
+  my ($entry) = @_;
+
+  my $mail_address = $entry->get_value('mail');
+  if ((not defined $mail_address) and $config->{'use_alternate'}) {
+    $mail_address = $entry->get_value('gosaMailAlternateAddress');
+  }
+  if (not defined $mail_address) {
+    $mail_address = $entry->get_value('supannAutreMail');
+  }
+  if (not defined $mail_address) {
+    $mail_address = $entry->get_value('fdPrivateMail');
+  }
+
+  return $mail_address;
+}
+
 sub alert_user_if_needed
 {
   my ($ldap,$entry,$now,$ppolicy_mode) = @_;
@@ -268,13 +292,7 @@ sub alert_user_if_needed
   }
 
   # Check if we have a mail address for this user.
-  my $mail_address = $entry->get_value('mail');
-  if (not defined $mail_address) {
-    $mail_address = $entry->get_value('fdPrivateMail');
-  }
-  if (not defined $mail_address) {
-    $mail_address = $entry->get_value('supannAutreMail');
-  }
+  my $mail_address = get_mail_from_entry($entry);
   if (not defined $mail_address) {
     print "User $cn has no mail address, skipping…\n";
     return;
@@ -313,7 +331,7 @@ sub alert_user_if_needed
     );
     if ($manager_mesg->count() > 0) {
       $manager_cn   = ($manager_mesg->entries)[0]->get_value('cn');
-      $manager_mail = ($manager_mesg->entries)[0]->get_value('mail');
+      $manager_mail = get_mail_from_entry(($manager_mesg->entries)[0]);
     }
   }
   send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail, $ppolicy_mode);
