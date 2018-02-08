@@ -5,8 +5,13 @@ image: debian:stretch
 variables:
   GIT_SSL_NO_VERIFY: "true"
 
+stages:
+  - test-perl
+  - test-manpages
+
 # Generate perlcritic rapport
 create_perlcritic_rapport:
+  stage: test-perl
   only:
     - branches
     - tags
@@ -18,6 +23,7 @@ create_perlcritic_rapport:
 
 # Perl lint
 create_perl_lint_rapport:
+  stage: test-perl
   only:
     - branches
     - tags
@@ -38,7 +44,7 @@ create_perl_lint_rapport:
 
 # generate man pages to test validity
 test_manpages:
-  stage: test
+  stage: test-manpages
   only:
     - branches
     - tags
