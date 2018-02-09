@@ -1,0 +1,72 @@
+=head1 NAME
+
+argonaut.conf - Argonaut configuration file
+
+=head1 DESCRIPTION
+
+The argonaut.conf file is used to configure the argonaut server and client
+
+=head2 Configuration layout
+
+The configuration is a classical ini style file
+
+=head2 Server options
+
+=over
+
+=item B<server_ip> I<ip address>
+
+The server_ip statement give the ip of the argonaut server
+
+=back
+
+=head2 Client section options
+
+=over
+
+=item B<client_ip> I<ip address>
+
+The client_ip statement give the ip of the argonaut server
+
+=back
+
+=head2 LDAP options
+
+=over
+
+=item B<config> I<path>
+
+Path to the file that contains the ldap URI and base
+
+=item B<dn> I<dn>
+
+Complete ldap DN of the DSA account needed to read the argonaut attributes from the ldap server
+
+=item B<password> I<string>
+
+Password of the DSA account 
+
+=item B<tls> I<bool>
+
+By default to off, switch to on if you want to use ssl on argonaut
+
+=back
+
+=head1 BUGS
+
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to <https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
+
+=head1 LICENCE AND COPYRIGHT
+
+This code is part of FusionDirectory <http://www.fusiondirectory.org>
+
+Argonaut Website is https://www.argonaut-project.org/
+
+=over 2
+
+=item Copyright (C) 2011-2018 FusionDirectory project
+
+=back
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
