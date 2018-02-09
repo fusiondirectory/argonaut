@@ -4,7 +4,7 @@
 #
 # yumgroup2yumi
 #
-# Copyright (c) 2015-2016 The FusionDirectory Project
+# Copyright (c) 2015-2018 The FusionDirectory Project
 #
 # Author: Côme BERNIGAUD
 #
@@ -180,7 +180,7 @@ B<-o>
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -188,7 +188,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org/>
 
 =over 3
 
-=item Copyright (C) 2015-2016 FusionDirectory project
+=item Copyright (C) 2015-2018 FusionDirectory project
 
 =back
 
