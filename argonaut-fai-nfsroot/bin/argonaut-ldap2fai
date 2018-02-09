@@ -6,7 +6,7 @@
 #
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (c) 2008-2010 GONICUS GmbH  <gosa-devel@oss.gonicus.de>
-# Copyright (c) 2011-2016 The FusionDirectory Project
+# Copyright (c) 2011-2018 The FusionDirectory Project
 #
 # Authors: Jan-Marek Glogowski
 #          Cajus Pollmeier
@@ -536,7 +536,7 @@ argonaut-ldap2fai is a script to read the fai config space from LDAP and create 
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -548,7 +548,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org/>
 
 =item Copyright (C) 2007-2010 The GOsa project
 
-=item Copyright (C) 2011-2016 FusionDirectory project
+=item Copyright (C) 2011-2018 FusionDirectory project
 
 =back
 

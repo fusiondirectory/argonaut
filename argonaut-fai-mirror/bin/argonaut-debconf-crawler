@@ -4,7 +4,7 @@
 #
 # argonaut-debconf-crawler - Extract debconf templates from packages
 #
-# Copyright (C) 2011-2016 FusionDirectory project
+# Copyright (C) 2011-2018 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
@@ -70,7 +70,7 @@ argonaut-debconf-crwaler is a program used to extract debconf templates from pac
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -78,7 +78,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org>
 
 =over 1
 
-=item Copyright (C) 2011-2016 FusionDirectory project
+=item Copyright (C) 2011-2018 FusionDirectory project
 
 =back
 
