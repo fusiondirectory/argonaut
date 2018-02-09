@@ -7,7 +7,7 @@
 #  Check for expired users and send them a mail allowing to postpone expiration
 #
 #  This code is part of FusionDirectory (http://www.fusiondirectory.org/)
-#  Copyright (C) 2016  FusionDirectory
+#  Copyright (C) 2015-2018  FusionDirectory
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -467,7 +467,7 @@ check both POSIX account expiration and ppolicy password expiration
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 AUTHORS
 
@@ -479,7 +479,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org/>
 
 =over 1
 
-=item Copyright (C) 2015-2016 FusionDirectory project
+=item Copyright (C) 2015-2018 FusionDirectory project
 
 =back
 
