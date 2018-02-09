@@ -58,9 +58,7 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 
 =head1 LICENCE AND COPYRIGHT
 
-This code is part of FusionDirectory <http://www.fusiondirectory.org>
-
-Argonaut Website is https://www.argonaut-project.org/
+This code is part of Argonaut Project <https://www.argonaut-project.org>
 
 =over 2
 

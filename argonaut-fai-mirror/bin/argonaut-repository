@@ -6,7 +6,7 @@
 #
 # Copyright (c) 2005,2006 Jan-Marek Glogowski <glogow@fbihome.de>
 # Copyrignt (c) 2007,2009 The GOsa project <gosa-devel@oss.gonicus.de>
-# Copyright (C) 2011-2016 FusionDirectory project
+# Copyright (C) 2011-2018 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
@@ -275,7 +275,7 @@ argonaut-repository is a program used to create the cronjob for creation the loc
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -287,7 +287,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org>
 
 =item Copyright (C) 2007-2010 The GOsa project
 
-=item Copyright (C) 2011-2016 FusionDirectory project
+=item Copyright (C) 2011-2018 FusionDirectory project
 
 =back
 
