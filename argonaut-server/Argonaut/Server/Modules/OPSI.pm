@@ -214,6 +214,7 @@ sub update_task {
       'actionRequest',
       'actionProgress',
       'installationStatus',
+      'lastAction',
     ];
     $task->{progress} = 10;
     $task->{substatus} = "";
@@ -234,7 +235,10 @@ sub update_task {
         $task->{progress}   = 50;
       } elsif ($res->{'actionResult'} eq 'failed') {
         $task->{status} = "error";
-        $task->{error}  = $res->{'actionProgress'};
+        $task->{error}  = "Action ".$res->{'lastAction'}." for netboot ".$self->{'netboot'}." failed";
+        if ($res->{'actionProgress'} ne '') {
+          $task->{error} .= ' ('.$res->{'actionProgress'}.')'
+        }
         return $task;
       }
     }
@@ -260,7 +264,10 @@ sub update_task {
           $nbinstalled++;
         } elsif ($res->{'actionResult'} eq 'failed') {
           $task->{status} = "error";
-          $task->{error} = $res->{'actionProgress'};
+          $task->{error}  = "Action ".$res->{'lastAction'}." for product $product failed";
+          if ($res->{'actionProgress'} ne '') {
+            $task->{error} .= ' ('.$res->{'actionProgress'}.')'
+          }
           return $task;
         }
       }
