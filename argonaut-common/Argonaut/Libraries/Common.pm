@@ -774,6 +774,23 @@ sub argonaut_get_generic_settings {
     }
   }
 
+  if ($inheritance == 2) {
+    # Get group values on top of normal ones
+    if (scalar($mesgGroup->entries) == 1) {
+      $settings->{"group"} = {};
+      while (my ($key,$value) = each(%{$params})) {
+        if (ref $value eq ref []) {
+          $settings->{"group"}->{"$key"} = ($mesgGroup->entries)[0]->get_value(@$value);
+        } elsif (($mesgGroup->entries)[0]->get_value("$value")) {
+          $settings->{"group"}->{"$key"} = ($mesgGroup->entries)[0]->get_value("$value");
+        } else {
+          $settings->{"group"}->{"$key"} = "";
+        }
+      }
+      return $settings;
+    }
+  }
+
   return $settings;
 }
 

@@ -106,6 +106,17 @@ sub get_opsi_settings {
     };
   };
 
+  if ($settings->{'profile-dn'} eq 'inherited') {
+    if (not exists $settings->{'group'}->{'profile-dn'}) {
+      die "Profile set to inherited but could no find group OPSI profile\n";
+    }
+    if (not exists $settings->{'group'}->{'server-dn'}) {
+      die "Profile set to inherited but could no find group OPSI server\n";
+    }
+    $settings->{'profile-dn'} = $settings->{'group'}->{'profile-dn'};
+    $settings->{'server-dn'}  = $settings->{'group'}->{'server-dn'};
+  }
+
   my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
 
   if (not defined $settings->{'server-uri'}) {
@@ -177,7 +188,7 @@ sub handle_client {
   }
 
   eval { #try
-    my $settings = get_opsi_settings($main::config, "(macAddress=$mac)");
+    my $settings = get_opsi_settings($main::config, "(macAddress=$mac)", 2);
     %$self = %$settings;
     if ($self->{client} && (not defined $clientActions->{$action})) {
       return 0;
