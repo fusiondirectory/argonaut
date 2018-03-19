@@ -79,9 +79,10 @@ sub get_opsi_settings {
     $settings = argonaut_get_generic_settings(
       'opsiClient',
       {
-        'server-dn'   => "fdOpsiServerDn",
-        'profile-dn'  => "fdOpsiProfileDn",
-        'softs'       => ["fdOpsiLocalbootProduct", asref => 1],
+        'server-dn'     => "fdOpsiServerDn",
+        'profile-dn'    => "fdOpsiProfileDn",
+        'softs'         => ["fdOpsiLocalbootProduct", asref => 1],
+        'inherit-softs' => "fdOpsiLocalbootInherit",
       },
       @_
     );
@@ -115,6 +116,14 @@ sub get_opsi_settings {
     }
     $settings->{'profile-dn'} = $settings->{'group'}->{'profile-dn'};
     $settings->{'server-dn'}  = $settings->{'group'}->{'server-dn'};
+  }
+
+  if ($settings->{'server-dn'} eq 'inherited') {
+    $settings->{'server-dn'}  = $settings->{'group'}->{'server-dn'};
+  }
+
+  if ($settings->{'inherit-softs'} eq 'TRUE') {
+    push(@{$settings->{'softs'}}, @{$settings->{'group'}->{'softs'}});
   }
 
   my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
