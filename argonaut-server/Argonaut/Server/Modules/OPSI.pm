@@ -107,7 +107,7 @@ sub get_opsi_settings {
     };
   };
 
-  if ($settings->{'profile-dn'} eq 'inherited') {
+  if ((defined $settings->{'profile-dn'}) && ($settings->{'profile-dn'} eq 'inherited')) {
     if (not exists $settings->{'group'}->{'profile-dn'}) {
       die "Profile set to inherited but could no find group OPSI profile\n";
     }
@@ -118,12 +118,16 @@ sub get_opsi_settings {
     $settings->{'server-dn'}  = $settings->{'group'}->{'server-dn'};
   }
 
-  if ($settings->{'server-dn'} eq 'inherited') {
+  if ((defined $settings->{'server-dn'}) && ($settings->{'server-dn'} eq 'inherited')) {
     $settings->{'server-dn'}  = $settings->{'group'}->{'server-dn'};
   }
 
-  if ($settings->{'inherit-softs'} eq 'TRUE') {
-    push(@{$settings->{'softs'}}, @{$settings->{'group'}->{'softs'}});
+  if ((defined $settings->{'inherit-softs'}) && ($settings->{'inherit-softs'} eq 'TRUE') && (defined $settings->{'group'}->{'softs'})) {
+    if (defined $settings->{'softs'}) {
+      push(@{$settings->{'softs'}}, @{$settings->{'group'}->{'softs'}});
+    } else {
+      $settings->{'softs'} = $settings->{'group'}->{'softs'};
+    }
   }
 
   my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
