@@ -748,7 +748,7 @@ sub argonaut_get_generic_settings {
   my $mesgGroup = $ldap->search( # Get the group object
     base   => $ldap_base,
     filter => "(&(objectClass=$objectClass)(member=$dn))",
-    attrs => [values(%{$params}), 'argonautDeploymentTimeframe']
+    attrs  => \@attrs
   );
 
   if (scalar($mesgGroup->entries) == 1) {
