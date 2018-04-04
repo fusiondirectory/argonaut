@@ -288,12 +288,12 @@ sub send_alert_mail
     $cc = encode_mimewords($manager_cn, Charset => 'utf-8', Encoding => 'B')." <$manager_mail>";
   }
   print " with token $token\n" if $verbose;
-  my $body = sprintf($alert_mailbody,$user_cn,$uid,$token);
+  my $body = sprintf($config->{'alert_mailbody'},$user_cn,$uid,$token);
   my %message = (
     'From'                      => $config->{'alert_mailaddress'},
     'To'                        => encode_mimewords($user_cn, Charset => 'utf-8', Encoding => 'B')." <$user_mail>",
     'Cc'                        => $cc,
-    'Subject'                   => encode_mimewords($alert_mailsubject, Charset => 'utf-8', Encoding => 'B'),
+    'Subject'                   => encode_mimewords($config->{'alert_mailsubject'}, Charset => 'utf-8', Encoding => 'B'),
     'Content-type'              => 'text/plain; charset="utf-8"',
     'Content-Transfer-Encoding' => 'base64',
     'Message'                   => encode_base64($body)
