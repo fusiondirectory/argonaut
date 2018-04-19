@@ -707,7 +707,7 @@ sub launch {
       $res = $res->result;
       if ((ref $res eq ref {}) && defined $res->{$self->{'fqdn'}}) {
         my $result = $res->{$self->{'fqdn'}};
-        if (JSON::XS::is_bool($result)) {
+        if (JSON::is_bool($result)) {
           $res = $result;
         } elsif (defined $result->{'error'}) {
           $main::log->error("[OPSI] Error : ".$result->{'error'});
