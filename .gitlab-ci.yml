@@ -85,10 +85,10 @@ test_manpages:
 build-tarballs:
   stage: tarballs
   script:
-    - tar -cvzf fusiondirectory-core.tar.gz *
+    - tar -cvzf argonaut.tar.gz *
   artifacts:
     paths:
-    - fusiondirectory-core.tar.gz
+    - argonaut.tar.gz
     expire_in: 1h
 
 build-release:
@@ -96,7 +96,7 @@ build-release:
   only:
     - tags
   script: 
-    - tar -cvzf fusiondirectory-core-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz *
+    - tar -cvzf argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz *
   artifacts:
     paths:
-      - fusiondirectory-core-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz
+      - argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz
