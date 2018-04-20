@@ -8,6 +8,7 @@ variables:
 stages:
   - test-perl
   - test-manpages
+  - tarballs
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
@@ -81,3 +82,21 @@ test_manpages:
     - lexgrog argonaut-quota/man/argonaut-quota.1
     - lexgrog argonaut-server/man/argonaut-server.1
 
+build-tarballs:
+  stage: tarballs
+  script:
+    - tar -cvzf argonaut.tar.gz *
+  artifacts:
+    paths:
+    - argonaut.tar.gz
+    expire_in: 1h
+
+build-release:
+  stage: tarballs
+  only:
+    - tags
+  script: 
+    - tar -cvzf argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz *
+  artifacts:
+    paths:
+      - argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz
