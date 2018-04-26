@@ -243,6 +243,9 @@ sub alert_user_if_needed
   if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
     print "User $cn was already sent a mail, not resending yet.\n" if $verbose;
     return;
+  } elsif ((defined $token_hash) || (defined $token_datetime)) {
+    # Delete obsolete token so we may create it again
+    delete_ldap_token($ldap, $entry->get_value('uid'));
   }
 
   my ($manager_cn, $manager_mail);
@@ -320,6 +323,16 @@ sub get_ldap_token
   }
 }
 
+sub delete_ldap_token
+{
+  my ($ldap, $uid) = @_;
+
+  my $dn = "ou=$uid,".$config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'};
+
+  my $mesg = $ldap->delete($dn);
+  $mesg->code && warn "! failed to delete token $dn: ".$mesg->error."\n";
+}
+
 sub store_ldap_token
 {
   my ($ldap, $uid, $datetime) = @_;
@@ -347,7 +360,7 @@ sub store_ldap_token
     ]
   );
 
-  $mesg->code && die "! failed to add LDAP's $dn token: ".$mesg->error."\n";
+  $mesg->code && die "! failed to create token $dn: ".$mesg->error."\n";
 
   return $token_password;
 }
