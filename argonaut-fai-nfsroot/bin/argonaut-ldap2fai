@@ -94,7 +94,7 @@ my ($ldap,$base) = argonaut_ldap_handle($config);
 
 
 # Get FAI object
-my $faiobj = Argonaut::FAI->new( 'LDAP'     => $ldap,
+my $faiobj = Argonaut::Libraries::FAI->new( 'LDAP'     => $ldap,
                                  'base'     => $base,
                                  'dumpdir'  => $dump_dir );
 
@@ -137,7 +137,7 @@ print( "Dumping config space to '$dump_dir'...\n" );
 my( $error, $sections, $customs ) = $faiobj->dump_release( $release, $res_classlist, $hostname );
 print $error . "\n" if( defined $error );
 
-generate_files_dir_configspace();
+generate_files_dir_configspace() if (!$dry_run);
 
 generate_sources_list( $sections ) if ($sources_list);
 
@@ -465,7 +465,7 @@ sub add_repo_for_release {
           if( scalar @modsections > 0 ) {
             my $debline = "deb $items[ 0 ] $items[ 2 ] " . join(' ',@modsections) . "\n";
             print "   + add: $debline" if $verbose;
-            print SOURCES "$debline" if( ! $dry_run );
+            print $filehandle "$debline" if( ! $dry_run );
           }
 
           last if( scalar keys ( %release_sections ) == 0);
