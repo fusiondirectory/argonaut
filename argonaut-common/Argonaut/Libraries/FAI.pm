@@ -690,9 +690,11 @@ sub dump_package_list {
 
   my( $entry, $method );
 
-  if( ! -d "$dumpdir/package_config" ) {
-    eval { mkpath( "$dumpdir/package_config" ); };
-    return( "Can't create dir '$dumpdir/package_config': $!\n" ) if( $@ );
+  if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+    if( ! -d "$dumpdir/package_config" ) {
+      eval { mkpath( "$dumpdir/package_config" ); };
+      return( "Can't create dir '$dumpdir/package_config': $!\n" ) if( $@ );
+    }
   }
 
   my %uniq_sections = ();
@@ -748,9 +750,11 @@ sub dump_debconf_info {
     = $self->init_dump_function( $release, $classref, $flags, 'debconf' );
   return $classref if( ! defined $dumpdir );
 
-  if( ! -d "$dumpdir/debconf" ) {
-    eval { mkpath( "$dumpdir/debconf" ); };
-    return( "Can't create dir '$dumpdir/debconf': $!\n" ) if( $@ );
+  if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+    if( ! -d "$dumpdir/debconf" ) {
+      eval { mkpath( "$dumpdir/debconf" ); };
+      return( "Can't create dir '$dumpdir/debconf': $!\n" ) if( $@ );
+    }
   }
 
   foreach my $class (@$classref) {
@@ -766,6 +770,8 @@ sub dump_debconf_info {
     }
 
     next if( 0 == scalar @lines );
+
+    next if($self->{ 'flags' } & FAI_FLAG_DRY_RUN);
 
     open( $debconf, q{>}, "$dumpdir/debconf/$class" )
       ||  return( "Can't create $dumpdir/debconf/$class. $!\n" );
@@ -797,9 +803,11 @@ sub dump_disk_config {
     = $self->init_dump_function( $release, $classref, $flags, 'disk' );
   return $classref if( ! defined $dumpdir );
 
-  if( ! -d "$dumpdir/disk_config" ) {
-    eval { mkpath( "$dumpdir/disk_config" ); };
-    return( "Can't create dir '$dumpdir/disk_config': $!\n" ) if( $@ );
+  if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+    if( ! -d "$dumpdir/disk_config" ) {
+      eval { mkpath( "$dumpdir/disk_config" ); };
+      return( "Can't create dir '$dumpdir/disk_config': $!\n" ) if( $@ );
+    }
   }
 
   my $first_lvm_disk= 1;
@@ -962,13 +970,15 @@ sub dump_disk_config {
       }
     }
 
+    next if ($self->{ 'flags' } & FAI_FLAG_DRY_RUN);
+
     open( $faidiskconfig, q{>}, "$dumpdir/disk_config/${class}" )
         || return( "Can't create $dumpdir/disk_config/$class. $!\n" );
     print $faidiskconfig join( '', @disk_config_lines );
     close( $faidiskconfig );
 
     # Enable setup storage if needed
-    if ($setup_storage && ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN)) {
+    if ($setup_storage) {
       if( ! -d "$dumpdir/class" ) {
         eval { mkpath( "$dumpdir/class" ); };
         return( "Can't create dir '$dumpdir/class': $!\n" ) if( $@ );
@@ -1078,9 +1088,11 @@ sub dump_scripts {
   foreach my $class (@$classref) {
     next if( ! exists $cow_cacheref->{ $class } );
 
-    if( ! -d "$dumpdir/scripts/${class}" ) {
-      eval { mkpath( "$dumpdir/scripts/${class}" ); };
-      return( "Can't create dir '$dumpdir/scripts/${class}': $!\n" ) if( $@ );
+    if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+      if( ! -d "$dumpdir/scripts/${class}" ) {
+        eval { mkpath( "$dumpdir/scripts/${class}" ); };
+        return( "Can't create dir '$dumpdir/scripts/${class}': $!\n" ) if( $@ );
+      }
     }
 
     my @lines = ();
@@ -1131,9 +1143,11 @@ sub dump_templates {
   my $ldap = $self->{ 'LDAP' };
   my $base = $self->{ 'base' };
 
-  if( ! -d "$dumpdir/files" ) {
-    eval { mkpath( "$dumpdir/files" ); };
-    return( "Can't create dir '$dumpdir/files': $!\n" ) if( $@ );
+  if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+    if( ! -d "$dumpdir/files" ) {
+      eval { mkpath( "$dumpdir/files" ); };
+      return( "Can't create dir '$dumpdir/files': $!\n" ) if( $@ );
+    }
   }
 
   foreach my $class (@$classref) {
@@ -1144,15 +1158,17 @@ sub dump_templates {
       chomp( $template_path );
       my $target_path = "${dumpdir}/files/${template_path}/${class}";
 
-      # Remove removed files ;-)
-      if( is_removed( $entry ) ) {
-        unlink( "${target_path}" ) if( -f "${target_path}" );
-        next;
-      }
+      if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+        # Remove removed files ;-)
+        if( is_removed( $entry ) ) {
+          unlink( "${target_path}" ) if( -f "${target_path}" );
+          next;
+        }
 
-      if( ! -d "$dumpdir/files/$template_path" ) {
-        eval { mkpath( "$dumpdir/files/$template_path" ); };
-        return( "Can't create dir '$dumpdir/files/$template_path': $!\n" ) if( $@ );
+        if( ! -d "$dumpdir/files/$template_path" ) {
+          eval { mkpath( "$dumpdir/files/$template_path" ); };
+          return( "Can't create dir '$dumpdir/files/$template_path': $!\n" ) if( $@ );
+        }
       }
 
       print( "Generate template '${template_path}' for class '${class}'.\n" )
@@ -1188,9 +1204,11 @@ sub dump_hooks {
   foreach my $class (@$classref) {
     next if( ! exists $cow_cacheref->{ $class } );
 
-    if( ! -d "$dumpdir/hooks" ) {
-      eval { mkpath( "$dumpdir/hooks" ); };
-      return( "Can't create dir '$dumpdir/hooks': $!\n" ) if( $@ );
+    if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+      if( ! -d "$dumpdir/hooks" ) {
+        eval { mkpath( "$dumpdir/hooks" ); };
+        return( "Can't create dir '$dumpdir/hooks': $!\n" ) if( $@ );
+      }
     }
 
     my @lines = ();
@@ -1199,9 +1217,11 @@ sub dump_hooks {
       my $hook_path = "${dumpdir}/hooks/${task}.${class}";
       my $cn        = $entry->get_value( 'cn' );
 
-      if( is_removed( $entry ) ) {
-        unlink( "${hook_path}" ) if( -f "${hook_path}" );
-        next;
+      if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+        if( is_removed( $entry ) ) {
+          unlink( "${hook_path}" ) if( -f "${hook_path}" );
+          next;
+        }
       }
 
       print( "Generate hook '$cn' ($task) for class '${class}'.\n" )
@@ -1249,17 +1269,19 @@ sub dump_release {
   my $dumpdir = $self->{ 'dumpdir' };
   $dumpdir .= '/class' if( defined $hostname );
 
-  # Create dump directory and hosts classfile
-  if( ! -d "${dumpdir}" ) {
-    eval { mkpath( "${dumpdir}" ); };
-    return( "Can't create dir '${dumpdir}': $!\n" ) if( $@ );
-  }
+  if( ! ($self->{ 'flags' } & FAI_FLAG_DRY_RUN) ) {
+    # Create dump directory and hosts classfile
+    if( ! -d "${dumpdir}" ) {
+      eval { mkpath( "${dumpdir}" ); };
+      return( "Can't create dir '${dumpdir}': $!\n" ) if( $@ );
+    }
 
-  if( defined ${hostname} ) {
-    open( $faiclasslist,q{<},"${dumpdir}/${hostname}" )
-      || return( "Can't create ${dumpdir}/${hostname}. $!\n" );
-    print( $faiclasslist join( ' ', @${classref} ) );
-    close( $faiclasslist );
+    if( defined ${hostname} ) {
+      open( $faiclasslist,q{<},"${dumpdir}/${hostname}" )
+        || return( "Can't create ${dumpdir}/${hostname}. $!\n" );
+      print( $faiclasslist join( ' ', @${classref} ) );
+      close( $faiclasslist );
+    }
   }
 
   # Add FAI standard classes for dump
