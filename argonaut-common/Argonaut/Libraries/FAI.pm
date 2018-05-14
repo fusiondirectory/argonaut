@@ -1277,7 +1277,7 @@ sub dump_release {
     }
 
     if( defined ${hostname} ) {
-      open( $faiclasslist,q{<},"${dumpdir}/${hostname}" )
+      open( $faiclasslist,q{>},"${dumpdir}/${hostname}" )
         || return( "Can't create ${dumpdir}/${hostname}. $!\n" );
       print( $faiclasslist join( ' ', @${classref} ) );
       close( $faiclasslist );
