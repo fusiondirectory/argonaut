@@ -33,6 +33,9 @@ use 5.008;
 
 use Argonaut::Libraries::Common qw(:ldap :file :config);
 
+use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
+use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
+
 my $actions = {
   'ping'                        => 'hostControl_reachable',
   'System.halt'                 => 'hostControl_shutdown',
@@ -582,7 +585,7 @@ sub launch {
       $res = $res->result;
       if ((ref $res eq ref {}) && defined $res->{$self->{'fqdn'}}) {
         my $result = $res->{$self->{'fqdn'}};
-        if (JSON::XS::is_bool($result)) {
+        if (JSON::is_bool($result)) {
           $res = $result;
         } elsif (defined $result->{'error'}) {
           $main::log->error("[OPSI] Error : ".$result->{'error'});

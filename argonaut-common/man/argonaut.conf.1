@@ -128,40 +128,51 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "ARGONAUT-CLEAN-AUDIT 1"
-.TH ARGONAUT-CLEAN-AUDIT 1 "2018-02-09" "Argonaut 1.2.1" "Argonaut Documentation"
+.IX Title "ARGONAUT.CONF 1"
+.TH ARGONAUT.CONF 1 "2018-02-09" "Argonaut 1.2.1" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-argonaut\-clean\-audit \- delete old audit entries from the LDAP
-.SH "SYNOPSIS"
-.IX Header "SYNOPSIS"
-argonaut-clean-audit [\-\-verbose]
+argonaut.conf \- Argonaut configuration file
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-argonaut-clean-audit is a program used to delete old audit entries from the \s-1LDAP.\s0
-It reads the delay before deletion from \s-1LDAP\s0 in fdAuditRotationDelay.
-.SH "OPTIONS"
-.IX Header "OPTIONS"
-.IP "\fB\-\-verbose\fR" 3
-.IX Item "--verbose"
-be verbose
+The argonaut.conf file is used to configure the argonaut server and client
+.SS "Configuration layout"
+.IX Subsection "Configuration layout"
+The configuration is a classical ini style file
+.SS "Server options"
+.IX Subsection "Server options"
+.IP "\fBserver_ip\fR \fIip address\fR" 4
+.IX Item "server_ip ip address"
+The server_ip statement give the ip of the argonaut server
+.SS "Client section options"
+.IX Subsection "Client section options"
+.IP "\fBclient_ip\fR \fIip address\fR" 4
+.IX Item "client_ip ip address"
+The client_ip statement give the ip of the argonaut server
+.SS "\s-1LDAP\s0 options"
+.IX Subsection "LDAP options"
+.IP "\fBconfig\fR \fIpath\fR" 4
+.IX Item "config path"
+Path to the file that contains the ldap \s-1URI\s0 and base
+.IP "\fBdn\fR \fIdn\fR" 4
+.IX Item "dn dn"
+Complete ldap \s-1DN\s0 of the \s-1DSA\s0 account needed to read the argonaut attributes from the ldap server
+.IP "\fBpassword\fR \fIstring\fR" 4
+.IX Item "password string"
+Password of the \s-1DSA\s0 account
+.IP "\fBtls\fR \fIbool\fR" 4
+.IX Item "tls bool"
+By default to off, switch to on if you want to use ssl on argonaut
 .SH "BUGS"
 .IX Header "BUGS"
-Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
-.SH "AUTHORS"
-.IX Header "AUTHORS"
-Come Bernigaud
+Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to <https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
-This code is part of Argonaut Project <https://www.argonaut\-project.org/>
-.IP "Copyright (C) 2015\-2018 FusionDirectory project" 1
-.IX Item "Copyright (C) 2015-2018 FusionDirectory project"
+This code is part of Argonaut Project <https://www.argonaut\-project.org>
+.IP "Copyright (C) 2011\-2018 FusionDirectory project" 2
+.IX Item "Copyright (C) 2011-2018 FusionDirectory project"
 .PP
-This program is distributed in the hope that it will be useful,
-but \s-1WITHOUT ANY WARRANTY\s0; without even the implied warranty of
-\&\s-1MERCHANTABILITY\s0 or \s-1FITNESS FOR A PARTICULAR PURPOSE. \s0 See the
-\&\s-1GNU\s0 General Public License for more details.
+This program is distributed in the hope that it will be useful, but \s-1WITHOUT ANY WARRANTY\s0; without even the implied warranty of \s-1MERCHANTABILITY\s0 or \s-1FITNESS FOR A PARTICULAR PURPOSE. \s0 See the \s-1GNU\s0 General Public License for more details.

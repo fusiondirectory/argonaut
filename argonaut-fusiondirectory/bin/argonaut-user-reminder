@@ -7,7 +7,7 @@
 #  Check for expired users and send them a mail allowing to postpone expiration
 #
 #  This code is part of FusionDirectory (http://www.fusiondirectory.org/)
-#  Copyright (C) 2016  FusionDirectory
+#  Copyright (C) 2015-2018  FusionDirectory
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -36,12 +36,9 @@ use Argonaut::Libraries::Common qw(:ldap :string :config);
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
 use Net::LDAP::Util qw(generalizedTime_to_time);
 
-# first, create your message
-#~ use Email::MIME;
-
-# send the message
-#~ use Email::Sender::Simple qw(sendmail);
 use Mail::Sendmail qw(sendmail);
+use MIME::Base64;
+use MIME::Words qw(encode_mimewords);
 
 my $config;
 
@@ -169,7 +166,7 @@ sub check_expired_users
 
     $mesg = $ldap->search(
       base    => $config->{'ldap_base'},
-      filter  => '(pwdChangedTime=*)',
+      filter  => '(&(objectClass=person)(pwdChangedTime=*))',
       scope   => 'subtree',
       attrs   => ['uid','cn','mail','fdPrivateMail','supannAutreMail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
     );
@@ -179,6 +176,9 @@ sub check_expired_users
     my @entries = $mesg->entries();
     foreach my $entry (@entries) {
       my $cn = $entry->get_value('cn');
+      if (not defined $cn) {
+        $cn = $entry->dn;
+      }
 
       my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
       if (not defined $pwdChangedTimestamp) {
@@ -206,8 +206,8 @@ sub check_expired_users
         }
       }
 
-      if (not defined $maxAge) {
-        print "No ppolicy max age found for $cn\n" if $verbose;
+      if ((not defined $maxAge) || ($maxAge == 0)) {
+        print "No ppolicy max age defined for $cn\n" if $verbose;
         next;
       }
 
@@ -243,6 +243,9 @@ sub alert_user_if_needed
   if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
     print "User $cn was already sent a mail, not resending yet.\n" if $verbose;
     return;
+  } elsif ((defined $token_hash) || (defined $token_datetime)) {
+    # Delete obsolete token so we may create it again
+    delete_ldap_token($ldap, $entry->get_value('uid'));
   }
 
   my ($manager_cn, $manager_mail);
@@ -285,15 +288,18 @@ sub send_alert_mail
   my $cc = "";
   if (defined $manager_mail) {
     print ", copy to $manager_cn<$manager_mail>" if $verbose;
-    $cc = "$manager_cn<$manager_mail>";
+    $cc = encode_mimewords($manager_cn, Charset => 'utf-8', Encoding => 'B')." <$manager_mail>";
   }
   print " with token $token\n" if $verbose;
+  my $body = sprintf($config->{'alert_mailbody'},$user_cn,$uid,$token);
   my %message = (
-    From    => $config->{'alert_mailaddress'},
-    To      => "$user_cn<$user_mail>",
-    Cc      => $cc,
-    Subject => $config->{'alert_mailsubject'},
-    Message => sprintf($config->{'alert_mailbody'},$user_cn,$uid,$token)
+    'From'                      => $config->{'alert_mailaddress'},
+    'To'                        => encode_mimewords($user_cn, Charset => 'utf-8', Encoding => 'B')." <$user_mail>",
+    'Cc'                        => $cc,
+    'Subject'                   => encode_mimewords($config->{'alert_mailsubject'}, Charset => 'utf-8', Encoding => 'B'),
+    'Content-type'              => 'text/plain; charset="utf-8"',
+    'Content-Transfer-Encoding' => 'base64',
+    'Message'                   => encode_base64($body)
   );
   sendmail(%message) or die $Mail::Sendmail::error;
 }
@@ -315,6 +321,16 @@ sub get_ldap_token
   } else {
     return ();
   }
+}
+
+sub delete_ldap_token
+{
+  my ($ldap, $uid) = @_;
+
+  my $dn = "ou=$uid,".$config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'};
+
+  my $mesg = $ldap->delete($dn);
+  $mesg->code && warn "! failed to delete token $dn: ".$mesg->error."\n";
 }
 
 sub store_ldap_token
@@ -344,7 +360,7 @@ sub store_ldap_token
     ]
   );
 
-  $mesg->code && die "! failed to add LDAP's $dn token: ".$mesg->error."\n";
+  $mesg->code && die "! failed to create token $dn: ".$mesg->error."\n";
 
   return $token_password;
 }
@@ -378,7 +394,7 @@ be verbose
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 AUTHORS
 
@@ -390,7 +406,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org/>
 
 =over 1
 
-=item Copyright (C) 2015-2016 FusionDirectory project
+=item Copyright (C) 2015-2018 FusionDirectory project
 
 =back
 

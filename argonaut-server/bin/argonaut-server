@@ -5,7 +5,7 @@
 # argonaut-server -- Dispatching action received from FusionDirectory
 # to the clients
 #
-# Copyright (C) 2011-2016 FusionDirectory project
+# Copyright (C) 2011-2018 FusionDirectory project
 #
 # Author: Côme BERNIGAUD
 #
@@ -280,7 +280,7 @@ POE::Session->create(
             $_[HEAP]{id} = 0;
 
             $_[HEAP]{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
-                json    => JSON->new->utf8,
+                json    => JSON->new->utf8->allow_nonref,
                 Port    => $server_port,
                 Handler => {
                     'echo' => 'echo',
@@ -735,6 +735,7 @@ POE::Session->create(
             readConfig();
             $kernel->signal($heap->{jsonserver},"KILL");
             $heap->{jsonserver} = POE::Component::Server::JSONRPC::Http->new(
+                json    => JSON->new->utf8->allow_nonref,
                 Port    => $server_port,
                 Handler => { # FIXME this hash should not be duplicated
                     'echo' => 'echo',
@@ -746,10 +747,16 @@ POE::Session->create(
                     'remove_entries' => 'remove_entries',
                     'process_entries_now' => 'process_entries',
                     'get_my_id' => 'id_of_mac',
+                    'get_host_id' => 'id_of_host',
                     'set_task_substatus' => 'jsonrpc_set_task_substatus',
                     'set_error' => 'set_error',
                     'get_packages' => 'get_packages'
                 },
+                ($protocol eq 'https')  ? ( SslKey  => $sslkeyfile,
+                                            SslCert => $sslcertfile,
+                                            SslCaCert => $sslcacertfile,
+                                            Authenticate => \&token_authenticate,)
+                                        : ()
             );
             $kernel->sig_handled();
         },
@@ -799,7 +806,7 @@ and can load various modules at run time.
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -807,7 +814,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org/>
 
 =over 1
 
-=item Copyright (C) 2011-2016 FusionDirectory project
+=item Copyright (C) 2011-2018 FusionDirectory project
 
 =back
 

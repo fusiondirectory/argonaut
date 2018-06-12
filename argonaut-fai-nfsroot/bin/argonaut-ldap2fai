@@ -6,7 +6,7 @@
 #
 # Copyright (c) 2008 Landeshauptstadt München
 # Copyright (c) 2008-2010 GONICUS GmbH  <gosa-devel@oss.gonicus.de>
-# Copyright (c) 2011-2016 The FusionDirectory Project
+# Copyright (c) 2011-2018 The FusionDirectory Project
 #
 # Authors: Jan-Marek Glogowski
 #          Cajus Pollmeier
@@ -94,7 +94,7 @@ my ($ldap,$base) = argonaut_ldap_handle($config);
 
 
 # Get FAI object
-my $faiobj = Argonaut::FAI->new( 'LDAP'     => $ldap,
+my $faiobj = Argonaut::Libraries::FAI->new( 'LDAP'     => $ldap,
                                  'base'     => $base,
                                  'dumpdir'  => $dump_dir );
 
@@ -137,7 +137,7 @@ print( "Dumping config space to '$dump_dir'...\n" );
 my( $error, $sections, $customs ) = $faiobj->dump_release( $release, $res_classlist, $hostname );
 print $error . "\n" if( defined $error );
 
-generate_files_dir_configspace();
+generate_files_dir_configspace() if (!$dry_run);
 
 generate_sources_list( $sections ) if ($sources_list);
 
@@ -465,7 +465,7 @@ sub add_repo_for_release {
           if( scalar @modsections > 0 ) {
             my $debline = "deb $items[ 0 ] $items[ 2 ] " . join(' ',@modsections) . "\n";
             print "   + add: $debline" if $verbose;
-            print SOURCES "$debline" if( ! $dry_run );
+            print $filehandle "$debline" if( ! $dry_run );
           }
 
           last if( scalar keys ( %release_sections ) == 0);
@@ -536,7 +536,7 @@ argonaut-ldap2fai is a script to read the fai config space from LDAP and create 
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -548,7 +548,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org/>
 
 =item Copyright (C) 2007-2010 The GOsa project
 
-=item Copyright (C) 2011-2016 FusionDirectory project
+=item Copyright (C) 2011-2018 FusionDirectory project
 
 =back
 

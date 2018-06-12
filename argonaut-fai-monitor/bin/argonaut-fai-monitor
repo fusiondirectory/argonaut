@@ -5,7 +5,7 @@
 # argonaut-fai-monitor - read status of installation and send information
 # to argonaut-server for FusionDirectory
 #
-# Copyright (C) 2014-2016 FusionDirectory project
+# Copyright (C) 2014-2018 FusionDirectory project
 #
 # Using code from fai-monitor:
 #   Copyright (C) 2003-2012 by Thomas Lange
@@ -343,7 +343,7 @@ Timeout for bad clients. 0 to disable.
 =head1 BUGS
 
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
-<https://forge.fusiondirectory.org/projects/argonaut-agents/issues/new>
+<https://gitlab.fusiondirectory.org/argonaut/argonaut/issues/new>
 
 =head1 LICENCE AND COPYRIGHT
 
@@ -351,7 +351,7 @@ This code is part of Argonaut Project <https://www.argonaut-project.org>
 
 =over 3
 
-=item Copyright (C) 2011-2016 FusionDirectory project
+=item Copyright (C) 2011-2018 FusionDirectory project
 
 =back
 
