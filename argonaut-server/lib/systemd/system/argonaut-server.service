@@ -1,5 +1,6 @@
 [Unit]
 Description=Start argonaut-server
+Documentation=man:argonaut-server(1)
 ConditionPathExists=/usr/sbin/argonaut-server
 Wants=network-online.target
 After=network-online.target
