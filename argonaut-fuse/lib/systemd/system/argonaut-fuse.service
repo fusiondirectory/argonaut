@@ -1,5 +1,6 @@
 [Unit]
 Description=Start argonaut-fuse
+Documentation=man:argonaut-fuse(1)
 ConditionPathExists=/usr/sbin/argonaut-fuse
 Wants=network-online.target
 After=network-online.target
