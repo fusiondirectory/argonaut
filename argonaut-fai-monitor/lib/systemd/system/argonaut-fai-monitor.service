@@ -1,5 +1,6 @@
 [Unit]
 Description=Start argonaut-fai-monitor
+Documentation=man:argonaut-fai-monitor(1)
 ConditionPathExists=/usr/sbin/argonaut-fai-monitor
 Wants=network-online.target
 After=network-online.target
