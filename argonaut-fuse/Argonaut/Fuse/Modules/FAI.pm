@@ -49,24 +49,38 @@ sub get_module_info {
 }
 
 sub get_module_settings {
-  return argonaut_get_generic_settings(
+  my $settings = argonaut_get_generic_settings(
     'argonautFuseFAIConfig',
     {
-      'fai_version' => "argonautFuseFaiVersion",
-      'fai_flags'   => "argonautFuseFaiFlags",
-      'nfs_root'    => "argonautFuseNfsRoot",
+      'fai_version'   => "argonautFuseFaiVersion",
+      'fai_flags'     => "argonautFuseFaiFlags",
+      'fai4_cmdline'  => "argonautFuseFai4Cmdline",
+      'fai5_cmdline'  => "argonautFuseFai5Cmdline",
+      'nfs_root'      => "argonautFuseNfsRoot",
     },
     $main::config,$main::config->{'client_ip'}
   );
+
+  # Default values
+  if (not defined $settings->{'fai_version'}) {
+    $settings->{'fai_version'} = 4;
+  }
+  if (not defined $settings->{'fai4_cmdline'}) {
+    $settings->{'fai4_cmdline'} = 'ip=dhcp root=/dev/nfs boot=live union=aufs';
+  }
+
+  return $settings;
 }
 
 sub get_pxe_config {
   my $class = shift;
   my ($filename) = shift || return;
-  my $settings = get_module_settings();
+
+  my $settings  = get_module_settings();
   my $nfs_root  = $settings->{'nfs_root'};
   my $fai_flags = $settings->{'fai_flags'};
   my $mac       = argonaut_get_mac_pxe($filename);
+
   my $result = undef;
 
   # Search for the host to examine the FAI state
@@ -125,12 +139,12 @@ sub get_pxe_config {
   # Set cmdline
 
   # Add NFS options and root, if available
-  $infos->{'cmdline'} .= " ip=dhcp";
   if ($settings->{'fai_version'} < 5) {
     $infos->{'cmdline'} .= " nfsroot=$nfs_root";
-    $infos->{'cmdline'} .= " root=/dev/nfs boot=live union=aufs";
+    $infos->{'cmdline'} .= $settings->{'fai4_cmdline'};
   } else {
-    $infos->{'cmdline'} .= " root=".$main::config->{'client_ip'}.":".$nfs_root." rootovl";
+    $infos->{'cmdline'} .= " root=".$main::config->{'client_ip'}.":".$nfs_root;
+    $infos->{'cmdline'} .= $settings->{'fai5_cmdline'};
   }
   $infos->{'cmdline'} .= " FAI_ACTION=${main::default_mode}";
 
