@@ -56,6 +56,7 @@ sub get_module_settings {
       'fai_flags'     => "argonautFuseFaiFlags",
       'fai4_cmdline'  => "argonautFuseFai4Cmdline",
       'fai5_cmdline'  => "argonautFuseFai5Cmdline",
+      'fai_hostname'  => "argonautFuseFaiForceHostname",
       'nfs_root'      => "argonautFuseNfsRoot",
     },
     $main::config,$main::config->{'client_ip'}
@@ -67,6 +68,9 @@ sub get_module_settings {
   }
   if (not defined $settings->{'fai4_cmdline'}) {
     $settings->{'fai4_cmdline'} = 'ip=dhcp root=/dev/nfs boot=live union=aufs';
+  }
+  if (not defined $settings->{'fai_hostname'}) {
+    $settings->{'fai_hostname'} = 'TRUE';
   }
 
   return $settings;
@@ -145,6 +149,9 @@ sub get_pxe_config {
   } else {
     $infos->{'cmdline'} .= " root=".$main::config->{'client_ip'}.":".$nfs_root;
     $infos->{'cmdline'} .= $settings->{'fai5_cmdline'};
+    if ($settings->{'fai_hostname'} ne 'FALSE') {
+      $infos->{'cmdline'} .= ' HOSTNAME='.$infos->{'hostname'};
+    }
   }
   $infos->{'cmdline'} .= " FAI_ACTION=${main::default_mode}";
 
