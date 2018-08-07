@@ -145,10 +145,10 @@ sub get_pxe_config {
   # Add NFS options and root, if available
   if ($settings->{'fai_version'} < 5) {
     $infos->{'cmdline'} .= " nfsroot=$nfs_root";
-    $infos->{'cmdline'} .= $settings->{'fai4_cmdline'};
+    $infos->{'cmdline'} .= ' '.$settings->{'fai4_cmdline'};
   } else {
     $infos->{'cmdline'} .= " root=".$main::config->{'client_ip'}.":".$nfs_root;
-    $infos->{'cmdline'} .= $settings->{'fai5_cmdline'};
+    $infos->{'cmdline'} .= ' '.$settings->{'fai5_cmdline'};
     if ($settings->{'fai_hostname'} ne 'FALSE') {
       $infos->{'cmdline'} .= ' HOSTNAME='.$infos->{'hostname'};
     }
