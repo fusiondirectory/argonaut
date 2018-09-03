@@ -57,6 +57,7 @@ sub get_module_settings {
       'fai4_cmdline'  => "argonautFuseFai4Cmdline",
       'fai5_cmdline'  => "argonautFuseFai5Cmdline",
       'fai_hostname'  => "argonautFuseFaiForceHostname",
+      'fai_multiple'  => "argonautFuseMultipleReleaseMode",
       'nfs_root'      => "argonautFuseNfsRoot",
     },
     $main::config,$main::config->{'client_ip'}
@@ -71,6 +72,9 @@ sub get_module_settings {
   }
   if (not defined $settings->{'fai_hostname'}) {
     $settings->{'fai_hostname'} = 'TRUE';
+  }
+  if (not defined $settings->{'fai_multiple'}) {
+    $settings->{'fai_multiple'} = 'FALSE';
   }
 
   return $settings;
@@ -92,10 +96,16 @@ sub get_pxe_config {
     'FAIobject',
     {
       'status'    => 'FAIstate',
+      'FAIclass'  => 'FAIclass',
       'hostname'  => 'cn',
     },
     $main::config,"(macAddress=$mac)"
   );
+
+  if ($infos->{'FAIclass'} =~ m/^(.+) :([^ :]+)$/) {
+    $infos->{'profile'} = $1;
+    $infos->{'release'} = $2;
+  }
 
   if ($infos->{'locked'}) {
     # Locked machine: go to 'localboot'
@@ -133,8 +143,17 @@ sub get_pxe_config {
   }
 
   # Get kernel and initrd from TFTP root
-  $infos->{'kernel'} = 'vmlinuz-install';
-  $infos->{'cmdline'} = ' initrd=initrd.img-install';
+  if ($settings->{'fai_multiple'} eq 'TRUE') {
+    $infos->{'kernel'}  = 'vmlinuz-'.$infos->{'release'}.'-install';
+    $infos->{'cmdline'} = ' initrd=initrd.img-'.$infos->{'release'}.'-install';
+    if ($nfs_root !~ m|/$|) {
+      $nfs_root .= '/';
+    }
+    $nfs_root .= $infos->{'release'};
+  } else {
+    $infos->{'kernel'}  = 'vmlinuz-install';
+    $infos->{'cmdline'} = ' initrd=initrd.img-install';
+  }
 
   my $chboot_cmd;
   my $output;
