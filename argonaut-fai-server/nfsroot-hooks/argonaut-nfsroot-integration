@@ -134,6 +134,7 @@ if [ -n "$TFTPROOT_EFI32" ]; then
       vmlinuxName=vmlinuz-install
     fi
 
+    cp -f "$TFTPROOT"/vmlinuz-"$version" "$TFTPROOT_EFI32"/vmlinuz-"$version"
     cp -f "$TFTPROOT"/vmlinuz-"$version" "$TFTPROOT_EFI32"/"$vmlinuxName"
   else
     msg "ERROR: cannot find kernel to use as vmlinuz-install!!!"
@@ -150,6 +151,7 @@ if [ -n "$TFTPROOT_EFI32" ]; then
       initrdName=initrd.img-install
     fi
 
+    cp -f "$TFTPROOT"/initrd.img-"$version" "$TFTPROOT_EFI32"/initrd.img-"$version"
     cp -f "$TFTPROOT"/initrd.img-"$version" "$TFTPROOT_EFI32"/"$initrdName"
   else
     msg "ERROR: cannot find initrd image to use as initrd.img-xx !!!"
@@ -169,6 +171,7 @@ if [ -n "$TFTPROOT_EFI64" ]; then
       vmlinuxName=vmlinuz-install
     fi
 
+    cp -f "$TFTPROOT"/vmlinuz-"$version" "$TFTPROOT_EFI64"/vmlinuz-"$version"
     cp -f "$TFTPROOT"/vmlinuz-"$version" "$TFTPROOT_EFI64"/"$vmlinuxName"
   else
     msg "ERROR: cannot find kernel to use as vmlinuz-install!!!"
@@ -185,6 +188,7 @@ if [ -n "$TFTPROOT_EFI64" ]; then
       initrdName=initrd.img-install
     fi
 
+    cp -f "$TFTPROOT"/initrd.img-"$version" "$TFTPROOT_EFI64"/initrd.img-"$version"
     cp -f "$TFTPROOT"/initrd.img-"$version" "$TFTPROOT_EFI64"/"$initrdName"
   else
     msg "ERROR: cannot find initrd image to use as initrd.img-xx !!!"
