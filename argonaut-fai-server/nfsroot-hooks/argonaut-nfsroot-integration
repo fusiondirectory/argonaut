@@ -123,6 +123,10 @@ fi
 
 # Actions for TFTPROOT_EFI32 if declared
 if [ -n "$TFTPROOT_EFI32" ]; then
+  # WARNING about linking pxelinux.cfg
+  msg "WARNING: not forget to link pxelinux.cfg in $TFTPROOT_EFI32"
+  msg "WARNING: for exemple"
+  msg "WARNING: cd $TFTPROOT_EFI32 ; ln -s ../bios/pxelinux.cfg $TFTPROOT_EFI32/pxelinux.cfg"
   # Copy as default kernel (TFTPROOT_EFI32)
   if [ -f "$TFTPROOT"/vmlinuz-"$version" ]; then
     msg "installing vmlinuz-install in $TFTPROOT_EFI32"
@@ -160,6 +164,10 @@ fi
 
 # Actions for TFTPROOT_EFI64 if declared
 if [ -n "$TFTPROOT_EFI64" ]; then
+  # WARNING about linking pxelinux.cfg
+  msg "WARNING: not forget to link pxelinux.cfg in $TFTPROOT_EFI64"
+  msg "WARNING: for exemple"
+  msg "WARNING: cd $TFTPROOT_EFI64 ; ln -s ../bios/pxelinux.cfg $TFTPROOT_EFI64/pxelinux.cfg"
   # Copy as default kernel (TFTPROOT_EFI64)
   if [ -f "$TFTPROOT"/vmlinuz-"$version" ]; then
     msg "installing vmlinuz-install in $TFTPROOT_EFI64"
