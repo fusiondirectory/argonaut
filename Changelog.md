@@ -1,3 +1,16 @@
+## %"Argonaut 1.2.2" - 2018-12-12
+
+### Added
+
+#### argonaut
+- argonaut#5729 argonaut-fai needs to support cryptsetup
+
+### Changed
+
+#### argonaut
+- argonaut#5734 Merge 1001_add-documentation-key-to-service-files.patch from debian
+- argonaut#5738 migrate changelog to changelog.md
+
 ## %"Argonaut 1.2.1" - 2018-04-20
 
 ### Added
