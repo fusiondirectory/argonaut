@@ -819,7 +819,7 @@ sub dump_disk_config {
     my $disk_config = $cow_cacheref->{ $class };
     my( %all_disks );
 
-    foreach my $type ("disk", "raid", "lvm") {
+    foreach my $type ("disk", "raid", "cryptsetup", "lvm") {
       foreach my $disk (keys %{$disk_config}) {
         next if( ! defined $disk_config->{ $disk } );
 
