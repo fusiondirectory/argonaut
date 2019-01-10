@@ -1,3 +1,15 @@
+## %"Argonaut 1.2.3" - 2019-01-10
+
+### Changed
+
+#### argonaut
+- argonaut#5678 the reverse for slave should be written in is own file not included in the first slave domain
+
+### Fixed
+
+#### argonaut
+- argonaut#5687 Use of uninitialized value in concatenation (.) or string at /usr/share/perl5/Argonaut/Server/Modules/OPSI.pm line 309.
+
 ## %"Argonaut 1.2.2" - 2018-12-12
 
 ### Added
