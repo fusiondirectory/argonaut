@@ -57,8 +57,6 @@ my @locked_actions = (
   'OPSI.host_getObjects', 'OPSI.get_netboots', 'OPSI.get_localboots',
 );
 
-my $settings;
-
 sub new
 {
   my ($class) = @_;
@@ -309,7 +307,7 @@ sub reinstall_or_update {
     attrs   => ['fdOpsiNetbootProduct', 'fdOpsiSoftwareList', 'fdOpsiProductProperty']
   );
   if ($mesg->count <= 0) {
-    die "[OPSI] Client with OPSI activated but profile '".$settings->{'profile-dn'}."' could not be found";
+    die "[OPSI] Client with OPSI activated but profile '".$self->{'profile-dn'}."' could not be found";
   }
   $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
   $self->{'softlists'}  = ($mesg->entries)[0]->get_value("fdOpsiSoftwareList", asref => 1);
