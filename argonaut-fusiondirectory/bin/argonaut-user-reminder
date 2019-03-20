@@ -40,8 +40,6 @@ use Mail::Sendmail qw(sendmail);
 use MIME::Base64;
 use MIME::Words qw(encode_mimewords);
 
-use DateTime;
-
 my $config;
 
 $config = argonaut_read_config;
@@ -285,25 +283,11 @@ sub check_expired_users
 
     foreach my $entry ($mesg->entries()) {
       my $cn = $entry->get_value('cn');
-      foreach my $supannRessourceEtatDate ($entry->get_value('supannRessourceEtatDate')) {
-        my ($labelstate, $substate, $start, $end) = split(':', $supannRessourceEtatDate);
-        if ($labelstate ne '{COMPTE}A') {
-          next;
-        }
-        if ($end eq '') {
-          next;
-        }
-        my $dt = DateTime->new(
-          year  => substr($end, 0, 4),
-          month => substr($end, 4, 2),
-          day   => substr($end, 6, 2),
-        );
-        my $endInSeconds = $dt->epoch;
-        if ($endInSeconds < $now) {
-          print "$cn has an invalid supannRessourceEtatDate value\n" if $verbose;
-        } elsif ($endInSeconds <= $next_alert_date) {
-          alert_user_if_needed($ldap,$entry,$now,0);
-        }
+      my ($labelstate, $substate, $start, $end) = split(':', $entry->get_value('supannRessourceEtatDate'));
+      if ($end < $now) {
+        print "$cn has an invalid supannRessourceEtatDate value\n" if $verbose;
+      } elsif ($end <= $next_alert_date) {
+        alert_user_if_needed($ldap,$entry,$now,0);
       }
     }
   }
