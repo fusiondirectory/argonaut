@@ -48,13 +48,12 @@ $config->{'fd_rdn'} = 'ou=fusiondirectory';
 my $verbose = 0;
 my $posix   = 1;
 my $ppolicy = 1;
-my $supann  = 0;
 
 
 sub print_usage
 {
   my ($help) = @_;
-  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix|--ppolicy|--both (default)|--supann]\n";
+  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix|--ppolicy|--both (default)]\n";
   if ($help) {
     print << "EOF";
 
@@ -62,8 +61,7 @@ sub print_usage
   --verbose : be verbose
   --posix   : check POSIX account expiration
   --ppolicy : check ppolicy password expiration
-  --both    : check both POSIX and ppolicy (default)
-  --supann  : check supannRessourceEtatDate
+  --both    : check both (default)
 EOF
     exit(0);
   } else {
@@ -259,27 +257,6 @@ sub check_expired_users
         } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
           alert_user_if_needed($ldap,$entry,$now,1);
         }
-      }
-    }
-  }
-
-  if ($supann) {
-    # SupAnn expiration
-    # Consider supannRessourceEtatDate end date to be an expiration date if state is A
-    my $mesg = $ldap->search(
-      base    => $config->{'ldap_base'},
-      filter  => '(&(objectClass=person)(supannRessourceEtatDate={COMPTE}A:*))',
-      scope   => 'subtree'
-    );
-    die_on_ldap_errors($mesg);
-
-    foreach my $entry ($mesg->entries()) {
-      my $cn = $entry->get_value('cn');
-      my ($labelstate, $substate, $start, $end) = split(':', $entry->get_value('supannRessourceEtatDate'));
-      if ($end < $now) {
-        print "$cn has an invalid supannRessourceEtatDate value\n" if $verbose;
-      } elsif ($end <= $next_alert_date) {
-        alert_user_if_needed($ldap,$entry,$now,0);
       }
     }
   }
