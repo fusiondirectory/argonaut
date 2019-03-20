@@ -46,15 +46,15 @@ $config = argonaut_read_config;
 $config->{'fd_rdn'} = 'ou=fusiondirectory';
 
 my $verbose = 0;
-my $posix   = 0;
-my $ppolicy = 0;
+my $posix   = 1;
+my $ppolicy = 1;
 my $supann  = 0;
 
 
 sub print_usage
 {
   my ($help) = @_;
-  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix] [--ppolicy] [--supann] [--all]\n";
+  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix|--ppolicy|--both (default)|--supann]\n";
   if ($help) {
     print << "EOF";
 
@@ -62,8 +62,8 @@ sub print_usage
   --verbose : be verbose
   --posix   : check POSIX account expiration
   --ppolicy : check ppolicy password expiration
+  --both    : check both POSIX and ppolicy (default)
   --supann  : check supannRessourceEtatDate
-  --all     : check POSIX, ppolicy and supannRessourceEtatDate
 EOF
     exit(0);
   } else {
@@ -76,26 +76,18 @@ foreach my $arg ( @ARGV ) {
     $verbose = 1;
   } elsif (lc($arg) eq "--posix") {
     $posix    = 1;
+    $ppolicy  = 0;
   } elsif (lc($arg) eq "--ppolicy") {
+    $posix    = 0;
     $ppolicy  = 1;
-  } elsif (lc($arg) eq "--supann") {
-    $supann   = 1;
-  } elsif (lc($arg) eq "--all") {
+  } elsif (lc($arg) eq "--both") {
     $posix    = 1;
     $ppolicy  = 1;
-    $supann   = 1;
   } elsif ((lc($arg) eq "--help") || (lc($arg) eq "-h")) {
     print_usage(1);
   } else {
     print_usage(0);
   }
-}
-
-if (!$posix && !$ppolicy && !$supann) {
-  # Defaults to --all
-  $posix    = 1;
-  $ppolicy  = 1;
-  $supann   = 1;
 }
 
 check_expired_users();
