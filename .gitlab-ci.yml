@@ -40,6 +40,7 @@ create_perl_lint_rapport:
     - apt-get install -y -qq debmirror libwww-perl
     - apt-get install -y -qq libmail-sendmail-perl
     - apt-get install -y -qq libfile-slurp-perl libdigest-perl-md5-perl
+    - apt-get install -y -qq librest-client-perl
   script:
     - find . -type f -name '*.pm' -print0 | xargs -0 -n1 perl -cw -I argonaut-ldap2zone -I argonaut-common
 
@@ -95,7 +96,7 @@ build-release:
   stage: tarballs
   only:
     - tags
-  script: 
+  script:
     - tar -cvzf argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz *
   artifacts:
     paths:
