@@ -33,6 +33,8 @@ use Digest::SHA qw(sha256_base64);
 
 use Argonaut::Libraries::Common qw(:ldap :string :config);
 
+use Argonaut::Libraries::WorkflowUpdate qw(argonaut_supann_update_states);
+
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
 use Net::LDAP::Util qw(generalizedTime_to_time);
 
@@ -47,25 +49,27 @@ my $config;
 $config = argonaut_read_config;
 $config->{'fd_rdn'} = 'ou=fusiondirectory';
 
-my $verbose = 0;
-my $posix   = 0;
-my $ppolicy = 0;
-my $supann  = 0;
+my $verbose   = 0;
+my $posix     = 0;
+my $ppolicy   = 0;
+my $supann    = 0;
+my $workflow  = 0;
 
 
 sub print_usage
 {
   my ($help) = @_;
-  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix] [--ppolicy] [--supann] [--all]\n";
+  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix] [--ppolicy] [--supann] [--all] [--supann-update]\n";
   if ($help) {
     print << "EOF";
 
-  --help    : this (help) message
-  --verbose : be verbose
-  --posix   : check POSIX account expiration
-  --ppolicy : check ppolicy password expiration
-  --supann  : check supannRessourceEtatDate
-  --all     : check POSIX, ppolicy and supannRessourceEtatDate
+  --help            : this (help) message
+  --verbose         : be verbose
+  --posix           : check POSIX account expiration
+  --ppolicy         : check ppolicy password expiration
+  --supann          : check supannRessourceEtatDate
+  --all             : check POSIX, ppolicy and supannRessourceEtatDate
+  --supann-update   : maintain supann workflow through webservice
 EOF
     exit(0);
   } else {
@@ -86,6 +90,8 @@ foreach my $arg ( @ARGV ) {
     $posix    = 1;
     $ppolicy  = 1;
     $supann   = 1;
+  } elsif (lc($arg) eq "--supann-update") {
+    $workflow = 1;
   } elsif ((lc($arg) eq "--help") || (lc($arg) eq "-h")) {
     print_usage(1);
   } else {
@@ -93,7 +99,7 @@ foreach my $arg ( @ARGV ) {
   }
 }
 
-if (!$posix && !$ppolicy && !$supann) {
+if (!$posix && !$ppolicy && !$supann && !$workflow) {
   # Defaults to --all
   $posix    = 1;
   $ppolicy  = 1;
@@ -101,6 +107,10 @@ if (!$posix && !$ppolicy && !$supann) {
 }
 
 check_expired_users();
+
+if ($workflow) {
+  argonaut_supann_update_states($verbose);
+}
 
 exit 0;
 
