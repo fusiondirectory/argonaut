@@ -631,6 +631,10 @@ sub argonaut_read_config {
   $res{'ldap_dn'}         = trim($config->val( ldap    => "dn",        ""));
   $res{'ldap_password'}   = trim($config->val( ldap    => "password",  ""));
   $res{'ldap_tls'}        = trim($config->val( ldap    => "tls",       "off"));
+  $res{'rest_endpoint'}   = trim($config->val( rest    => "endpoint",  ""));
+  $res{'rest_ldap'}       = trim($config->val( rest    => "ldap",      ""));
+  $res{'rest_login'}      = trim($config->val( rest    => "login",     ""));
+  $res{'rest_password'}   = trim($config->val( rest    => "password",  ""));
 
   if ($res{'ldap_tls'} !~ m/^off|on$/i) {
     warn "Unknown value for option ldap/tls: ".$res{'ldap_tls'}." (valid values are on/off)\n";
