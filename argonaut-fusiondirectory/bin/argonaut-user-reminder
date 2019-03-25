@@ -377,28 +377,28 @@ sub send_alert_mail
   }
   print "Sending mail to $user_cn<$user_mail>" if $verbose;
   if (defined $maillogfile) {
-    print $maillogfile, scalar(localtime)." $user_cn<$user_mail>";
+    print $maillogfile scalar(localtime)." $user_cn<$user_mail>";
   }
   my $cc = "";
   if (defined $manager_mail) {
     print ", copy to $manager_cn<$manager_mail>" if $verbose;
     $cc = encode_mimewords($manager_cn, Charset => 'utf-8', Encoding => 'B')." <$manager_mail>";
     if (defined $maillogfile) {
-      print $maillogfile, " $manager_cn<$manager_mail>";
+      print $maillogfile " $manager_cn<$manager_mail>";
     }
   }
   print " with token $token" if ($verbose and (not $ppolicy_mode));
   print "\n" if $verbose;
   if (defined $maillogfile) {
     if ($first_email) {
-      print $maillogfile, " (first email)";
+      print $maillogfile " (first email)";
     } else {
-      print $maillogfile, " (resent email)";
+      print $maillogfile " (resent email)";
     }
     if ($ppolicy_mode) {
-      print $maillogfile, " (from ppolicy)";
+      print $maillogfile " (from ppolicy)";
     }
-    print $maillogfile, "\n";
+    print $maillogfile "\n";
   }
   my $body = sprintf($alert_mailbody,$user_cn,$uid,$token);
   my %message = (
