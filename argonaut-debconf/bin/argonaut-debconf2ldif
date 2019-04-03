@@ -93,7 +93,7 @@ $options{domain_part}= ','. $options{base} if length $options{base};
 
 for my $section( qw/templates questions/) {
   my $ckey= $section.'_file';
-  open $open{$section}, $options{$ckey} or
+  open ($open{$section}, q{<}, $options{$ckey}) or
     warn "Can't rdopen '$options{$ckey}' ($!). Can proceed without it ".
       "if -k FILE is specified.\n";
 
@@ -163,7 +163,7 @@ my %filter;
 my $with_domain= 1;
 
 if( my $f= $options{keys_file}) { # Specify subset of all keys
-  open my $kin, $f or die "Can't rdopen '$f' ($!)\n";
+  open (my $kin, q{<}, $f) or die "Can't rdopen '$f' ($!)\n";
   while( $_= <$kin>) {
    if( /^#.*DOMAIN=(\d)/) { $with_domain= $1}
 
