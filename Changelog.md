@@ -1,3 +1,41 @@
+## %"Argonaut 1.3" - 2019-04-11
+
+### Added
+
+#### argonaut
+- argonaut#5680 adding contributing guide and new license
+- argonaut#5686 Forbid deployments outside given time frames
+- argonaut#5699 Support products directly on OPSI client as well
+- argonaut#5703 Add help for argonaut-user-reminder
+- argonaut#5704 Add support for getting logs from OPSI webservice
+- argonaut#5705 Support ping for several targets
+- argonaut#5711 Add OPSI action for productOnClient_getObjects
+- argonaut#5712 Extend manager email possibilities in user-reminder
+- argonaut#5720 Support inheriting profile only for OPSI client config
+- argonaut#5721 Support inheriting localboots from group
+- argonaut#5723 Add a log of emails sent by argonaut-user-reminder
+- argonaut#5736 Add new variables in FAI integration script
+- argonaut#5737 Add new options in argonaut-fuse PXE file generation
+- argonaut#5746 add back the script to convert debconf/preseed file to ldif
+- argonaut#5747 Add a global log system to argonaut-user-reminder
+
+### Changed
+
+#### argonaut
+- argonaut#3613 argonaut fuse module opsi should check if the system is lock or not
+- argonaut#5689 making the ip non mandatory in the opsi backend plugin when people don 't manage dns and dhcp with opsi
+- argonaut#5701 split posix and ppolicy treatment
+- argonaut#5707 Some OPSI actions are not possible on OPSI server
+- argonaut#5735 argonaut-fuse should adapt command line options to FAI version
+
+### Fixed
+
+#### argonaut
+- argonaut#2240 OPSI should update actions when a new one is called
+- argonaut#5461 Error with Ldap2zone slave when using multiple domains with a common reverse zone
+- argonaut#5709 OPSI.update_or_insert duplicates host instead of renaming
+- argonaut#5719 Argonaut doens't receive error when paquet failing to installing
+
 ## %"Argonaut 1.2.3" - 2019-01-10
 
 ### Changed
