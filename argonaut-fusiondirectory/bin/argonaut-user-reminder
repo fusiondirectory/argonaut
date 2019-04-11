@@ -33,6 +33,8 @@ use Digest::SHA qw(sha256_base64);
 
 use Argonaut::Libraries::Common qw(:ldap :string :config);
 
+use Log::Handler;
+
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
 use Net::LDAP::Util qw(generalizedTime_to_time);
 
@@ -45,16 +47,26 @@ my $config;
 $config = argonaut_read_config;
 $config->{'fd_rdn'} = 'ou=fusiondirectory';
 
+my $logdir;
+
+eval {
+  my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
+  $logdir = $client_settings->{'logdir'};
+};
+if ($@) {
+  $logdir = '/var/log/argonaut';
+}
+
+my $logfile     = "argonaut-user-reminder.log";
+
 my $verbose = 0;
 my $posix   = 1;
 my $ppolicy = 1;
-my $maillog = '';
-my $maillogfile;
 
 sub print_usage
 {
   my ($help) = @_;
-  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix|--ppolicy|--both (default)] [--mail-log LOGFILE]\n";
+  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix|--ppolicy|--both (default)]\n";
   if ($help) {
     print << "EOF";
 
@@ -63,7 +75,6 @@ sub print_usage
   --posix   : check POSIX account expiration
   --ppolicy : check ppolicy password expiration
   --both    : check both (default)
-  --mail-log: store log of sent emails to LOGFILE
 EOF
     exit(0);
   } else {
@@ -72,9 +83,7 @@ EOF
 }
 
 foreach my $arg ( @ARGV ) {
-  if (not defined $maillog) {
-    $maillog = $arg;
-  } elsif (lc($arg) eq "--verbose") {
+  if (lc($arg) eq "--verbose") {
     $verbose = 1;
   } elsif (lc($arg) eq "--posix") {
     $posix    = 1;
@@ -85,8 +94,6 @@ foreach my $arg ( @ARGV ) {
   } elsif (lc($arg) eq "--both") {
     $posix    = 1;
     $ppolicy  = 1;
-  } elsif (lc($arg) eq "--mail-log") {
-    undef $maillog;
   } elsif ((lc($arg) eq "--help") || (lc($arg) eq "-h")) {
     print_usage(1);
   } else {
@@ -94,16 +101,36 @@ foreach my $arg ( @ARGV ) {
   }
 }
 
-if (not defined $maillog) {
-  # --mail-log used with no filename after
-  print_usage(0);
-}
+our $log = Log::Handler->create_logger("argonaut-user-reminder");
 
-if ($maillog ne '') {
-  open ($maillogfile, q{>}, $maillog) or die "Cannot open mail log file ".$maillog;
-}
+$log->add(
+  file => {
+    filename => "$logdir/$logfile",
+    maxlevel => ($verbose ? "info" : "notice"),
+    minlevel => "emergency",
+    newline  => 1,
+  },
+  screen => {
+    log_to   => "STDOUT",
+    maxlevel => ($verbose ? "info" : "notice"),
+    minlevel => "notice",
+    newline  => 1,
+  },
+  screen => {
+    log_to   => "STDERR",
+    maxlevel => "warning",
+    minlevel => "emergency",
+    newline  => 1,
+  },
+);
 
-check_expired_users();
+eval {
+  check_expired_users();
+};
+if ($@) {
+  $log->error("Died with: $@");
+  die $@;
+}
 
 exit 0;
 
@@ -195,7 +222,7 @@ sub check_expired_users
       my $cn = $entry->get_value('cn');
       my $shadowExpireSeconds = $entry->get_value('shadowExpire') * 86400;
       if ($shadowExpireSeconds <= $now) {
-        print "$cn is Expired\n" if $verbose;
+        $log->info("$cn is Expired");
       } elsif ($shadowExpireSeconds <= $next_alert_date) {
         alert_user_if_needed($ldap,$entry,$now,0);
       }
@@ -238,7 +265,7 @@ sub check_expired_users
 
         my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
         if (not defined $pwdChangedTimestamp) {
-          print "Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn\n";
+          $log->notice("Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn");
           next;
         }
 
@@ -263,12 +290,12 @@ sub check_expired_users
         }
 
         if ((not defined $maxAge) || ($maxAge == 0)) {
-          print "No ppolicy max age defined for $cn\n" if $verbose;
+          $log->info("No ppolicy max age defined for $cn");
           next;
         }
 
         if ($pwdChangedTimestamp + $maxAge <= $now) {
-          print "$cn is Expired\n" if $verbose;
+          $log->info("$cn is Expired");
         } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
           alert_user_if_needed($ldap,$entry,$now,1);
         }
@@ -309,7 +336,7 @@ sub alert_user_if_needed
   # Check if we have a mail address for this user.
   my $mail_address = get_mail_from_entry($entry);
   if (not defined $mail_address) {
-    print "User $cn has no mail address, skipping…\n";
+    $log->notice("User $cn has no mail address, skipping…");
     return;
   }
 
@@ -318,7 +345,7 @@ sub alert_user_if_needed
   # Check if we already sent an email.
   my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
   if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
-    print "User $cn was already sent a mail, not resending yet.\n" if $verbose;
+    $log->info("User $cn was already sent a mail, not resending yet.");
     return;
   } elsif ((defined $token_hash) || (defined $token_datetime)) {
     # Delete obsolete token so we may create it again
@@ -343,7 +370,7 @@ sub alert_user_if_needed
       }
     }
     if (not defined $manager_dn) {
-      print "No manager found for $cn\n";
+      $log->notice("No manager found for $cn");
     }
     my $manager_mesg = $ldap->search(
       base    => $manager_dn,
@@ -372,34 +399,27 @@ sub send_alert_mail
     $token              = store_ldap_token($ldap, $uid, $datetime);
   }
   if (($alert_mailbody eq '') || ($alert_mailsubject eq '')) {
-    print "Skipping mail to $user_cn<$user_mail> as mail body or subject is empty\n" if $verbose;
+    $log->info("Skipping mail to $user_cn<$user_mail> as mail body or subject is empty");
     return;
   }
-  print "Sending mail to $user_cn<$user_mail>" if $verbose;
-  if (defined $maillogfile) {
-    print $maillogfile scalar(localtime)." $user_cn<$user_mail>";
-  }
+  my $info_message = "Sending mail to $user_cn<$user_mail>";
   my $cc = "";
   if (defined $manager_mail) {
-    print ", copy to $manager_cn<$manager_mail>" if $verbose;
+    $info_message .= ", copy to $manager_cn<$manager_mail>";
     $cc = encode_mimewords($manager_cn, Charset => 'utf-8', Encoding => 'B')." <$manager_mail>";
-    if (defined $maillogfile) {
-      print $maillogfile " $manager_cn<$manager_mail>";
-    }
   }
-  print " with token $token" if ($verbose and (not $ppolicy_mode));
-  print "\n" if $verbose;
-  if (defined $maillogfile) {
-    if ($first_email) {
-      print $maillogfile " (first email)";
-    } else {
-      print $maillogfile " (resent email)";
-    }
-    if ($ppolicy_mode) {
-      print $maillogfile " (from ppolicy)";
-    }
-    print $maillogfile "\n";
+  if (not $ppolicy_mode) {
+    $info_message .= " with token $token";
   }
+  if ($first_email) {
+    $info_message .= " (first email)";
+  } else {
+    $info_message .= " (resent email)";
+  }
+  if ($ppolicy_mode) {
+    $info_message .= " (from ppolicy)";
+  }
+  $log->notice($info_message);
   my $body = sprintf($alert_mailbody,$user_cn,$uid,$token);
   my %message = (
     'From'                      => $config->{'alert_mailaddress'},
