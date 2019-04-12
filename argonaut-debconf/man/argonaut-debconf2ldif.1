@@ -128,39 +128,57 @@
 .rm #[ #] #H #V #F C
 .\" ========================================================================
 .\"
-.IX Title "FAI2LDIF 1"
-.TH FAI2LDIF 1 "2019-04-03" "Argonaut 1.3" "Argonaut Documentation"
+.IX Title "ARGONAUT-DEBCONF2LDIF 1"
+.TH ARGONAUT-DEBCONF2LDIF 1 "2019-04-03" "Argonaut 1.3" "Argonaut Documentation"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH "NAME"
-fai2ldif \- read fai classes and create an ldif file to be imported into an ldap server
+argonaut\-debconf2ldif \- read debconf preseed files and create an ldif file to be imported into an ldap server
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-fai2ldif [\-hv] [\-c config_space] [\-d dist] [\-r release] [\-o output filename] \-b base class
+argonaut\-debconf2ldif [\-h] [\-\-diff | \-\-nodiff] [\-f flag] [\-b base] [\-t templates\-tree] [\-q questions\-tree] [\-\-templates\-file file] [\-\-questions\-file file] [\-k keys\-file] [\-p | \-\-noprefer\-preseed] [\-d | \-c]
 .SH "OPTIONS"
 .IX Header "OPTIONS"
 \&\fB\-h\fR
     print out this help message
 .PP
-\&\fB\-v\fR
-    be verbose (multiple v's will increase verbosity)
+\&\fB\-b\fR
+    \s-1LDAP\s0 base, usually ou=templatename,<ldap_base>
 .PP
 \&\fB\-c\fR
-    config sapce (default: /var/lib/fai/config)
+    overrides flag and templates/questions paths to use /var/log/installer/cdebconf
 .PP
 \&\fB\-d\fR
-    Distribution name
+    overrides flag and templates/questions paths to use /var/cache/debconf/
 .PP
-\&\fB\-b\fR
-    ldap base
+\&\fB\-f\fR
+    flag (default: preseed)
 .PP
-\&\fB\-o\fR
-    output filename
+\&\fB\-k\fR
+    preseed keys file path (optional)
+.PP
+\&\fB\-p\fR
+    allow type/value specs from preseed file to have precedence over values from templates/questions files
+.PP
+\&\fB\-q\fR
+    questions branch (default: ou=questions)
+.PP
+\&\fB\-t\fR
+    templates branch (default: ou=templates)
+.PP
+\&\fB\-\-diff\fR
+    to see diff between templates and questions
+.PP
+\&\fB\-\-templates\-file\fR
+    templates file path (default: /var/log/installer/cdebconf/templates.dat)
+.PP
+\&\fB\-\-questions\-file\fR
+    questions file path (default: /var/log/installer/cdebconf/questions.dat)
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-fai2ldif is a script to read the fai classes files and create ldif files.
+Script that looks up the specified Debconf or CDebconf database and converts the specified questions/templates from Debconf format \*(L"822\*(R" to \s-1LDIF.\s0
 .SH "BUGS"
 .IX Header "BUGS"
 Please report any bugs, or post any suggestions, to the fusiondirectory mailing list fusiondirectory-users or to
@@ -168,8 +186,12 @@ Please report any bugs, or post any suggestions, to the fusiondirectory mailing 
 .SH "LICENCE AND COPYRIGHT"
 .IX Header "LICENCE AND COPYRIGHT"
 This code is part of Argonaut Project <https://www.argonaut\-project.org/>
-.IP "Copyright (C) 2011\-2018 FusionDirectory project" 3
-.IX Item "Copyright (C) 2011-2018 FusionDirectory project"
+.IP "Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>" 3
+.IX Item "Copyright (C) 2011, Davor Ocelic <docelic@spinlocksolutions.com>"
+.PD 0
+.IP "Copyright (C) 2011\-2019 FusionDirectory project" 3
+.IX Item "Copyright (C) 2011-2019 FusionDirectory project"
+.PD
 .PP
 This program is distributed in the hope that it will be useful,
 but \s-1WITHOUT ANY WARRANTY\s0; without even the implied warranty of

@@ -62,7 +62,7 @@ use constant SOCK_PACKET => 10;
 use English qw(-no_match_vars);
 use Socket;
 
-our ($config,$protocol,$server_ip,$server_port);
+our ($config,$protocol,$server_settings,$server_port);
 my ($sslkeyfile,$sslcertfile,$sslcacertfile,$iptool,$delete_finished_tasks,
     $interface,$logdir,$packages_folder,$fetch_packages,$token);
 my $logfile = "argonaut-server.log";
@@ -95,19 +95,19 @@ $log->add(
 
 sub readConfig {
   $config = argonaut_read_config;
-  my $settings = argonaut_get_server_settings($config,$config->{'server_ip'});
+  $server_settings = argonaut_get_server_settings($config,$config->{'server_ip'});
 
-  $protocol               = $settings->{'protocol'};
-  $server_port            = $settings->{'port'};
-  $iptool                 = $settings->{'iptool'};
-  $delete_finished_tasks  = ($settings->{'delete_finished_tasks'} eq "TRUE");
-  $fetch_packages         = ($settings->{'fetch_packages'} eq "TRUE");
-  $interface              = $settings->{'interface'};
-  $logdir                 = $settings->{'logdir'};
-  $sslkeyfile             = $settings->{'keyfile'};
-  $sslcertfile            = $settings->{'certfile'};
-  $sslcacertfile          = $settings->{'cacertfile'};
-  $token                  = $settings->{'token'};
+  $protocol               = $server_settings->{'protocol'};
+  $server_port            = $server_settings->{'port'};
+  $iptool                 = $server_settings->{'iptool'};
+  $delete_finished_tasks  = ($server_settings->{'delete_finished_tasks'} eq "TRUE");
+  $fetch_packages         = ($server_settings->{'fetch_packages'} eq "TRUE");
+  $interface              = $server_settings->{'interface'};
+  $logdir                 = $server_settings->{'logdir'};
+  $sslkeyfile             = $server_settings->{'keyfile'};
+  $sslcertfile            = $server_settings->{'certfile'};
+  $sslcacertfile          = $server_settings->{'cacertfile'};
+  $token                  = $server_settings->{'token'};
 
   $packages_folder        = "/var/cache/argonaut/packages";
 }
@@ -505,6 +505,7 @@ POE::Session->create(
               $heap->{tasks}->{$taskid}->{nb_targets} = scalar(@$targets);
               $heap->{tasks}->{$taskid}->{jsonid} = $id;
               $heap->{tasks}->{$taskid}->{jsonsession} = $jsonrpc;
+              $heap->{tasks}->{$taskid}->{data} = $data;
               foreach my $target (@{$targets}) {
                 $kernel->yield('action' => $taskid,$action,lc($target),$data);
               }
@@ -590,7 +591,13 @@ POE::Session->create(
             # Is this module able to handle this client and action?
             if (eval {$module->handle_client($target,$action)}) {
               $handled = 1;
-              # If it is, send him the infos
+              # Refresh pending tasks on the same target
+              foreach my $id (keys(%{$heap->{tasks}})) {
+                if ((not defined $heap->{tasks}->{$id}->{jsonid}) && ($target eq $heap->{tasks}->{$id}->{'target'})) {
+                  refresh_task($kernel,$heap,$session,$id);
+                }
+              }
+              # Send the infos to the module
               my $args = undef;
               if(defined $data->{args}) {
                 $args = $data->{args};
@@ -600,14 +607,24 @@ POE::Session->create(
             }
           }
           unless ($handled) {
-            $kernel->yield('set_task_error' => $taskid, "No client module can handle action $action for target $target");
+            $kernel->yield('set_task_error' => $taskid, $target, "No client module can handle action $action for target $target");
           }
         },
         set_task_error => sub {
-          my ($kernel,$heap,$session,$taskid,$error) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          my ($kernel,$heap,$session,$taskid,$target,$error) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
           $log->debug("Setting task error '$error' for task '$taskid'");
           if (defined $heap->{tasks}->{$taskid}->{jsonid}) {
-            $heap->{tasks}->{$taskid}->{error} .= $error;
+            if (defined $heap->{tasks}->{$taskid}->{data}->{fullresult} && $heap->{tasks}->{$taskid}->{data}->{fullresult}) {
+              if (ref $heap->{tasks}->{$taskid}->{result} ne ref {}) {
+                $heap->{tasks}->{$taskid}->{result} = {};
+              }
+              if (not defined $heap->{tasks}->{$taskid}->{result}->{errors}) {
+                $heap->{tasks}->{$taskid}->{result}->{errors} = {};
+              }
+              $heap->{tasks}->{$taskid}->{result}->{errors}->{$target} = $error;
+            } else {
+              $heap->{tasks}->{$taskid}->{error} .= $error;
+            }
             $kernel->call($session => 'send_result' => $taskid);
           } else {
             $log->warning("Error occured : ".$error);
@@ -616,10 +633,20 @@ POE::Session->create(
           }
         },
         set_task_result => sub {
-          my ($kernel,$heap,$session,$taskid,$res) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
+          my ($kernel,$heap,$session,$taskid,$target,$res) = @_[KERNEL,HEAP,SESSION,ARG0 .. $#_];
           $log->debug("Setting task result '$res' for task '$taskid'");
           if (defined $heap->{tasks}->{$taskid}->{jsonid}) {
-            push @{$heap->{tasks}->{$taskid}->{result}}, $res;
+            if (defined $heap->{tasks}->{$taskid}->{data}->{fullresult} && $heap->{tasks}->{$taskid}->{data}->{fullresult}) {
+              if (ref $heap->{tasks}->{$taskid}->{result} ne ref {}) {
+                $heap->{tasks}->{$taskid}->{result} = {};
+              }
+              if (not defined $heap->{tasks}->{$taskid}->{result}->{results}) {
+                $heap->{tasks}->{$taskid}->{result}->{results} = {};
+              }
+              $heap->{tasks}->{$taskid}->{result}->{results}->{$target} = $res;
+            } else {
+              push @{$heap->{tasks}->{$taskid}->{result}}, $res;
+            }
             $kernel->call($session => 'send_result' => $taskid);
           } else {
             $heap->{tasks}->{$taskid}->{error} = "";

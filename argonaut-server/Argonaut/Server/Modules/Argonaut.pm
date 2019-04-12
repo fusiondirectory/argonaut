@@ -47,6 +47,8 @@ sub new
 sub handle_client {
   my ($self, $mac,$action) = @_;
 
+  $self->{target} = $mac;
+
   if ($action =~ m/^Deployment.(reboot|wake)$/) {
     $action =~ s/^Deployment./System./;
   } elsif ($action =~ m/^Deployment./) {
@@ -55,25 +57,27 @@ sub handle_client {
   }
 
   if ($action eq 'System.wake') {
-    $self->{mac}    = $mac;
     $self->{action} = $action;
     return 1;
   }
 
-  my $ip = main::getIpFromMac($mac);
-
   eval { #try
-    my $settings = argonaut_get_client_settings($main::config,$ip);
+    my $settings = argonaut_get_client_settings($main::config,"(macAddress=$mac)");
     %$self = %$settings;
     $self->{action} = $action;
+    $self->{target} = $mac;
   };
   if ($@) { #catch
     $main::log->debug("[Argonaut] Can't handle client : $@");
     return 0;
   };
-  my $server_settings = argonaut_get_server_settings($main::config,$main::server_ip);
-  $self->{cacertfile} = $server_settings->{cacertfile};
-  $self->{token} = $server_settings->{token};
+  $self->{cacertfile} = $main::server_settings->{cacertfile};
+  $self->{token}      = $main::server_settings->{token};
+  # We take a lower timeout than the server so that it's possible to return the result
+  $self->{timeout}    = $main::server_settings->{timeout} - 2;
+  if ($self->{timeout} <= 0) {
+    $self->{timeout} = 1;
+  }
 
   return 1;
 }
@@ -98,8 +102,11 @@ sub do_action {
 
   if ($action eq 'ping') {
     my $ok = 'OK';
-    my $res = $self->launch('echo',$ok);
-    return ($res eq $ok);
+    eval {
+      my $res = $self->launch('echo',$ok);
+      return ($res eq $ok);
+    };
+    return 0;
   } else {
     return $self->launch($action,$params);
   }
@@ -140,13 +147,26 @@ sub launch { # if ip pings, send the request
       $client->ua->credentials($ip.":".$self->{'port'}, "JSONRPCRealm", "", argonaut_gen_ssha_token($self->{'token'}));
     }
   }
+  $client->ua->timeout($self->{timeout});
 
   my $callobj = {
     method  => $action,
     params  => [$params],
   };
 
-  my $res = $client->call($self->{'protocol'}."://".$ip.":".$self->{'port'}, $callobj);
+  my $res;
+  eval {
+    $res = $client->call($self->{'protocol'}."://".$ip.":".$self->{'port'}, $callobj);
+  };
+  if ($@) {
+    if ($client->status_line =~ m/^(4|5)\d\d/) {
+      $main::log->info("Status : ".$client->status_line);
+      die $client->status_line."\n";
+    } else {
+      $main::log->error("Error : ".$@);
+      die $@."\n";
+    }
+  }
 
   if($res) {
     if ($res->is_error) {

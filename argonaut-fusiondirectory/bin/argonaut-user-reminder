@@ -33,6 +33,8 @@ use Digest::SHA qw(sha256_base64);
 
 use Argonaut::Libraries::Common qw(:ldap :string :config);
 
+use Log::Handler;
+
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
 use Net::LDAP::Util qw(generalizedTime_to_time);
 
@@ -45,24 +47,90 @@ my $config;
 $config = argonaut_read_config;
 $config->{'fd_rdn'} = 'ou=fusiondirectory';
 
-my $verbose = 0;
+my $logdir;
 
+eval {
+  my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
+  $logdir = $client_settings->{'logdir'};
+};
+if ($@) {
+  $logdir = '/var/log/argonaut';
+}
+
+my $logfile     = "argonaut-user-reminder.log";
+
+my $verbose = 0;
+my $posix   = 1;
+my $ppolicy = 1;
 
 sub print_usage
 {
-  print "Usage : argonaut-user-reminder [--verbose]\n";
-  exit(0);
+  my ($help) = @_;
+  print "Usage : argonaut-user-reminder [--help] [--verbose] [--posix|--ppolicy|--both (default)]\n";
+  if ($help) {
+    print << "EOF";
+
+  --help    : this (help) message
+  --verbose : be verbose
+  --posix   : check POSIX account expiration
+  --ppolicy : check ppolicy password expiration
+  --both    : check both (default)
+EOF
+    exit(0);
+  } else {
+    exit(-1);
+  }
 }
 
 foreach my $arg ( @ARGV ) {
   if (lc($arg) eq "--verbose") {
     $verbose = 1;
+  } elsif (lc($arg) eq "--posix") {
+    $posix    = 1;
+    $ppolicy  = 0;
+  } elsif (lc($arg) eq "--ppolicy") {
+    $posix    = 0;
+    $ppolicy  = 1;
+  } elsif (lc($arg) eq "--both") {
+    $posix    = 1;
+    $ppolicy  = 1;
+  } elsif ((lc($arg) eq "--help") || (lc($arg) eq "-h")) {
+    print_usage(1);
   } else {
-    print_usage();
+    print_usage(0);
   }
 }
 
-check_expired_users();
+our $log = Log::Handler->create_logger("argonaut-user-reminder");
+
+$log->add(
+  file => {
+    filename => "$logdir/$logfile",
+    maxlevel => ($verbose ? "info" : "notice"),
+    minlevel => "emergency",
+    newline  => 1,
+  },
+  screen => {
+    log_to   => "STDOUT",
+    maxlevel => ($verbose ? "info" : "notice"),
+    minlevel => "notice",
+    newline  => 1,
+  },
+  screen => {
+    log_to   => "STDERR",
+    maxlevel => "warning",
+    minlevel => "emergency",
+    newline  => 1,
+  },
+);
+
+eval {
+  check_expired_users();
+};
+if ($@) {
+  $log->error("Died with: $@");
+  die $@;
+}
 
 exit 0;
 
@@ -92,7 +160,9 @@ sub read_reminder_ldap_config
   # Days after first mail to send a new one
   $config->{'resend_delay'}   = 7;
   # Should alert mails be forwarded to the manager
-  $config->{'forward_alert'}  = 1;
+  $config->{'forward_alert'}    = 1;
+  $config->{'forward_ppolicy'}  = 1;
+  $config->{'use_alternate'}    = 1;
 
   my $entry = argonaut_read_ldap_config(
     $ldap,
@@ -100,20 +170,30 @@ sub read_reminder_ldap_config
     $config,
     '(&(objectClass=fusionDirectoryConf)(objectClass=fdUserReminderPluginConf))',
     {
-      'user_rdn'          => "fdUserRDN",
-      'token_rdn'         => "fdReminderTokenRDN",
-      'alert_delay'       => "fdUserReminderAlertDelay",
-      'resend_delay'      => "fdUserReminderResendDelay",
-      'alert_mailsubject' => "fdUserReminderAlertSubject",
-      'alert_mailbody'    => "fdUserReminderAlertBody",
-      'alert_mailaddress' => "fdUserReminderEmail",
-      'ppolicy_default'   => "fdPpolicyDefaultCn",
-      'ppolicy_rdn'       => "fdPpolicyRDN"
+      'user_rdn'            => "fdUserRDN",
+      'token_rdn'           => "fdReminderTokenRDN",
+      'alert_delay'         => "fdUserReminderAlertDelay",
+      'resend_delay'        => "fdUserReminderResendDelay",
+      'alert_mailsubject'   => "fdUserReminderAlertSubject",
+      'alert_mailbody'      => "fdUserReminderAlertBody",
+      'alert_mailaddress'   => "fdUserReminderEmail",
+      'ppolicy_default'     => "fdPpolicyDefaultCn",
+      'ppolicy_rdn'         => "fdPpolicyRDN",
+      'ppolicy_mailsubject' => "fdUserReminderPpolicyAlertSubject",
+      'ppolicy_mailbody'    => "fdUserReminderPpolicyAlertBody",
     }
   );
 
   if ($entry->exists('fdUserReminderForwardAlert')) {
     $config->{'forward_alert'} = ($entry->get_value('fdUserReminderForwardAlert') eq "TRUE");
+  }
+
+  if ($entry->exists('fdUserReminderForwardPpolicyAlert')) {
+    $config->{'forward_ppolicy'} = ($entry->get_value('fdUserReminderForwardPpolicyAlert') eq "TRUE");
+  }
+
+  if ($entry->exists('fdUserReminderUseAlternate')) {
+    $config->{'use_alternate'} = ($entry->get_value('fdUserReminderUseAlternate') eq "TRUE");
   }
 }
 
@@ -129,127 +209,152 @@ sub check_expired_users
   # Convert alert_delay (days) to seconds and add it to $now (86400 is 24*60*60)
   my $next_alert_date = ($now + ($config->{'alert_delay'} * 86400));
 
-  # POSIX expiration
-  my $mesg = $ldap->search(
-    base    => $config->{'ldap_base'},
-    filter  => '(&(objectClass=person)(shadowExpire=*))',
-    scope   => 'subtree'
-  );
-  die_on_ldap_errors($mesg);
+  if ($posix) {
+    # POSIX expiration
+    my $mesg = $ldap->search(
+      base    => $config->{'ldap_base'},
+      filter  => '(&(objectClass=person)(shadowExpire=*))',
+      scope   => 'subtree'
+    );
+    die_on_ldap_errors($mesg);
 
-  foreach my $entry ($mesg->entries()) {
-    my $cn = $entry->get_value('cn');
-    my $shadowExpireSeconds = $entry->get_value('shadowExpire') * 86400;
-    if ($shadowExpireSeconds <= $now) {
-      print "$cn is Expired\n" if $verbose;
-    } elsif ($shadowExpireSeconds <= $next_alert_date) {
-      alert_user_if_needed($ldap,$entry,$now);
+    foreach my $entry ($mesg->entries()) {
+      my $cn = $entry->get_value('cn');
+      my $shadowExpireSeconds = $entry->get_value('shadowExpire') * 86400;
+      if ($shadowExpireSeconds <= $now) {
+        $log->info("$cn is Expired");
+      } elsif ($shadowExpireSeconds <= $next_alert_date) {
+        alert_user_if_needed($ldap,$entry,$now,0);
+      }
     }
   }
 
-  # PPOLICY expiration
-  if (($config->{'ppolicy_default'}) && ($config->{'ppolicy_rdn'})) {
-    my $defaultMaxAge;
-    my $ppolicydn = 'cn='.$config->{'ppolicy_default'}.','.$config->{'ppolicy_rdn'}.','.$config->{'ldap_base'};
-    $mesg = $ldap->search(
-      base    => $ppolicydn,
-      filter  => '(objectClass=*)',
-      scope   => 'base',
-      attrs   => ['pwdMaxAge']
-    );
-    die_on_ldap_errors($mesg);
-    if ($mesg->count > 0) {
-      $defaultMaxAge = ($mesg->entries)[0]->get_value("pwdMaxAge");
-    } else {
-      die "Default ppolicy '".$ppolicydn."' could not be found in the LDAP!\n";
-    }
-
-    $mesg = $ldap->search(
-      base    => $config->{'ldap_base'},
-      filter  => '(&(objectClass=person)(pwdChangedTime=*))',
-      scope   => 'subtree',
-      attrs   => ['uid','cn','mail','fdPrivateMail','supannAutreMail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
-    );
-    die_on_ldap_errors($mesg);
-
-    my %maxAgeCache = ();
-    my @entries = $mesg->entries();
-    foreach my $entry (@entries) {
-      my $cn = $entry->get_value('cn');
-      if (not defined $cn) {
-        $cn = $entry->dn;
+  if ($ppolicy) {
+    # PPOLICY expiration
+    if (($config->{'ppolicy_default'}) && ($config->{'ppolicy_rdn'})) {
+      my $defaultMaxAge;
+      my $ppolicydn = 'cn='.$config->{'ppolicy_default'}.','.$config->{'ppolicy_rdn'}.','.$config->{'ldap_base'};
+      my $mesg = $ldap->search(
+        base    => $ppolicydn,
+        filter  => '(objectClass=*)',
+        scope   => 'base',
+        attrs   => ['pwdMaxAge']
+      );
+      die_on_ldap_errors($mesg);
+      if ($mesg->count > 0) {
+        $defaultMaxAge = ($mesg->entries)[0]->get_value("pwdMaxAge");
+      } else {
+        die "Default ppolicy '".$ppolicydn."' could not be found in the LDAP!\n";
       }
 
-      my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
-      if (not defined $pwdChangedTimestamp) {
-        print "Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn\n";
-        next;
-      }
+      $mesg = $ldap->search(
+        base    => $config->{'ldap_base'},
+        filter  => '(&(objectClass=person)(pwdChangedTime=*))',
+        scope   => 'subtree',
+        attrs   => ['uid','cn','mail','gosaMailAlternateAddress','fdPrivateMail','supannAutreMail','manager','pwdChangedTime','pwdPolicySubentry','pwdAccountLockedTime'],
+      );
+      die_on_ldap_errors($mesg);
 
-      my $maxAge = $defaultMaxAge;
-      if (defined $entry->get_value('pwdPolicySubentry')) {
-        my $userPolicy = $entry->get_value('pwdPolicySubentry');
-        if (defined $maxAgeCache{$userPolicy}) {
-          $maxAge = $maxAgeCache{$userPolicy};
-        } else {
-          $mesg = $ldap->search(
-            base    => $userPolicy,
-            filter  => '(objectClass=*)',
-            scope   => 'base',
-            attrs   => ['pwdMaxAge']
-          );
-          die_on_ldap_errors($mesg);
-          if ($mesg->count > 0) {
-            $maxAge = ($mesg->entries)[0]->get_value("pwdMaxAge");
-          }
-          $maxAgeCache{$userPolicy} = $maxAge;
+      my %maxAgeCache = ();
+      my @entries = $mesg->entries();
+      foreach my $entry (@entries) {
+        my $cn = $entry->get_value('cn');
+        if (not defined $cn) {
+          $cn = $entry->dn;
         }
-      }
 
-      if ((not defined $maxAge) || ($maxAge == 0)) {
-        print "No ppolicy max age defined for $cn\n" if $verbose;
-        next;
-      }
+        my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
+        if (not defined $pwdChangedTimestamp) {
+          $log->notice("Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn");
+          next;
+        }
 
-      if ($pwdChangedTimestamp + $maxAge <= $now) {
-        print "$cn is Expired\n" if $verbose;
-      } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
-        alert_user_if_needed($ldap,$entry,$now);
+        my $maxAge = $defaultMaxAge;
+        if (defined $entry->get_value('pwdPolicySubentry')) {
+          my $userPolicy = $entry->get_value('pwdPolicySubentry');
+          if (defined $maxAgeCache{$userPolicy}) {
+            $maxAge = $maxAgeCache{$userPolicy};
+          } else {
+            $mesg = $ldap->search(
+              base    => $userPolicy,
+              filter  => '(objectClass=*)',
+              scope   => 'base',
+              attrs   => ['pwdMaxAge']
+            );
+            die_on_ldap_errors($mesg);
+            if ($mesg->count > 0) {
+              $maxAge = ($mesg->entries)[0]->get_value("pwdMaxAge");
+            }
+            $maxAgeCache{$userPolicy} = $maxAge;
+          }
+        }
+
+        if ((not defined $maxAge) || ($maxAge == 0)) {
+          $log->info("No ppolicy max age defined for $cn");
+          next;
+        }
+
+        if ($pwdChangedTimestamp + $maxAge <= $now) {
+          $log->info("$cn is Expired");
+        } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
+          alert_user_if_needed($ldap,$entry,$now,1);
+        }
       }
     }
   }
 }
 
-sub alert_user_if_needed
+sub get_mail_from_entry
 {
-  my ($ldap,$entry,$now) = @_;
-  my $cn = $entry->get_value('cn');
+  my ($entry) = @_;
 
-  # Check if we have a mail address for this user.
   my $mail_address = $entry->get_value('mail');
-  if (not defined $mail_address) {
-    $mail_address = $entry->get_value('fdPrivateMail');
+  if ((not defined $mail_address) and $config->{'use_alternate'}) {
+    $mail_address = $entry->get_value('gosaMailAlternateAddress');
   }
   if (not defined $mail_address) {
     $mail_address = $entry->get_value('supannAutreMail');
   }
   if (not defined $mail_address) {
-    print "User $cn has no mail address, skipping…\n";
+    $mail_address = $entry->get_value('fdPrivateMail');
+  }
+
+  return $mail_address;
+}
+
+sub alert_user_if_needed
+{
+  my ($ldap,$entry,$now,$ppolicy_mode) = @_;
+  my $cn = $entry->get_value('cn');
+  my $forward_alert;
+  if ($ppolicy_mode) {
+    $forward_alert = $config->{'forward_ppolicy'};
+  } else {
+    $forward_alert = $config->{'forward_alert'};
+  }
+
+  # Check if we have a mail address for this user.
+  my $mail_address = get_mail_from_entry($entry);
+  if (not defined $mail_address) {
+    $log->notice("User $cn has no mail address, skipping…");
     return;
   }
+
+  my $first_email = 1;
 
   # Check if we already sent an email.
   my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
   if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
-    print "User $cn was already sent a mail, not resending yet.\n" if $verbose;
+    $log->info("User $cn was already sent a mail, not resending yet.");
     return;
   } elsif ((defined $token_hash) || (defined $token_datetime)) {
     # Delete obsolete token so we may create it again
     delete_ldap_token($ldap, $entry->get_value('uid'));
+    $first_email = 0;
   }
 
   my ($manager_cn, $manager_mail);
-  if ($config->{'forward_alert'}) {
+  if ($forward_alert) {
     # Find the manager
     my $manager_dn = $entry->get_value('manager');
     if (not defined $manager_dn) {
@@ -265,7 +370,7 @@ sub alert_user_if_needed
       }
     }
     if (not defined $manager_dn) {
-      print "No manager found for $cn\n";
+      $log->notice("No manager found for $cn");
     }
     my $manager_mesg = $ldap->search(
       base    => $manager_dn,
@@ -274,29 +379,53 @@ sub alert_user_if_needed
     );
     if ($manager_mesg->count() > 0) {
       $manager_cn   = ($manager_mesg->entries)[0]->get_value('cn');
-      $manager_mail = ($manager_mesg->entries)[0]->get_value('mail');
+      $manager_mail = get_mail_from_entry(($manager_mesg->entries)[0]);
     }
   }
-  send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail);
+  send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail, $ppolicy_mode, $first_email);
 }
 
 sub send_alert_mail
 {
-  my ($ldap, $uid, $datetime, $user_cn, $user_mail, $manager_cn, $manager_mail) = @_;
-  my $token = store_ldap_token($ldap, $uid, $datetime);
-  print "Sending mail to $user_cn<$user_mail>" if $verbose;
+  my ($ldap, $uid, $datetime, $user_cn, $user_mail, $manager_cn, $manager_mail, $ppolicy_mode, $first_email) = @_;
+  my ($alert_mailsubject, $alert_mailbody, $token);
+  if ($ppolicy_mode) {
+    $alert_mailsubject  = $config->{'ppolicy_mailsubject'};
+    $alert_mailbody     = $config->{'ppolicy_mailbody'};
+    $token              = '';
+  } else {
+    $alert_mailsubject  = $config->{'alert_mailsubject'};
+    $alert_mailbody     = $config->{'alert_mailbody'};
+    $token              = store_ldap_token($ldap, $uid, $datetime);
+  }
+  if (($alert_mailbody eq '') || ($alert_mailsubject eq '')) {
+    $log->info("Skipping mail to $user_cn<$user_mail> as mail body or subject is empty");
+    return;
+  }
+  my $info_message = "Sending mail to $user_cn<$user_mail>";
   my $cc = "";
   if (defined $manager_mail) {
-    print ", copy to $manager_cn<$manager_mail>" if $verbose;
+    $info_message .= ", copy to $manager_cn<$manager_mail>";
     $cc = encode_mimewords($manager_cn, Charset => 'utf-8', Encoding => 'B')." <$manager_mail>";
   }
-  print " with token $token\n" if $verbose;
-  my $body = sprintf($config->{'alert_mailbody'},$user_cn,$uid,$token);
+  if (not $ppolicy_mode) {
+    $info_message .= " with token $token";
+  }
+  if ($first_email) {
+    $info_message .= " (first email)";
+  } else {
+    $info_message .= " (resent email)";
+  }
+  if ($ppolicy_mode) {
+    $info_message .= " (from ppolicy)";
+  }
+  $log->notice($info_message);
+  my $body = sprintf($alert_mailbody,$user_cn,$uid,$token);
   my %message = (
     'From'                      => $config->{'alert_mailaddress'},
     'To'                        => encode_mimewords($user_cn, Charset => 'utf-8', Encoding => 'B')." <$user_mail>",
     'Cc'                        => $cc,
-    'Subject'                   => encode_mimewords($config->{'alert_mailsubject'}, Charset => 'utf-8', Encoding => 'B'),
+    'Subject'                   => encode_mimewords($alert_mailsubject, Charset => 'utf-8', Encoding => 'B'),
     'Content-type'              => 'text/plain; charset="utf-8"',
     'Content-Transfer-Encoding' => 'base64',
     'Message'                   => encode_base64($body)
@@ -373,13 +502,13 @@ argonaut-user-reminder - read account expiration date from ldap and send emails 
 
 =head1 SYNOPSIS
 
-argonaut-user-reminder [--verbose]
+argonaut-user-reminder [--verbose] [--posix|--ppolicy|--both (default)]
 
 =head1 DESCRIPTION
 
 argonaut-user-reminder is a program used to read account expiration dates from the LDAP.
 It reads the delay before expiration from the LDAP and send emails for user to postpone
-expiration date.
+expiration date or change the password.
 
 =head1 OPTIONS
 
@@ -388,6 +517,18 @@ expiration date.
 =item B<--verbose>
 
 be verbose
+
+=item B<--posix>
+
+check only POSIX account expiration (based on shadowExpire)
+
+=item B<--ppolicy>
+
+check only ppolicy password expiration (based on pwdChangedTime and pwdMaxAge)
+
+=item B<--both>
+
+check both POSIX account expiration and ppolicy password expiration
 
 =back
 

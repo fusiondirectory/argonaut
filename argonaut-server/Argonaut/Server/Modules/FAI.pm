@@ -29,7 +29,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file :config);
+use Argonaut::Libraries::Common qw(:ldap :file :config :utils);
 
 my @fai_actions = ("Deployment.reinstall", "Deployment.update", "Deployment.wake", "Deployment.reboot");
 
@@ -44,15 +44,17 @@ sub new
 sub handle_client {
   my ($self, $mac, $action) = @_;
 
+  $self->{target} = $mac;
+
   if (grep {$_ eq $action} @fai_actions) {
-    my $ip = main::getIpFromMac($mac);
     eval { #try
       my $settings = argonaut_get_generic_settings(
         'FAIobject', {'state' => "FAIstate"},
-        $main::config,$ip
+        $main::config, "(macAddress=$mac)"
       );
       %$self = %$settings;
       $self->{action} = $action;
+      $self->{target} = $mac;
     };
     if ($@) { #catch
       $main::log->debug("[FAI] Can't handle client : $@");
@@ -68,13 +70,19 @@ sub handle_client {
 =pod
 =item do_action
 Execute a JSON-RPC method on a client which the ip is given.
-Parameters : ip,action,params
+Parameters : params
 =cut
 sub do_action {
   my ($self, $params) = @_;
 
   if ($self->{'locked'}) {
     die 'This computer is locked';
+  }
+
+  if ($self->{action} =~ m/^Deployment\./) {
+    unless (argonaut_check_time_frames($self)) {
+      die 'Deployment actions are forbidden outside of the authorized time frames';
+    }
   }
 
   my $substatus = $self->handler_fai($self->{taskid},$self->{action},$params);
@@ -106,7 +114,7 @@ sub handler_fai {
   $self->flag($fai_state->{$action});
 
   if($need_reboot) {
-    $self->{launch_actions} = [["System.reboot", [$self->{'mac'}], {'args' => []}]];
+    $self->{launch_actions} = [["System.reboot", [$self->{target}], {'args' => []}]];
     return "rebooting";
   } else {
     main::wakeOnLan($self->{'mac'});

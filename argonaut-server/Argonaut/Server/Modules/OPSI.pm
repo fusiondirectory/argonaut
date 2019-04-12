@@ -31,30 +31,38 @@ use JSON;
 
 use 5.008;
 
-use Argonaut::Libraries::Common qw(:ldap :file :config);
+use Argonaut::Libraries::Common qw(:ldap :file :config :utils);
 
 use if (USE_LEGACY_JSON_RPC),     'JSON::RPC::Legacy::Client';
 use if not (USE_LEGACY_JSON_RPC), 'JSON::RPC::Client';
 
-my $actions = {
+my $clientActions = {
   'ping'                        => 'hostControl_reachable',
   'System.halt'                 => 'hostControl_shutdown',
   'System.reboot'               => 'hostControl_reboot',
   'Deployment.reboot'           => 'hostControl_reboot',
   'Deployment.reinstall'        => \&reinstall,
   'Deployment.update'           => \&update,
+  'System.list_logs'            => \&list_logs,
+  'System.get_log'              => \&get_log,
   'OPSI.update_or_insert'       => \&update_or_insert,
   'OPSI.delete'                 => 'host_delete',
-  'OPSI.host_getObjects'        => 'host_getObjects',
-  'OPSI.get_netboots'           => 'product_getObjects',
-  'OPSI.get_localboots'         => 'product_getObjects',
-  'OPSI.get_product_properties' => 'productProperty_getObjects',
+};
+my $serverActions = {
+  'ping'                            => 'accessControl_authenticated',
+  'OPSI.delete'                     => 'host_delete',
+  'OPSI.host_getObjects'            => 'host_getObjects',
+  'OPSI.get_netboots'               => 'product_getObjects',
+  'OPSI.get_localboots'             => 'product_getObjects',
+  'OPSI.get_product_properties'     => 'productProperty_getObjects',
+  'OPSI.productOnClient_getObjects' => 'productOnClient_getObjects',
 };
 
 my @locked_actions = (
   'ping',
   'OPSI.update_or_insert', 'OPSI.delete',
   'OPSI.host_getObjects', 'OPSI.get_netboots', 'OPSI.get_localboots',
+  'System.list_logs', 'System.get_log',
 );
 
 sub new
@@ -65,29 +73,42 @@ sub new
   return $self;
 }
 
-sub needs_host_param
-{
-  my ($self, $action, $params) = @_;
-  #Right now update_or_insert and host_getObjects are the only actions
-  # that does not require the host as first parameter
-  return 0 if ($action eq 'productProperty_getObjects');
-  return 0 if ($action eq 'host_getObjects');
-  return 0 if ($action eq 'product_getObjects');
-  return 0 if (($action eq 'host_delete') && (@$params > 0));
-  return 1;
-}
-
 sub get_opsi_settings {
   my $settings;
   eval { #try
     $settings = argonaut_get_generic_settings(
       'opsiClient',
       {
-        'server-dn'   => "fdOpsiServerDn",
-        'profile-dn'  => "fdOpsiProfileDn",
+        'server-dn'     => "fdOpsiServerDn",
+        'profile-dn'    => "fdOpsiProfileDn",
+        'softs'         => ["fdOpsiLocalbootProduct", asref => 1],
+        'inherit-softs' => "fdOpsiLocalbootInherit",
       },
       @_
     );
+    $settings->{client} = 1;
+    if ($settings->{'profile-dn'} eq 'inherited') {
+      if (not exists $settings->{'group'}->{'profile-dn'}) {
+        die "Profile set to inherited but could no find group OPSI profile\n";
+      }
+      if (not exists $settings->{'group'}->{'server-dn'}) {
+        die "Profile set to inherited but could no find group OPSI server\n";
+      }
+      $settings->{'profile-dn'} = $settings->{'group'}->{'profile-dn'};
+      $settings->{'server-dn'}  = $settings->{'group'}->{'server-dn'};
+    }
+
+    if ($settings->{'server-dn'} eq 'inherited') {
+      $settings->{'server-dn'}  = $settings->{'group'}->{'server-dn'};
+    }
+
+    if ((defined $settings->{'inherit-softs'}) && ($settings->{'inherit-softs'} eq 'TRUE') && (defined $settings->{'group'}->{'softs'})) {
+      if (defined $settings->{'softs'}) {
+        push(@{$settings->{'softs'}}, @{$settings->{'group'}->{'softs'}});
+      } else {
+        $settings->{'softs'} = $settings->{'group'}->{'softs'};
+      }
+    }
   };
   if ($@) { #catch
     my $error = $@;
@@ -101,6 +122,7 @@ sub get_opsi_settings {
         },
         @_
       );
+      $settings->{client} = 0;
     };
     if ($@) {
       die $error;
@@ -136,24 +158,32 @@ sub get_winstation_fqdn_settings {
     {
       'cn'              => 'cn',
       'description'     => 'description',
+      'dns-zones-dn'    => ['fdDNSZoneDn', asref => 1],
     },
     @_,
     0
   );
-  my $cn = $settings->{'cn'};
-  $cn =~ s/\$$//;
 
   my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
 
-  my $mesg = $ldap->search( # perform a search
-    base    => $ldap_base,
-    filter  => "(&(relativeDomainName=$cn)(aRecord=".$settings->{'ip'}.")(zoneName=*))",
-    attrs   => ['zoneName']
-  );
-  if ($mesg->count <= 0) {
+  my $zoneName = undef;
+  foreach my $zonedn (@{$settings->{'dns-zones-dn'}}) {
+    my $mesg = $ldap->search(
+      base    => $zonedn,
+      scope   => 'base',
+      filter  => '(zoneName=*)',
+      attrs   => ['zoneName']
+    );
+    if ($mesg->count == 1) {
+      $zoneName = ($mesg->entries)[0]->get_value("zoneName");
+      last;
+    }
+  }
+  my $cn = $settings->{'cn'};
+  if (not defined $zoneName) {
     die "[OPSI] Could not find any DNS domain name for $cn";
   }
-  my $zoneName = ($mesg->entries)[0]->get_value("zoneName");
+  $cn =~ s/\$$//;
   $zoneName =~ s/\.$//;
   $settings->{'fqdn'} = $cn.'.'.$zoneName;
 
@@ -163,16 +193,22 @@ sub get_winstation_fqdn_settings {
 sub handle_client {
   my ($self, $mac,$action) = @_;
 
-  if (not defined $actions->{$action}) {
+  $self->{target} = $mac;
+
+  if ((not defined $clientActions->{$action}) && (not defined $serverActions->{$action})) {
     return 0;
   }
 
-  my $ip = main::getIpFromMac($mac);
-
   eval { #try
-    my $settings = get_opsi_settings($main::config,$ip);
+    my $settings = get_opsi_settings($main::config, "(macAddress=$mac)", 2);
     %$self = %$settings;
+    if ($self->{client} && (not defined $clientActions->{$action})) {
+      return 0;
+    } elsif ((not $self->{client}) && (not defined $serverActions->{$action})) {
+      return 0;
+    }
     $self->{action} = $action;
+    $self->{target} = $mac;
   };
   if ($@) { #catch
     if ($@ =~ /^[OPSI]/) {
@@ -201,6 +237,7 @@ sub update_task {
       'actionRequest',
       'actionProgress',
       'installationStatus',
+      'lastAction',
     ];
     $task->{progress} = 10;
     $task->{substatus} = "";
@@ -221,7 +258,10 @@ sub update_task {
         $task->{progress}   = 50;
       } elsif ($res->{'actionResult'} eq 'failed') {
         $task->{status} = "error";
-        $task->{error}  = $res->{'actionProgress'};
+        $task->{error}  = "Action ".$res->{'lastAction'}." for netboot ".$self->{'netboot'}." failed";
+        if ($res->{'actionProgress'} ne '') {
+          $task->{error} .= ' ('.$res->{'actionProgress'}.')'
+        }
         return $task;
       }
     }
@@ -247,7 +287,10 @@ sub update_task {
           $nbinstalled++;
         } elsif ($res->{'actionResult'} eq 'failed') {
           $task->{status} = "error";
-          $task->{error} = $res->{'actionProgress'};
+          $task->{error}  = "Action ".$res->{'lastAction'}." for product $product failed";
+          if ($res->{'actionProgress'} ne '') {
+            $task->{error} .= ' ('.$res->{'actionProgress'}.')'
+          }
           return $task;
         }
       }
@@ -281,12 +324,22 @@ sub update_or_insert {
     "ipAddress"       => $self->{'ip'},
     "type"            => "OpsiClient",
   };
+
   my $opsiaction = 'host_updateObject';
-  my $tmpres = $self->launch('host_getObjects',[['id'],{'id' => $self->{'fqdn'}}]);
-  if (scalar(@$tmpres) < 1) {
-    $opsiaction = 'host_insertObject';
-    $infos->{"notes"} = "Created by FusionDirectory";
+
+  if (scalar(@$params) > 0) {
+    # If our id changed, rename the object in OPSI
+    if ($params->[0] ne $self->{'fqdn'}) {
+      $res = $self->launch('host_renameOpsiClient',[$params->[0], $self->{'fqdn'}]);
+    }
+  } else {
+    my $tmpres = $self->launch('host_getObjects',[['id'],{'id' => $self->{'fqdn'}}]);
+    if (scalar(@$tmpres) < 1) {
+      $opsiaction = 'host_insertObject';
+      $infos->{"notes"} = "Created by FusionDirectory";
+    }
   }
+
   $res = $self->launch($opsiaction,[$infos]);
   if (defined $self->{'depot'}) {
     $res = $self->launch('configState_create',["clientconfig.depot.id", $self->{'fqdn'}, $self->{'depot'}]);
@@ -300,19 +353,22 @@ sub reinstall_or_update {
   #1 - fetch the host profile
   my ($ldap, $ldap_base) = argonaut_ldap_handle($main::config);
 
-  my $mesg = $ldap->search( # perform a search
-    base    => $self->{'profile-dn'},
-    scope   => 'base',
-    filter  => "(objectClass=opsiProfile)",
-    attrs   => ['fdOpsiNetbootProduct', 'fdOpsiSoftwareList', 'fdOpsiProductProperty']
-  );
-  if ($mesg->count <= 0) {
-    die "[OPSI] Client with OPSI activated but profile '".$self->{'profile-dn'}."' could not be found";
+  if ($self->{'profile-dn'} ne '') {
+    my $mesg = $ldap->search( # perform a search
+      base    => $self->{'profile-dn'},
+      scope   => 'base',
+      filter  => "(objectClass=opsiProfile)",
+      attrs   => ['fdOpsiNetbootProduct', 'fdOpsiSoftwareList', 'fdOpsiProductProperty']
+    );
+    if ($mesg->count <= 0) {
+      die "[OPSI] Client with OPSI activated but profile '".$self->{'profile-dn'}."' could not be found";
+    }
+    $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
+    $self->{'softlists'}  = ($mesg->entries)[0]->get_value("fdOpsiSoftwareList", asref => 1);
+    $self->{'properties'} = ($mesg->entries)[0]->get_value("fdOpsiProductProperty", asref => 1);
   }
-  $self->{'netboot'}    = ($mesg->entries)[0]->get_value("fdOpsiNetbootProduct");
-  $self->{'softlists'}  = ($mesg->entries)[0]->get_value("fdOpsiSoftwareList", asref => 1);
+
   $self->{'localboots'} = [];
-  $self->{'properties'} = ($mesg->entries)[0]->get_value("fdOpsiProductProperty", asref => 1);
   #2 - remove existing setups and properties
   my $productOnClients = $self->launch('productOnClient_getObjects',
     [[],
@@ -376,8 +432,32 @@ sub reinstall_or_update {
     }
   }
   #4 - set localboot as the profile specifies (maybe remove the old ones that are not in the profile - see 3 bis)
+  my $infos = [];
+  if (defined $self->{'softs'}) {
+    # Handle localboots directly on the node
+    foreach my $localboot (@{$self->{'softs'}}) {
+      my ($product, $action) = split('\|',$localboot);
+      push @{$self->{'localboots'}}, $localboot;
+      if ($reinstall || ($action ne 'setup') || (! defined $productStates->{$product}) || ($productStates->{$product} ne 'installed')) {
+        push @$infos, {
+          "productId"     => $product,
+          "clientId"      => $self->{'fqdn'},
+          "actionRequest" => $action,
+          "type"          => "ProductOnClient",
+          "productType"   => "LocalbootProduct"
+        };
+      } else {
+        push @$infos, {
+          "productId"     => $product,
+          "clientId"      => $self->{'fqdn'},
+          "actionRequest" => "none",
+          "type"          => "ProductOnClient",
+          "productType"   => "LocalbootProduct"
+        };
+      }
+    }
+  }
   if (defined $self->{'softlists'}) {
-    my $infos = [];
     foreach my $softlistdn (@{$self->{'softlists'}}) {
       my $mesg = $ldap->search( # perform a search
         base    => $softlistdn,
@@ -393,6 +473,10 @@ sub reinstall_or_update {
       if (grep {$_ eq 'opsiSoftwareList'} @$ocs) {
         foreach my $localboot (@{$localboots}) {
           my ($product, $action) = split('\|',$localboot);
+          if (grep {$_ =~ m/^$product\|/} @{$self->{'localboots'}}) {
+            # Products from $self->{'softs'} have priority, do not overwrite
+            next;
+          }
           push @{$self->{'localboots'}}, $localboot;
           if ($reinstall || ($action ne 'setup') || (! defined $productStates->{$product}) || ($productStates->{$product} ne 'installed')) {
             push @$infos, {
@@ -426,9 +510,9 @@ sub reinstall_or_update {
         $self->launch('configState_create',['software-on-demand.show-details', $self->{'fqdn'}, ($showdetails?JSON::true:JSON::false)]);
       }
     }
-    if (scalar(@$infos) > 0) {
-      $self->launch('productOnClient_updateObjects',[$infos]);
-    }
+  }
+  if (scalar(@$infos) > 0) {
+    $self->launch('productOnClient_updateObjects',[$infos]);
   }
   #5 - set properties as the profile specifies
   if (defined $self->{'properties'}) {
@@ -474,6 +558,30 @@ sub update {
   return $self->reinstall_or_update(0, $action, $params);
 }
 
+sub get_log {
+  my ($self, $action,$params) = @_;
+
+  if (scalar(@$params) < 1) {
+    die "Missing parameter for get_log\n";
+  }
+
+  return $self->launch('log_read',[$params->[0], $self->{'fqdn'}]);
+}
+
+sub list_logs {
+  my ($self, $action,$params) = @_;
+
+  my @logTypes = ('instlog', 'clientconnect', 'userlogin', 'bootimage', 'opsiconfd');
+  my $result = [];
+  foreach my $logType (@logTypes) {
+    if ($self->launch('log_read',[$logType, $self->{'fqdn'}, 100])) {
+      push @$result, $logType;
+    }
+  }
+
+  return $result;
+}
+
 =pod
 =item do_action
 Execute a JSON-RPC method on a client which the ip is given.
@@ -486,6 +594,12 @@ sub do_action {
 
   if ($self->{'locked'} && not (grep {$_ eq $action} @locked_actions)) {
     die 'This computer is locked';
+  }
+
+  if ($self->{action} =~ m/^Deployment\./) {
+    unless (argonaut_check_time_frames($self)) {
+      die 'Deployment actions are forbidden outside of the authorized time frames';
+    }
   }
 
   $self->{task}->{handler} = 1;
@@ -519,12 +633,22 @@ sub do_action {
     }
     $params->[0] = \@fqdns;
   }
+  my $actions;
+  if ($self->{client}) {
+    $actions = $clientActions;
+  } else {
+    $actions = $serverActions;
+  }
   if (ref $actions->{$action} eq ref "") {
-    if ($action eq 'ping') {
-      $params = ['1000'];
-    }
-    my $hostParam = $self->needs_host_param($actions->{$action}, $params);
-    if ($hostParam) {
+    if ($self->{client}) {
+      if ($action eq 'ping') {
+        # We take a lower timeout than the server so that it's possible to return the result
+        my $timeout = $main::server_settings->{timeout} - 2;
+        if ($timeout <= 0) {
+          $timeout = 1;
+        }
+        $params = [$timeout];
+      }
       unshift @$params, $self->{'fqdn'};
     }
     $main::log->info("[OPSI] sending action ".$actions->{$action}." to ".$self->{'fqdn'});

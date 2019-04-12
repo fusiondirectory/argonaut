@@ -78,79 +78,94 @@ sub get_pxe_config {
   }
   my $result = undef;
 
-  # Load actions
-  my $callobj = {
-    method  => 'getClientIdByMac',
-    params  => [$mac],
-    id  => 1,
-  };
-  my $res = $opsi_client->call($opsi_url, $callobj);
-  my $state= 0;
-  my $status= "localboot";
-  my $kernel = "kernel opsi-install";
+  my $state   = 0;
+  my $status  = "localboot";
+  my $kernel  = "kernel opsi-install";
+  my $product = "";
   my $cmdline;
-  my $product= "";
 
-  if ($res) {
-    if ($res->is_error) {
-      $log->error("ch $$: Error : $res->error_message\n");
-    } else {
-      $sclient=$res->result;
-      $callobj = { method  => 'getNetBootProductStates_hash', params  => [ $sclient ], id  => 2, };
-      my $res2 = $opsi_client->call($opsi_url, $callobj);
-      if ($res2) {
-        if ($res2->is_error) {
-          $log->error("ch $$: Error : ". $res2->error_message."\n");
-        } else {
-            foreach my $element (@{$res2->result->{$sclient}}){
-            if(
-              $element->{'actionRequest'} ne '' &&
-              $element->{'actionRequest'} ne 'undefined' &&
-              $element->{'actionRequest'} ne 'none' ) {
-                $state= 1;
-                $status= "install";
-                $product= "product=".$element->{'productId'};
-                last;
+  # Search for the host to examine the lock state
+  my $infos = argonaut_get_generic_settings(
+    'opsiClient',
+    {
+    },
+    $main::config, "(macAddress=$mac)"
+  );
+  
+  if ($infos->{'locked'}) {
+    # Localboot
+    $status   = 'localboot (locked)';
+    $kernel   = 'localboot 0';
+    $cmdline  = '';
+  } else {
+    # Load actions
+    my $callobj = {
+      method  => 'getClientIdByMac',
+      params  => [$mac],
+      id  => 1,
+    };
+    my $res     = $opsi_client->call($opsi_url, $callobj);
+    if ($res) {
+      if ($res->is_error) {
+        $log->error("ch $$: Error : $res->error_message\n");
+      } else {
+        $sclient = $res->result;
+        $callobj = { method  => 'getNetBootProductStates_hash', params  => [ $sclient ], id  => 2, };
+        my $res2 = $opsi_client->call($opsi_url, $callobj);
+        if ($res2) {
+          if ($res2->is_error) {
+            $log->error("ch $$: Error : ". $res2->error_message."\n");
+          } else {
+              foreach my $element (@{$res2->result->{$sclient}}){
+              if(
+                $element->{'actionRequest'} ne '' &&
+                $element->{'actionRequest'} ne 'undefined' &&
+                $element->{'actionRequest'} ne 'none' ) {
+                  $state= 1;
+                  $status= "install";
+                  $product= "product=".$element->{'productId'};
+                  last;
+                }
               }
             }
+        } else {
+          $log->error("ch $$: Error : $opsi_client->status_line\n");
+        }
+
+        if ($state) {
+          # Installation requested
+          my $service= "";
+          my $pckey= "";
+
+          # Load pc key
+          $callobj = { method  => 'getOpsiHostKey', params  => [ $sclient ], id  => 4, };
+          $res = $opsi_client->call($opsi_url, $callobj);
+          if (defined $res->result) {
+            $pckey= "pckey=".$res->result;
+            $log->info("setting pckey for $sclient\n");
+          } else {
+            $log->warning("no pc key for $sclient found\n");
           }
-      } else {
-        $log->error("ch $$: Error : $opsi_client->status_line\n");
-      }
 
-      if ($state) {
-        # Installation requested
-        my $service= "";
-        my $pckey= "";
-
-        # Load pc key
-        $callobj = { method  => 'getOpsiHostKey', params  => [ $sclient ], id  => 4, };
-        $res = $opsi_client->call($opsi_url, $callobj);
-        if (defined $res->result) {
-          $pckey= "pckey=".$res->result;
-          $log->info("setting pckey for $sclient\n");
+          # Load depot server for this client
+          $callobj = { method  => 'getDepotId', params  => [ $sclient ], id  => 5, };
+          $res = $opsi_client->call($opsi_url, $callobj);
+          if (defined $res->result){
+            $service= "service=".$res->result;
+            $log->info("setting depot server for $sclient to $service\n");
+          } else {
+            $log->info("no depot server for $sclient defined\n");
+          }
+          $cmdline = "noapic lang=$lang ramdisk_size=175112 init=/etc/init initrd=opsi-root.gz reboot=b video=vesa:ywrap,mtrr $service $pckey vga=791 quiet splash $product";
         } else {
-          $log->warning("no pc key for $sclient found\n");
+          # Localboot
+          $kernel = 'localboot 0';
+          $cmdline = '';
         }
-
-        # Load depot server for this client
-        $callobj = { method  => 'getDepotId', params  => [ $sclient ], id  => 5, };
-        $res = $opsi_client->call($opsi_url, $callobj);
-        if (defined $res->result){
-          $service= "service=".$res->result;
-          $log->info("setting depot server for $sclient to $service\n");
-        } else {
-          $log->info("no depot server for $sclient defined\n");
-        }
-        $cmdline = "noapic lang=$lang ramdisk_size=175112 init=/etc/init initrd=opsi-root.gz reboot=b video=vesa:ywrap,mtrr $service $pckey vga=791 quiet splash $product";
-      } else {
-        # Localboot
-        $kernel = 'localboot 0';
-        $cmdline = '';
       }
+    } else {
+      $log->error("ch $$: Error : $opsi_client->status_line\n");
     }
-  } else {
-    $log->error("ch $$: Error : $opsi_client->status_line\n");
   }
 
 
