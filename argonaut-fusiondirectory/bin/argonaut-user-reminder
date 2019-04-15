@@ -35,6 +35,8 @@ use Argonaut::Libraries::Common qw(:ldap :string :config);
 
 use Argonaut::Libraries::WorkflowUpdate qw(argonaut_supann_update_states);
 
+use Log::Handler;
+
 use Net::LDAP::Constant qw(LDAP_NO_SUCH_OBJECT);
 use Net::LDAP::Util qw(generalizedTime_to_time);
 
@@ -49,12 +51,23 @@ my $config;
 $config = argonaut_read_config;
 $config->{'fd_rdn'} = 'ou=fusiondirectory';
 
+my $logdir;
+
+eval {
+  my $client_settings = argonaut_get_client_settings($config,$config->{'client_ip'});
+  $logdir = $client_settings->{'logdir'};
+};
+if ($@) {
+  $logdir = '/var/log/argonaut';
+}
+
+my $logfile     = "argonaut-user-reminder.log";
+
 my $verbose   = 0;
 my $posix     = 0;
 my $ppolicy   = 0;
 my $supann    = 0;
 my $workflow  = 0;
-
 
 sub print_usage
 {
@@ -106,10 +119,39 @@ if (!$posix && !$ppolicy && !$supann && !$workflow) {
   $supann   = 1;
 }
 
-check_expired_users();
+our $log = Log::Handler->create_logger("argonaut-user-reminder");
 
-if ($workflow) {
-  argonaut_supann_update_states($verbose);
+$log->add(
+  file => {
+    filename => "$logdir/$logfile",
+    maxlevel => ($verbose ? "info" : "notice"),
+    minlevel => "emergency",
+    newline  => 1,
+  },
+  screen => {
+    log_to   => "STDOUT",
+    maxlevel => ($verbose ? "info" : "notice"),
+    minlevel => "notice",
+    newline  => 1,
+  },
+  screen => {
+    log_to   => "STDERR",
+    maxlevel => "warning",
+    minlevel => "emergency",
+    newline  => 1,
+  },
+);
+
+eval {
+  check_expired_users();
+
+  if ($workflow) {
+    argonaut_supann_update_states($verbose);
+  }
+};
+if ($@) {
+  $log->error("Died with: $@");
+  die $@;
 }
 
 exit 0;
@@ -202,7 +244,7 @@ sub check_expired_users
       my $cn = $entry->get_value('cn');
       my $shadowExpireSeconds = $entry->get_value('shadowExpire') * 86400;
       if ($shadowExpireSeconds <= $now) {
-        print "$cn is Expired\n" if $verbose;
+        $log->info("$cn is Expired");
       } elsif ($shadowExpireSeconds <= $next_alert_date) {
         alert_user_if_needed($ldap,$entry,$now,0);
       }
@@ -245,7 +287,7 @@ sub check_expired_users
 
         my $pwdChangedTimestamp = generalizedTime_to_time($entry->get_value('pwdChangedTime'));
         if (not defined $pwdChangedTimestamp) {
-          print "Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn\n";
+          $log->notice("Failed to parse value '".$entry->get_value('pwdChangedTime')."' for $cn");
           next;
         }
 
@@ -270,12 +312,12 @@ sub check_expired_users
         }
 
         if ((not defined $maxAge) || ($maxAge == 0)) {
-          print "No ppolicy max age defined for $cn\n" if $verbose;
+          $log->info("No ppolicy max age defined for $cn");
           next;
         }
 
         if ($pwdChangedTimestamp + $maxAge <= $now) {
-          print "$cn is Expired\n" if $verbose;
+          $log->info("$cn is Expired");
         } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
           alert_user_if_needed($ldap,$entry,$now,1);
         }
@@ -310,7 +352,7 @@ sub check_expired_users
         );
         my $endInSeconds = $dt->epoch;
         if ($endInSeconds < $now) {
-          print "$cn has an invalid supannRessourceEtatDate value\n" if $verbose;
+          $log->info("$cn has an invalid supannRessourceEtatDate value");
         } elsif ($endInSeconds <= $next_alert_date) {
           alert_user_if_needed($ldap,$entry,$now,0);
         }
@@ -351,14 +393,14 @@ sub alert_user_if_needed
   # Check if we have a mail address for this user.
   my $mail_address = get_mail_from_entry($entry);
   if (not defined $mail_address) {
-    print "User $cn has no mail address, skipping…\n";
+    $log->notice("User $cn has no mail address, skipping…");
     return;
   }
 
   # Check if we already sent an email.
   my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
   if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
-    print "User $cn was already sent a mail, not resending yet.\n" if $verbose;
+    $log->info("User $cn was already sent a mail, not resending yet.");
     return;
   } elsif ((defined $token_hash) || (defined $token_datetime)) {
     # Delete obsolete token so we may create it again
@@ -382,7 +424,7 @@ sub alert_user_if_needed
       }
     }
     if (not defined $manager_dn) {
-      print "No manager found for $cn\n";
+      $log->notice("No manager found for $cn");
     }
     my $manager_mesg = $ldap->search(
       base    => $manager_dn,
@@ -411,17 +453,27 @@ sub send_alert_mail
     $token              = store_ldap_token($ldap, $uid, $datetime);
   }
   if (($alert_mailbody eq '') || ($alert_mailsubject eq '')) {
-    print "Skipping mail to $user_cn<$user_mail> as mail body or subject is empty\n" if $verbose;
+    $log->info("Skipping mail to $user_cn<$user_mail> as mail body or subject is empty");
     return;
   }
-  print "Sending mail to $user_cn<$user_mail>" if $verbose;
+  my $info_message = "Sending mail to $user_cn<$user_mail>";
   my $cc = "";
   if (defined $manager_mail) {
-    print ", copy to $manager_cn<$manager_mail>" if $verbose;
+    $info_message .= ", copy to $manager_cn<$manager_mail>";
     $cc = encode_mimewords($manager_cn, Charset => 'utf-8', Encoding => 'B')." <$manager_mail>";
   }
-  print " with token $token" if ($verbose and (not $ppolicy_mode));
-  print "\n" if $verbose;
+  if (not $ppolicy_mode) {
+    $info_message .= " with token $token";
+  }
+  if ($first_email) {
+    $info_message .= " (first email)";
+  } else {
+    $info_message .= " (resent email)";
+  }
+  if ($ppolicy_mode) {
+    $info_message .= " (from ppolicy)";
+  }
+  $log->notice($info_message);
   my $body = sprintf($alert_mailbody,$user_cn,$uid,$token);
   my %message = (
     'From'                      => $config->{'alert_mailaddress'},
