@@ -397,6 +397,8 @@ sub alert_user_if_needed
     return;
   }
 
+  my $first_email = 1;
+
   # Check if we already sent an email.
   my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
   if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
@@ -405,6 +407,7 @@ sub alert_user_if_needed
   } elsif ((defined $token_hash) || (defined $token_datetime)) {
     # Delete obsolete token so we may create it again
     delete_ldap_token($ldap, $entry->get_value('uid'));
+    $first_email = 0;
   }
 
   my ($manager_cn, $manager_mail);
@@ -436,12 +439,12 @@ sub alert_user_if_needed
       $manager_mail = get_mail_from_entry(($manager_mesg->entries)[0]);
     }
   }
-  send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail, $ppolicy_mode);
+  send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail, $ppolicy_mode, $first_email);
 }
 
 sub send_alert_mail
 {
-  my ($ldap, $uid, $datetime, $user_cn, $user_mail, $manager_cn, $manager_mail, $ppolicy_mode) = @_;
+  my ($ldap, $uid, $datetime, $user_cn, $user_mail, $manager_cn, $manager_mail, $ppolicy_mode, $first_email) = @_;
   my ($alert_mailsubject, $alert_mailbody, $token);
   if ($ppolicy_mode) {
     $alert_mailsubject  = $config->{'ppolicy_mailsubject'};
