@@ -44,7 +44,19 @@ sub argonaut_get_rest_client {
   my $config = argonaut_read_config;
 
   my $client = REST::Client->new();
+
   $client->setHost($config->{'rest_endpoint'});
+
+  if ($client->getUseragent()->can('ssl_opts')) {
+    $client->getUseragent()->ssl_opts(verify_hostname   => 1);
+    if ($config->{'rest_cacertfile'} ne '') {
+      $client->getUseragent()->ssl_opts(SSL_ca_file => $config->{'rest_cacertfile'});
+    }
+    if ($config->{'rest_certcn'} ne '') {
+      $client->getUseragent()->ssl_opts(SSL_verifycn_name => $config->{'rest_certcn'});
+    }
+  }
+
   my %postBody = (
     'user'      => $config->{'rest_login'},
     'password'  => $config->{'rest_password'}

@@ -635,6 +635,8 @@ sub argonaut_read_config {
   $res{'rest_ldap'}       = trim($config->val( rest    => "ldap",      ""));
   $res{'rest_login'}      = trim($config->val( rest    => "login",     ""));
   $res{'rest_password'}   = trim($config->val( rest    => "password",  ""));
+  $res{'rest_cacertfile'} = trim($config->val( rest    => "ca_file",   ""));
+  $res{'rest_certcn'}     = trim($config->val( rest    => "cert_cn",   ""));
 
   if ($res{'ldap_tls'} !~ m/^off|on$/i) {
     warn "Unknown value for option ldap/tls: ".$res{'ldap_tls'}." (valid values are on/off)\n";
