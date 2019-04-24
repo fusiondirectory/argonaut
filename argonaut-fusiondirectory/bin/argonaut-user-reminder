@@ -119,6 +119,8 @@ if (!$posix && !$ppolicy && !$supann && !$workflow) {
   $supann   = 1;
 }
 
+argonaut_create_dir($logdir);
+
 our $log = Log::Handler->create_logger("argonaut-user-reminder");
 
 $log->add(
