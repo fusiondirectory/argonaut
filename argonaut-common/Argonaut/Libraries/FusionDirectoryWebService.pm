@@ -35,7 +35,7 @@ use JSON;
 use Argonaut::Libraries::Common qw(:config);
 
 use Exporter 'import';                          # gives you Exporter's import() method directly
-our @EXPORT_OK = qw(&argonaut_get_rest_client); # symbols to export on request
+our @EXPORT_OK = qw(&argonaut_get_rest_client &argonaut_parse_rest_error); # symbols to export on request
 
 =item argonaut_get_rest_client
  Get REST client connection using information from configuration file
@@ -72,10 +72,35 @@ sub argonaut_get_rest_client {
     my $token = JSON->new->utf8->allow_nonref->decode($client->responseContent());
     $client->addHeader('Session-Token', $token);
   } else {
-    die('Connection to REST API failed: '.$client->responseCode().' '.$client->responseContent());
+    die('Connection to REST API failed: '.$client->responseCode().' - '.argonaut_parse_rest_error($client)."\n");
   }
 
   return $client;
+}
+
+=item argonaut_parse_rest_error
+ Parse REST response after an error and returns string version of the first error
+=cut
+sub argonaut_parse_rest_error {
+  my ($client) = @_;
+
+  my $error = JSON->new->utf8->allow_nonref->decode($client->responseContent());
+  if (ref($error) eq "ARRAY") {
+    $error = $error->[0];
+  }
+  my $errorMessage = $error;
+  if (ref($error) eq "HASH") {
+    $errorMessage = $error->{'message'};
+    if (defined $error->{'file'}) {
+      $errorMessage .= ' ('.$error->{'file'};
+      if (defined $error->{'line'}) {
+        $errorMessage .= ':'.$error->{'line'};
+      }
+      $errorMessage .= ')';
+    }
+  }
+
+  return $errorMessage;
 }
 
 1;
