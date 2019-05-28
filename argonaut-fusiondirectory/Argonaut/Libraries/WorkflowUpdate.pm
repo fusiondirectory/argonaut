@@ -29,7 +29,7 @@ use warnings;
 
 use 5.008;
 
-use Argonaut::Libraries::FusionDirectoryWebService qw(argonaut_get_rest_client);
+use Argonaut::Libraries::FusionDirectoryWebService qw(argonaut_get_rest_client argonaut_parse_rest_error);
 
 use JSON;
 
@@ -105,12 +105,12 @@ sub argonaut_supann_update_states {
       if ($updateNeeded) {
         $client->PUT('/objects/user/'.$dn.'/supannAccountStatus/supannRessourceEtatDate', encode_json($supannRessourceEtatDateNewValues));
         if ($client->responseCode() ne '200') {
-          die('Request to REST API failed: '.$client->responseCode().' - '.argonaut_parse_rest_error($client));
+          die('Request to REST API failed: '.$client->responseCode().' - '.argonaut_parse_rest_error($client)."\n");
         }
       }
     }
   } else {
-    die('Request to REST API failed: '.$client->responseCode().' - '.argonaut_parse_rest_error($client));
+    die('Request to REST API failed: '.$client->responseCode().' - '.argonaut_parse_rest_error($client)."\n");
   }
 }
 
