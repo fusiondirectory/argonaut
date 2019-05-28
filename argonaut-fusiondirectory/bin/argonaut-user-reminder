@@ -31,7 +31,7 @@ use 5.008;
 
 use Digest::SHA qw(sha256_base64);
 
-use Argonaut::Libraries::Common qw(:ldap :string :config);
+use Argonaut::Libraries::Common qw(:ldap :file :string :config);
 
 use Argonaut::Libraries::WorkflowUpdate qw(argonaut_supann_update_states);
 
