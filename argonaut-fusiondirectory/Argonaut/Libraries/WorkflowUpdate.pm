@@ -105,12 +105,12 @@ sub argonaut_supann_update_states {
       if ($updateNeeded) {
         $client->PUT('/objects/user/'.$dn.'/supannAccountStatus/supannRessourceEtatDate', encode_json($supannRessourceEtatDateNewValues));
         if ($client->responseCode() ne '200') {
-          die('Request to REST API failed: '.$client->responseCode().' '.$client->responseContent());
+          die('Request to REST API failed: '.$client->responseCode().' - '.argonaut_parse_rest_error($client));
         }
       }
     }
   } else {
-    die('Request to REST API failed: '.$client->responseCode().' '.$client->responseContent());
+    die('Request to REST API failed: '.$client->responseCode().' - '.argonaut_parse_rest_error($client));
   }
 }
 
