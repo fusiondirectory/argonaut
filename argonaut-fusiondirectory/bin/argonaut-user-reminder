@@ -561,7 +561,7 @@ argonaut-user-reminder - read account expiration date from ldap and send emails 
 
 =head1 SYNOPSIS
 
-argonaut-user-reminder [--verbose] [--posix|--ppolicy|--both (default)]
+argonaut-user-reminder [--help] [--verbose] [--posix] [--ppolicy] [--supann] [--all (default)] [--supann-update]
 
 =head1 DESCRIPTION
 
@@ -573,21 +573,35 @@ expiration date or change the password.
 
 =over 3
 
+=item B<--help>
+
+Help message
+
 =item B<--verbose>
 
-be verbose
+Be verbose
 
 =item B<--posix>
 
-check only POSIX account expiration (based on shadowExpire)
+Check POSIX account expiration (based on shadowExpire)
 
 =item B<--ppolicy>
 
-check only ppolicy password expiration (based on pwdChangedTime and pwdMaxAge)
+Check ppolicy password expiration (based on pwdChangedTime and pwdMaxAge)
 
-=item B<--both>
+=item B<--supann>
 
-check both POSIX account expiration and ppolicy password expiration
+Check supann expiration (based on supannRessourceEtatDate)
+
+=item B<--all>
+
+Check POSIX account, ppolicy password and supann expiration
+
+=item B<--supann-update>
+
+Check supannRessourceEtatDate end date and update values if needed.
+To use this you need to fill [rest] section of argonaut.conf and install webservice plugin
+ on your FusionDirectory installation.
 
 =back
 
