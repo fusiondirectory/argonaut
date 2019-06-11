@@ -145,11 +145,11 @@ $log->add(
 );
 
 eval {
-  check_expired_users();
-
   if ($workflow) {
     argonaut_supann_update_states($verbose);
   }
+
+  check_expired_users();
 };
 if ($@) {
   $log->error("Died with: $@");
@@ -186,6 +186,8 @@ sub read_reminder_ldap_config
   # Should alert mails be forwarded to the manager
   $config->{'forward_alert'}    = 1;
   $config->{'forward_ppolicy'}  = 1;
+  $config->{'alert_expired'}    = 0;
+  $config->{'forward_expired'}  = 1;
   $config->{'use_alternate'}    = 1;
 
   my $entry = argonaut_read_ldap_config(
@@ -205,6 +207,8 @@ sub read_reminder_ldap_config
       'ppolicy_rdn'         => "fdPpolicyRDN",
       'ppolicy_mailsubject' => "fdUserReminderPpolicyAlertSubject",
       'ppolicy_mailbody'    => "fdUserReminderPpolicyAlertBody",
+      'expired_mailsubject' => "fdUserReminderExpirationSubject",
+      'expired_mailbody'    => "fdUserReminderExpirationBody",
     }
   );
 
@@ -214,6 +218,14 @@ sub read_reminder_ldap_config
 
   if ($entry->exists('fdUserReminderForwardPpolicyAlert')) {
     $config->{'forward_ppolicy'} = ($entry->get_value('fdUserReminderForwardPpolicyAlert') eq "TRUE");
+  }
+
+  if ($entry->exists('fdUserReminderExpiration')) {
+    $config->{'alert_expired'} = ($entry->get_value('fdUserReminderExpiration') eq "TRUE");
+  }
+
+  if ($entry->exists('fdUserReminderForwardExpiration')) {
+    $config->{'forward_expired'} = ($entry->get_value('fdUserReminderForwardExpiration') eq "TRUE");
   }
 
   if ($entry->exists('fdUserReminderUseAlternate')) {
@@ -247,8 +259,9 @@ sub check_expired_users
       my $shadowExpireSeconds = $entry->get_value('shadowExpire') * 86400;
       if ($shadowExpireSeconds <= $now) {
         $log->info("$cn is Expired");
+        alert_user_if_needed($ldap,$entry,$now,'expired');
       } elsif ($shadowExpireSeconds <= $next_alert_date) {
-        alert_user_if_needed($ldap,$entry,$now,0);
+        alert_user_if_needed($ldap,$entry,$now,'posix');
       }
     }
   }
@@ -320,8 +333,9 @@ sub check_expired_users
 
         if ($pwdChangedTimestamp + $maxAge <= $now) {
           $log->info("$cn is Expired");
+          alert_user_if_needed($ldap,$entry,$now,'expired');
         } elsif ($pwdChangedTimestamp + $maxAge <= $next_alert_date) {
-          alert_user_if_needed($ldap,$entry,$now,1);
+          alert_user_if_needed($ldap,$entry,$now,'ppolicy');
         }
       }
     }
@@ -356,7 +370,39 @@ sub check_expired_users
         if ($endInSeconds < $now) {
           $log->info("$cn has an invalid supannRessourceEtatDate value");
         } elsif ($endInSeconds <= $next_alert_date) {
-          alert_user_if_needed($ldap,$entry,$now,0);
+          alert_user_if_needed($ldap,$entry,$now,'supann');
+        }
+      }
+    }
+
+    # Consider supannRessourceEtatDate start date to be an expiration date if state is
+    my $mesg = $ldap->search(
+      base    => $config->{'ldap_base'},
+      filter  => '(&(objectClass=person)(supannRessourceEtatDate={COMPTE}I:SupannExpire:*))',
+      scope   => 'subtree'
+    );
+    die_on_ldap_errors($mesg);
+
+    foreach my $entry ($mesg->entries()) {
+      my $cn = $entry->get_value('cn');
+      foreach my $supannRessourceEtatDate ($entry->get_value('supannRessourceEtatDate')) {
+        my ($labelstate, $substate, $start, $end) = split(':', $supannRessourceEtatDate);
+        if (($labelstate ne '{COMPTE}I') or ($substate ne 'SupannExpire')) {
+          next;
+        }
+        if ($start eq '') {
+          next;
+        }
+        my $dt = DateTime->new(
+          year  => substr($start, 0, 4),
+          month => substr($start, 4, 2),
+          day   => substr($start, 6, 2),
+        );
+        my $startInSeconds = $dt->epoch;
+        if ($startInSeconds > $now) {
+          $log->info("$cn has an invalid supannRessourceEtatDate value");
+        } else {
+          alert_user_if_needed($ldap,$entry,$now,'expired');
         }
       }
     }
@@ -383,11 +429,18 @@ sub get_mail_from_entry
 
 sub alert_user_if_needed
 {
-  my ($ldap,$entry,$now,$ppolicy_mode) = @_;
+  my ($ldap,$entry,$now,$mode) = @_;
+
+  if (($mode eq 'expired') and (not $config->{'alert_expired'})) {
+    return;
+  }
+
   my $cn = $entry->get_value('cn');
   my $forward_alert;
-  if ($ppolicy_mode) {
+  if ($mode eq 'ppolicy') {
     $forward_alert = $config->{'forward_ppolicy'};
+  } elsif ($mode eq 'expired') {
+    $forward_alert = $config->{'forward_expired'};
   } else {
     $forward_alert = $config->{'forward_alert'};
   }
@@ -403,6 +456,13 @@ sub alert_user_if_needed
 
   # Check if we already sent an email.
   my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
+  if ($mode eq 'expired') {
+    if ($token_hash eq '{EXPIRED}') {
+      $log->info("User $cn was already sent a mail of expiration, not resending.");
+      return;
+    }
+    undef $token_datetime;
+  }
   if ((defined $token_datetime) && ($token_datetime + ($config->{'resend_delay'} * 86400) > $now)) {
     $log->info("User $cn was already sent a mail, not resending yet.");
     return;
@@ -441,21 +501,25 @@ sub alert_user_if_needed
       $manager_mail = get_mail_from_entry(($manager_mesg->entries)[0]);
     }
   }
-  send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail, $ppolicy_mode, $first_email);
+  send_alert_mail($ldap, $entry->get_value('uid'), $now, $cn, $mail_address, $manager_cn, $manager_mail, $mode, $first_email);
 }
 
 sub send_alert_mail
 {
-  my ($ldap, $uid, $datetime, $user_cn, $user_mail, $manager_cn, $manager_mail, $ppolicy_mode, $first_email) = @_;
+  my ($ldap, $uid, $datetime, $user_cn, $user_mail, $manager_cn, $manager_mail, $mode, $first_email) = @_;
   my ($alert_mailsubject, $alert_mailbody, $token);
-  if ($ppolicy_mode) {
+  if ($mode eq 'expired') {
+    $alert_mailsubject  = $config->{'expired_mailsubject'};
+    $alert_mailbody     = $config->{'expired_mailbody'};
+    $token              = store_ldap_token($ldap, $uid, $datetime, 1);
+  } elsif ($mode eq 'ppolicy') {
     $alert_mailsubject  = $config->{'ppolicy_mailsubject'};
     $alert_mailbody     = $config->{'ppolicy_mailbody'};
     $token              = '';
   } else {
     $alert_mailsubject  = $config->{'alert_mailsubject'};
     $alert_mailbody     = $config->{'alert_mailbody'};
-    $token              = store_ldap_token($ldap, $uid, $datetime);
+    $token              = store_ldap_token($ldap, $uid, $datetime, 0);
   }
   if (($alert_mailbody eq '') || ($alert_mailsubject eq '')) {
     $log->info("Skipping mail to $user_cn<$user_mail> as mail body or subject is empty");
@@ -467,17 +531,17 @@ sub send_alert_mail
     $info_message .= ", copy to $manager_cn<$manager_mail>";
     $cc = encode_mimewords($manager_cn, Charset => 'utf-8', Encoding => 'B')." <$manager_mail>";
   }
-  if (not $ppolicy_mode) {
+  if ($token ne '') {
     $info_message .= " with token $token";
   }
-  if ($first_email) {
-    $info_message .= " (first email)";
-  } else {
-    $info_message .= " (resent email)";
+  if ($mode ne 'expired') {
+    if ($first_email) {
+      $info_message .= " (first email)";
+    } else {
+      $info_message .= " (resent email)";
+    }
   }
-  if ($ppolicy_mode) {
-    $info_message .= " (from ppolicy)";
-  }
+  $info_message .= " (from $mode)";
   $log->notice($info_message);
   my $body = sprintf($alert_mailbody,$user_cn,$uid,$token);
   my %message = (
@@ -523,14 +587,21 @@ sub delete_ldap_token
 
 sub store_ldap_token
 {
-  my ($ldap, $uid, $datetime) = @_;
+  my ($ldap, $uid, $datetime, $expired) = @_;
 
-  my $token_password  = argonaut_gen_random_str(48);
-  my $token_hash      = sha256_base64('expired'.$token_password);
-  while (length($token_hash) % 4) {
-    $token_hash .= '=';
+  my $token_password;
+  my $token_hash;
+  if ($expired) {
+    $token_password = '';
+    $token_hash     = '{EXPIRED}';
+  } else {
+    $token_password  = argonaut_gen_random_str(48);
+    $token_hash      = sha256_base64('expired'.$token_password);
+    while (length($token_hash) % 4) {
+      $token_hash .= '=';
+    }
+    $token_hash = "{SHA}".$token_hash;
   }
-  $token_hash = "{SHA}".$token_hash;
 
   my $dn = "ou=$uid,".$config->{'token_rdn'}.','.$config->{'fd_rdn'}.','.$config->{'ldap_base'};
 
