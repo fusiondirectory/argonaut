@@ -376,7 +376,7 @@ sub check_expired_users
     }
 
     # Consider supannRessourceEtatDate start date to be an expiration date if state is
-    my $mesg = $ldap->search(
+    $mesg = $ldap->search(
       base    => $config->{'ldap_base'},
       filter  => '(&(objectClass=person)(supannRessourceEtatDate={COMPTE}I:SupannExpire:*))',
       scope   => 'subtree'
