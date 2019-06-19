@@ -457,7 +457,7 @@ sub alert_user_if_needed
   # Check if we already sent an email.
   my ($token_hash, $token_datetime) = get_ldap_token($ldap, $entry->get_value('uid'));
   if ($mode eq 'expired') {
-    if ($token_hash eq '{EXPIRED}') {
+    if ((defined $token_hash) && ($token_hash eq '{EXPIRED}')) {
       $log->info("User $cn was already sent a mail of expiration, not resending.");
       return;
     }
