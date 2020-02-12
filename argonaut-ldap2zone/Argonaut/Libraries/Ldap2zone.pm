@@ -242,12 +242,8 @@ sub zoneparse
           push @{$list},{ name => $name, class => $class,
                           text => $value, ttl => $ttl, ORIGIN => $zone };
         } else {
-          if($name ne "@") {
-            push @{$list},{ name => $name, class => $class,
-                            host => $value, ttl => $ttl, ORIGIN => $zone };
-          } else {
-            push @{$list},{ host => $value, ttl => $ttl, ORIGIN => $zone };
-          }
+          push @{$list},{ name => $name, class => $class,
+                          host => $value, ttl => $ttl, ORIGIN => $zone };
         }
         print "Added record $type $name $class $value $ttl\n" if $verbose;
       }
