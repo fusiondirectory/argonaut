@@ -63,9 +63,17 @@ You can [register on our system][register] and enter issues [Argonaut][issues-co
   be instant but in most channels people are in different time zones.  At times
   chat replies can be in excess of 24hrs.
   
-## Donate
+## Crowfunding
 
-If you like [Argonaut][Argonaut] and would like to [donate][donate-liberapay] even a small amount you can go to our Liberapay account
+If you like us and want to send us a small contribution you can use the following crowfunding services
+
+* [liberapay] [donate-liberapay]: https://liberapay.com/fusiondirectory/donate
+
+* [kofi][donate-kofi]: https://ko-fi.com/fusiondirectory
+
+* [opencollective][donate-opencollective]: https://opencollective.com/fusiondirectory
+
+* [communitybridge][donate-communitybridge]: https://funding.communitybridge.org/projects/fusiondirectory
   
 ## License
 
@@ -86,3 +94,9 @@ If you like [Argonaut][Argonaut] and would like to [donate][donate-liberapay] ev
 [issues-core]: https://gitlab.fusiondirectory.org/argonaut/argonaut/issues
 
 [donate-liberapay]: https://liberapay.com/fusiondirectory/donate
+
+[donate-kofi]: https://ko-fi.com/fusiondirectory
+
+[donate-opencollective]: https://opencollective.com/fusiondirectory
+
+[donate-communitybridge]: https://funding.communitybridge.org/projects/fusiondirectory
