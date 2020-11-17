@@ -109,6 +109,7 @@ build-release:
       - argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz
 
 trigger-ci-debian-stretch:
+  allow_failure: true
   stage: trigger
   only:
     - branches
@@ -120,6 +121,7 @@ trigger-ci-debian-stretch:
     branch: "$BRANCH_BUILD_DEBIAN_STRETCH"
 
 trigger-ci-centos-7:
+  allow_failure: true
   stage: trigger
   only:
     - branches
