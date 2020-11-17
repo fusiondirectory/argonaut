@@ -4,6 +4,9 @@ image: debian:stretch
 # Define variable to disable SSL verification of GIT
 variables:
   GIT_SSL_NO_VERIFY: "true"
+  BRANCH: "$CI_COMMIT_REF_NAME"
+  BRANCH_BUILD_DEBIAN_STRETCH: "master"
+  BRANCH_BUILD_CENTOS_7: "master"
 
 stages:
   - test-perl
@@ -89,7 +92,7 @@ build-tarballs:
   artifacts:
     paths:
     - argonaut.tar.gz
-    expire_in: 1h
+    expire_in: 30d
 
 build-release:
   stage: tarballs
@@ -100,3 +103,25 @@ build-release:
   artifacts:
     paths:
       - argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz
+
+trigger-ci-debian-stretch:
+    stage: trigger
+  only:
+    - branches
+  variables:
+    GROUP: "$GROUP"
+    BRANCH: "$BRANCH"
+  trigger:
+    project: debian/stretch-argonaut-fixes
+    branch: "$BRANCH_BUILD_DEBIAN_STRETCH"
+
+trigger-ci-centos-7:
+    stage: trigger
+  only:
+    - branches
+  variables:
+    GROUP: "$GROUP"
+    BRANCH: "$BRANCH"
+  trigger:
+    project: debian/centos7-argonaut-fixes
+    branch: "$BRANCH_BUILD_CENTOS_7"
