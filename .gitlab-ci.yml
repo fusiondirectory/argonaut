@@ -118,7 +118,7 @@ trigger-ci-debian-stretch:
     GROUP: "$GROUP"
     BRANCH: "$CI_COMMIT_REF_NAME"
   trigger:
-    project: debian/stretch-argonaut-fixes
+    project: debian/stretch-argonaut-dev
     branch: "$BRANCH_BUILD_DEBIAN_STRETCH"
 
 trigger-ci-centos-7:
@@ -129,5 +129,5 @@ trigger-ci-centos-7:
     GROUP: "$GROUP"
     BRANCH: "$CI_COMMIT_REF_NAME"
   trigger:
-    project: centos/centos7-argonaut-fixes
+    project: centos/centos7-argonaut-dev
     branch: "$BRANCH_BUILD_CENTOS_7"
