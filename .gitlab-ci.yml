@@ -4,11 +4,14 @@ image: debian:stretch
 # Define variable to disable SSL verification of GIT
 variables:
   GIT_SSL_NO_VERIFY: "true"
+  BRANCH_BUILD_DEBIAN_STRETCH: "master"
+  BRANCH_BUILD_CENTOS_7: "master"
 
 stages:
   - test-perl
   - test-manpages
   - tarballs
+  - trigger
 
 # Generate perlcritic rapport
 create_perlcritic_rapport:
@@ -83,14 +86,18 @@ test_manpages:
     - lexgrog argonaut-quota/man/argonaut-quota.1
     - lexgrog argonaut-server/man/argonaut-server.1
 
+
 build-tarballs:
   stage: tarballs
   script:
-    - tar -cvzf argonaut.tar.gz *
+    - mkdir ../argonaut-1.4/
+    - mv ./* ../argonaut-1.4/
+    - mv  ../argonaut-1.4/ ./
+    - tar -cvzf argonaut-1.4.tar.gz *
   artifacts:
     paths:
-    - argonaut.tar.gz
-    expire_in: 1h
+    - argonaut-1.4.tar.gz
+    expire_in: 30d
 
 build-release:
   stage: tarballs
@@ -101,3 +108,26 @@ build-release:
   artifacts:
     paths:
       - argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz
+
+
+trigger-ci-debian-stretch:
+  stage: trigger
+  only:
+    - branches
+  variables:
+    GROUP: "$GROUP"
+    BRANCH: "$CI_COMMIT_REF_NAME"
+  trigger:
+    project: debian/stretch-argonaut-fixes
+    branch: "$BRANCH_BUILD_DEBIAN_STRETCH"
+
+trigger-ci-centos-7:
+  stage: trigger
+  only:
+    - branches
+  variables:
+    GROUP: "$GROUP"
+    BRANCH: "$CI_COMMIT_REF_NAME"
+  trigger:
+    project: centos/centos7-argonaut-fixes
+    branch: "$BRANCH_BUILD_CENTOS_7"
