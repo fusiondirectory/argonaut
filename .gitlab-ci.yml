@@ -5,6 +5,7 @@ image: debian:stretch
 variables:
   GIT_SSL_NO_VERIFY: "true"
   BRANCH_BUILD_DEBIAN_STRETCH: "master"
+  BRANCH_BUILD_DEBIAN_BUSTER: "master"
   BRANCH_BUILD_CENTOS_7: "master"
 
 stages:
@@ -120,6 +121,17 @@ trigger-ci-debian-stretch:
   trigger:
     project: debian/stretch-argonaut-dev
     branch: "$BRANCH_BUILD_DEBIAN_STRETCH"
+
+trigger-ci-debian-buster:
+  stage: trigger
+  only:
+    - branches
+  variables:
+    GROUP: "$GROUP"
+    BRANCH: "$CI_COMMIT_REF_NAME"
+  trigger:
+    project: debian/buster-argonaut-dev
+    branch: "$BRANCH_BUILD_DEBIAN_BUSTER"
 
 trigger-ci-centos-7:
   stage: trigger
