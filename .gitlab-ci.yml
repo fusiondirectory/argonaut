@@ -5,6 +5,7 @@ image: debian:stretch
 variables:
   GIT_SSL_NO_VERIFY: "true"
   BRANCH_BUILD_DEBIAN_STRETCH: "master"
+  BRANCH_BUILD_DEBIAN_BUSTER: "master"
   BRANCH_BUILD_CENTOS_7: "master"
 
 stages:
