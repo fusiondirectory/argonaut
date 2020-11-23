@@ -119,7 +119,7 @@ trigger-ci-debian-stretch:
     project: debian/stretch-argonaut-fixes
     branch: "$BRANCH_BUILD_DEBIAN_STRETCH"
 
-trigger-ci-debian-stretch:
+trigger-ci-debian-buster:
   stage: trigger
   only:
     - branches
