@@ -685,7 +685,7 @@ sub argonaut_get_generic_settings {
 
   my ($ldap,$ldap_base) = argonaut_ldap_handle($config);
 
-  if ($filter =~ m/([0-9]{1,3}\.?){4}/ or $filter eq '*') {
+  if (($filter =~ m/^[0-9a-fA-F\.:]+$/) or ($filter eq '*')) {
     $filter = "(ipHostNumber=$filter)";
   } elsif ($filter !~ m/^\(/) {
     $filter = "($filter)";
