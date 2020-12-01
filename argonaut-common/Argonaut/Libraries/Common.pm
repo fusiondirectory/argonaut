@@ -717,7 +717,7 @@ sub argonaut_get_generic_settings {
     }
     $mesg = $ldap->search( # Get the system object
       base    => $ldap_base,
-      filter  => $filter,
+      filter  => "(&(objectClass=ipHost)$filter)",
       attrs   => \@attrs
     );
     if (scalar($mesg->entries) > 1) {
