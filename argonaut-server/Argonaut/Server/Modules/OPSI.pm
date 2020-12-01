@@ -154,7 +154,7 @@ sub get_opsi_settings {
 
 sub get_winstation_fqdn_settings {
   my $settings = argonaut_get_generic_settings(
-    '*',
+    'ipHost',
     {
       'cn'              => 'cn',
       'description'     => 'description',
