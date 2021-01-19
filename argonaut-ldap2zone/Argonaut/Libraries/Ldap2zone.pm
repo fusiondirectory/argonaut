@@ -295,9 +295,9 @@ sub computezonecontent
 ;
 ZONEHEADER1
 
-  if ( $soa->{'ORIGIN'} ne $soa->{'origin'} ) {
-      $output .= "\n\$ORIGIN $soa->{'ORIGIN'}\n\n";
-  }
+;  if ( $soa->{'ORIGIN'} ne $soa->{'origin'} ) {
+;      $output .= "\n\$ORIGIN $soa->{'ORIGIN'}\n\n";
+;  }
 
   $output .= <<ZONEHEADER2;
 
@@ -316,10 +316,10 @@ $soa->{origin}            $soa->{ttl}       IN  SOA  $soa->{primary} $soa->{emai
 ZONEHEADER2
 
 
-  if ( $ORIGIN ne $soa->{'ORIGIN'} ) {
-    $output .= "\n\;\n\; $ORIGIN records\n\;\n\n";
-    $output .= "\$ORIGIN $ORIGIN\n\n";
-  }
+;  if ( $ORIGIN ne $soa->{'ORIGIN'} ) {
+;    $output .= "\n\;\n\; $ORIGIN records\n\;\n\n";
+;    $output .= "\$ORIGIN $ORIGIN\n\n";
+;  }
 
   while (my ($type,$list) = each %{$records}) {
     foreach my $o (@$list) {
