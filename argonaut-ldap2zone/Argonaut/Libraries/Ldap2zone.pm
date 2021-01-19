@@ -230,8 +230,16 @@ sub zoneparse
         } else {
           $unicityTest{$type.$name.$value.$class.$ttl} = 1;
         }
-        push @{$list},{ name => $name, class => $class,
+        if($type eq "ns") {
+          push @{$list},{ name => "", class => $class,
+                            value => $value, ttl => $ttl };
+        } elsif ($type eq "mx") {
+          push @{$list},{ name => "", class => $class,
+                            value => $value, ttl => $ttl };
+        } else {
+          push @{$list},{ name => $name, class => $class,
                           value => $value, ttl => $ttl };
+        }
         print "Added record $type $name $class $value $ttl\n" if $verbose;
       }
     }
