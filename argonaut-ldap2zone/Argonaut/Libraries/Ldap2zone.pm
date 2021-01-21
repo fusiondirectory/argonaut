@@ -327,7 +327,7 @@ ZONEHEADER2
     my $list = $records->{$type};
     foreach my $o (@$list) {
       $output .= sprintf(
-        "%-15s %-5s %-5s %-5s %s\n",
+        "%-30s %-5s %-3s %-5s %s\n",
         $o->{name}, $o->{ttl}, $o->{class}, uc($type), $o->{value}
       );
     }
