@@ -34,7 +34,7 @@ our @EXPORT_OK = qw(&argonaut_ldap2zone);  # symbols to export on request
 
 use Argonaut::Libraries::Common qw(:ldap :config);
 
-my @record_types = ('a','aaaa','caa','cname','mx','ns','ptr','txt','srv','hinfo','rp','loc');
+my @record_types = ('ns','mx','a','aaaa','caa','cname','ptr','txt','srv','hinfo','rp','loc');
 
 my $NAMEDCHECKCONF = 'named-checkconf';
 
@@ -321,7 +321,8 @@ ZONEHEADER2
     $output .= "\$ORIGIN $ORIGIN\n\n";
   }
 
-  while (my ($type,$list) = each %{$records}) {
+  foreach my $type (@record_types) {
+    my $list = $records->{$type};
     foreach my $o (@$list) {
       $output .= sprintf(
         "%-15s %-5s %-5s %-5s %s\n",
