@@ -230,12 +230,14 @@ sub zoneparse
         } else {
           $unicityTest{$type.$name.$value.$class.$ttl} = 1;
         }
-        if($type eq "ns") {
-          push @{$list},{ name => "", class => $class,
+        if (($type eq "ns") or ($type eq "mx")) {
+          if ($name eq "@") {
+            unshift @{$list},{ name => "", class => $class,
                             value => $value, ttl => $ttl };
-        } elsif ($type eq "mx") {
-          push @{$list},{ name => "", class => $class,
+          } else {
+            push @{$list},{ name => $name, class => $class,
                             value => $value, ttl => $ttl };
+          }
         } else {
           push @{$list},{ name => $name, class => $class,
                           value => $value, ttl => $ttl };
