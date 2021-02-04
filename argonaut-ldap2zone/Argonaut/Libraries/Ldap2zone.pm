@@ -239,6 +239,11 @@ sub zoneparse
                             value => $value, ttl => $ttl };
           }
         } else {
+          if (($type eq "txt") and ($value !~ m/^".*"$/)) {
+            # Suround TXT with quotes if they are missing
+            $value =~ s/"/\\"/g;
+            $value = '"'.$value.'"';
+          }
           push @{$list},{ name => $name, class => $class,
                           value => $value, ttl => $ttl };
         }
