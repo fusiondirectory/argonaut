@@ -242,7 +242,7 @@ sub zoneparse
           if ((($type eq "txt") or ($type eq "spf")) and ($value !~ m/^".*"$/)) {
             # If TXT/SPF value is not surrounded with quotes
             # Split it into 255-length parts, escape quotes, surround each part with quotes and join them with newlines.
-            $value = "(\"".join("\"\n\"", map { $_ =~ s/"/\\"/g ; $_ } unpack("(a255)*", $value) )."\");";
+            $value = "(\"".join("\"\n\"", map { my $chunk = $_; $chunk =~ s/"/\\"/g ; $chunk } unpack("(a255)*", $value) )."\");";
           }
           push @{$list},{ name => $name, class => $class,
                           value => $value, ttl => $ttl };
