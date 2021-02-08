@@ -239,10 +239,10 @@ sub zoneparse
                             value => $value, ttl => $ttl };
           }
         } else {
-          if (($type eq "txt") and ($value !~ m/^".*"$/)) {
-            # Suround TXT with quotes if they are missing
-            $value =~ s/"/\\"/g;
-            $value = '"'.$value.'"';
+          if ((($type eq "txt") or ($type eq "spf")) and ($value !~ m/^".*"$/)) {
+            # If TXT/SPF value is not surrounded with quotes
+            # Split it into 255-length parts, escape quotes, surround each part with quotes and join them with newlines.
+            $value = "(\"".join("\"\n\"", map { $_ =~ s/"/\\"/g ; $_ } unpack("(a255)*", $value) )."\");";
           }
           push @{$list},{ name => $name, class => $class,
                           value => $value, ttl => $ttl };
