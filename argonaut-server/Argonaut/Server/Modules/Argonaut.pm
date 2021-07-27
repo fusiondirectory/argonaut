@@ -101,12 +101,12 @@ sub do_action {
   }
 
   if ($action eq 'ping') {
-    my $ok = 'OK';
+    my $ok  = 'OK';
+    my $res = '';
     eval {
-      my $res = $self->launch('echo',$ok);
-      return ($res eq $ok);
+      $res = $self->launch('echo',$ok);
     };
-    return 0;
+    return ($res eq $ok);
   } else {
     return $self->launch($action,$params);
   }
