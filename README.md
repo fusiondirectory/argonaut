@@ -52,8 +52,6 @@ Argonaut server and argonaut client can booth load modules at startup
 
 There are a couple ways you can try [to get help][get help].You can also join the `#fusiondirectory` IRC channel at freenode.net.
 
-You can [register on our system][register] and enter issues [Argonaut][issues-core].
-
 ## IRC Etiquette
 
 * If we don't answer right away then just hang out in the channel.  Someone will
@@ -80,9 +78,5 @@ If you like [Argonaut][Argonaut] and would like to [donate][donate-liberapay] ev
 [FusionDirectory]: https://www.fusiondirectory.org/
 
 [get help]: https://www.fusiondirectory.org/contact-us/
-
-[register]: https://register.fusiondirectory.org
-
-[issues-core]: https://gitlab.fusiondirectory.org/argonaut/argonaut/issues
 
 [donate-liberapay]: https://liberapay.com/fusiondirectory/donate
