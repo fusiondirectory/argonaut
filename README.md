@@ -83,13 +83,13 @@ The subscription period is one year from the date of purchase and gives you acce
 
 If you like us and want to send us a small contribution you can use the following crowfunding services
 
-* [liberapay] [donate-liberapay]: https://liberapay.com/fusiondirectory/donate
+* [donate-liberapay]
 
-* [kofi][donate-kofi]: https://ko-fi.com/fusiondirectory
+* [donate-kofi]
 
-* [opencollective][donate-opencollective]: https://opencollective.com/fusiondirectory
+* [donate-opencollective]
 
-* [communitybridge][donate-communitybridge]: https://funding.communitybridge.org/projects/fusiondirectory
+* [donate-communitybridge]
   
 ## License
 
