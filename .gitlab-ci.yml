@@ -28,7 +28,7 @@ create_perl_lint_rapport:
 
 # generate man pages to test validity
 create_manpages_lint_report:
-  image: registry.fusiondirectory.org/fusiondirectory/fd/perlcodestyle:stretch
+  image: registry.fusiondirectory.org/fusiondirectory/fd/perlcodestyle-cli:buster
   stage: lint
   only:
     - branches
