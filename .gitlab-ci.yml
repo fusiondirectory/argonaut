@@ -1,31 +1,12 @@
-# Specify docker image
-image: debian:stretch
-
-# Define variable to disable SSL verification of GIT
-variables:
-  BRANCH_BUILD_DEBIAN_STRETCH: "master"
-  BRANCH_BUILD_DEBIAN_BUSTER: "master"
-  BRANCH_BUILD_CENTOS_7: "master"
-
 stages:
   - lint
   - codestyle
   - tarballs
   - trigger
 
-# Generate perlcritic rapport
-create_perlcritic_rapport:
-  image: registry.fusiondirectory.org/fusiondirectory/fd/perlcodestyle:stretch
-  stage: codestyle
-  only:
-    - branches
-    - tags
-  script:
-    - perlcritic .
-
 # Perl lint
 create_perl_lint_rapport:
-  image: registry.fusiondirectory.org/fusiondirectory/fd/perlcodestyle:stretch
+  image: registry.fusiondirectory.org/fusiondirectory/fd/perlcodestyle-cli:buster
   stage: lint
   only:
     - branches
@@ -82,6 +63,16 @@ create_manpages_lint_report:
     - lexgrog argonaut-server/man/argonaut-server.1
 
 
+# Generate perlcritic rapport
+create_perlcritic_rapport:
+  image: registry.fusiondirectory.org/fusiondirectory/fd/perlcodestyle-cli:buster 
+  stage: codestyle
+  only:
+    - branches
+    - tags
+  script: 
+    - perlcritic .
+
 build-tarballs:
   stage: tarballs
   script:
@@ -104,17 +95,6 @@ build-release:
     paths:
       - argonaut-$(grep '%' Changelog.md | head -n1 | cut -d ' ' -f3 | tr -d '"').tar.gz
 
-
-trigger-ci-debian-stretch:
-  stage: trigger
-  only:
-    - branches
-  variables:
-    GROUP: "$GROUP"
-    BRANCH: "$CI_COMMIT_REF_NAME"
-  trigger:
-    project: debian/stretch-argonaut-dev
-    branch: "$BRANCH_BUILD_DEBIAN_STRETCH"
 
 trigger-ci-debian-buster:
   stage: trigger
