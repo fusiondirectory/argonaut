@@ -104,7 +104,7 @@ trigger-ci-debian-buster:
     GROUP: "$GROUP"
     BRANCH: "$CI_COMMIT_REF_NAME"
   trigger:
-    project: debian/buster-argonaut-dev
+    project: debian/buster-argonaut-fixes
     branch: "$BRANCH_BUILD_DEBIAN_BUSTER"
 
 trigger-ci-centos-7:
@@ -115,5 +115,5 @@ trigger-ci-centos-7:
     GROUP: "$GROUP"
     BRANCH: "$CI_COMMIT_REF_NAME"
   trigger:
-    project: centos/centos7-argonaut-dev
+    project: centos/centos7-argonaut-fixes
     branch: "$BRANCH_BUILD_CENTOS_7"
